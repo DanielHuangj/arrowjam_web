@@ -1,0 +1,1377 @@
+{
+  "itemModels": [
+    {
+      "kind": 12,
+      "occupiedPositions": [[5,0],[5,1],[5,2],[5,3],[6,0],[6,1],[6,2],[6,3],[5,4],[6,4],[5,5],[6,5],[5,6],[6,6],[5,7],[6,7],[5,8],[6,8],[5,9],[6,9],[5,10],[6,10],[5,11],[6,11],[5,12],[6,12],[5,13],[6,13],[5,14],[6,14],[7,0],[7,1],[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],[7,11],[7,12],[7,13],[7,14],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],[8,11],[8,12],[8,13],[8,14],[9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],[9,11],[9,12],[9,13],[9,14],[10,0],[10,1],[10,2],[10,3],[10,4],[10,5],[10,6],[10,7],[10,8],[10,9],[10,10],[10,11],[10,12],[10,13],[10,14],[11,0],[11,1],[11,2],[11,3],[11,4],[11,5],[11,6],[11,7],[11,8],[11,9],[11,10],[11,11],[11,12],[11,13],[11,14],[12,0],[12,1],[12,2],[12,3],[12,4],[12,5],[12,6],[12,7],[12,8],[12,9],[12,10],[12,11],[12,12],[12,13],[12,14],[13,0],[13,1],[13,2],[13,3],[13,4],[13,5],[13,6],[13,7],[13,8],[13,9],[13,10],[13,11],[13,12],[13,13],[13,14],[14,0],[14,1],[14,2],[14,3],[14,4],[14,5],[14,6],[14,7],[14,8],[14,9],[14,10],[14,11],[14,12],[14,13],[14,14]],
+      "instanceId": 10,
+      "layer": 1,
+      "items": [
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,7],[12,7],[12,8],[13,8],[14,8],[14,7],[13,7],[13,6],[13,5],[13,4]],
+          "instanceId": 118,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[10,14],[10,13],[11,13],[11,12],[10,12],[9,12],[8,12],[8,13],[7,13],[6,13],[6,12]],
+          "instanceId": 119,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[14,0],[14,1],[13,1],[12,1],[12,2],[12,3],[12,4],[12,5],[12,6],[11,6]],
+          "instanceId": 120,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[14,14],[13,14],[12,14],[11,14]],
+          "instanceId": 121,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,5],[10,5],[11,5],[11,4],[10,4],[10,3],[9,3],[8,3],[7,3]],
+          "instanceId": 122,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,10],[9,10],[10,10],[10,11],[9,11],[8,11],[7,11],[6,11],[5,11],[5,10],[5,9],[5,8]],
+          "instanceId": 123,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,9],[11,8],[10,8],[10,7]],
+          "instanceId": 124,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[7,7],[7,8],[7,9],[7,10],[6,10],[6,9],[6,8]],
+          "instanceId": 125,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,6],[6,5],[5,5],[5,4],[5,3],[6,3],[6,2]],
+          "instanceId": 126,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,7],[5,7],[5,6]],
+          "instanceId": 127,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[12,11],[11,11],[11,10]],
+          "instanceId": 128,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,14],[9,14],[9,13]],
+          "instanceId": 129,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[13,12],[12,12],[12,13],[13,13],[14,13],[14,12],[14,11]],
+          "instanceId": 130,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[10,9],[9,9],[8,9],[8,8],[8,7]],
+          "instanceId": 131,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[10,0],[9,0],[8,0],[8,1],[9,1],[10,1]],
+          "instanceId": 132,
+          "layer": 2,
+          "direction": 3,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,4],[8,4],[8,5],[7,5],[7,4],[6,4]],
+          "instanceId": 133,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[13,2],[13,3],[14,3],[14,2]],
+          "instanceId": 134,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,2],[9,2],[10,2],[11,2],[11,1]],
+          "instanceId": 135,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[12,9],[13,9],[14,9],[14,10],[13,10],[12,10]],
+          "instanceId": 136,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[7,2],[7,1],[7,0]],
+          "instanceId": 137,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,0],[12,0],[13,0]],
+          "instanceId": 138,
+          "layer": 2,
+          "direction": 3,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[14,6],[14,5],[14,4]],
+          "instanceId": 139,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,7],[9,6],[8,6],[7,6]],
+          "instanceId": 140,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[7,14],[6,14],[5,14],[5,13],[5,12]],
+          "instanceId": 141,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[5,2],[5,1],[6,1],[6,0],[5,0]],
+          "instanceId": 142,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        }
+      ]
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[5,2],[5,1],[5,0],[6,0],[6,1],[6,2],[7,2],[8,2]],
+      "instanceId": 37,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,3],[7,3],[6,3],[5,3]],
+      "instanceId": 115,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,4],[7,4],[6,4],[5,4],[4,4],[4,3],[4,2]],
+      "instanceId": 27,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[2,11],[2,10],[2,9],[2,8],[3,8],[4,8],[5,8],[5,7],[5,6],[5,5],[4,5]],
+      "instanceId": 43,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,5],[7,5],[6,5],[6,6],[6,7],[6,8],[6,9],[5,9],[4,9],[3,9]],
+      "instanceId": 14,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,6],[7,7],[7,8],[7,9],[7,10],[6,10],[5,10],[5,11],[6,11]],
+      "instanceId": 18,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[9,10],[8,10],[8,11],[7,11],[7,12],[6,12],[5,12]],
+      "instanceId": 7,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3,13],[4,13],[5,13]],
+      "instanceId": 32,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[5,14],[6,14],[6,13]],
+      "instanceId": 95,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,0],[8,0],[8,1],[7,1]],
+      "instanceId": 68,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,13],[8,13],[8,12],[9,12],[9,11]],
+      "instanceId": 109,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,14],[8,14],[8,15]],
+      "instanceId": 22,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,6],[9,6],[10,6],[10,5],[9,5]],
+      "instanceId": 73,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[9,7],[9,8],[9,9],[8,9],[8,8],[8,7]],
+      "instanceId": 6,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[9,3],[9,2],[9,1],[9,0],[10,0]],
+      "instanceId": 13,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,7],[11,8],[12,8],[12,7],[12,6],[11,6],[11,5],[11,4],[10,4],[9,4]],
+      "instanceId": 56,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[9,15],[9,14],[9,13]],
+      "instanceId": 85,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,1],[11,1],[11,2],[12,2],[13,2]],
+      "instanceId": 96,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,3],[11,3],[12,3],[13,3],[14,3],[15,3],[15,4],[14,4],[13,4],[12,4]],
+      "instanceId": 52,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[12,9],[11,9],[10,9],[10,8],[10,7]],
+      "instanceId": 87,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,11],[10,11],[10,10],[11,10],[12,10],[13,10],[14,10],[15,10],[16,10]],
+      "instanceId": 35,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,13],[11,12],[10,12]],
+      "instanceId": 92,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,14],[10,14],[10,13]],
+      "instanceId": 97,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,0],[12,0],[12,1],[13,1],[14,1]],
+      "instanceId": 112,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,6],[14,5],[13,5],[12,5]],
+      "instanceId": 70,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[12,14],[12,13],[12,12],[12,11]],
+      "instanceId": 42,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[13,0],[14,0],[15,0],[15,1],[15,2],[16,2]],
+      "instanceId": 53,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[13,8],[13,7],[13,6]],
+      "instanceId": 79,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[13,9],[14,9],[14,8],[14,7]],
+      "instanceId": 61,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,15],[11,15],[12,15],[13,15],[13,14],[13,13],[13,12],[13,11],[14,11]],
+      "instanceId": 36,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,12],[14,12],[14,13],[15,13],[16,13],[17,13],[17,12]],
+      "instanceId": 39,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 12,
+      "occupiedPositions": [[5,20],[6,20],[7,20],[8,20],[9,20],[10,20],[11,20],[12,20],[13,20],[5,21],[6,21],[7,21],[8,21],[9,21],[10,21],[11,21],[12,21],[13,21],[5,22],[6,22],[7,22],[8,22],[9,22],[10,22],[11,22],[12,22],[13,22],[5,23],[6,23],[7,23],[8,23],[9,23],[10,23],[11,23],[12,23],[13,23],[5,24],[6,24],[7,24],[8,24],[9,24],[10,24],[11,24],[12,24],[13,24],[5,25],[6,25],[7,25],[8,25],[9,25],[10,25],[11,25],[12,25],[13,25],[5,26],[6,26],[7,26],[8,26],[9,26],[10,26],[11,26],[12,26],[13,26],[5,27],[6,27],[7,27],[8,27],[9,27],[10,27],[11,27],[12,27],[13,27],[5,28],[6,28],[7,28],[8,28],[9,28],[10,28],[11,28],[12,28],[13,28],[5,29],[6,29],[7,29],[8,29],[9,29],[10,29],[11,29],[12,29],[13,29],[5,30],[6,30],[7,30],[8,30],[9,30],[10,30],[11,30],[12,30],[13,30],[5,31],[6,31],[7,31],[8,31],[9,31],[10,31],[11,31],[12,31],[13,31],[5,32],[6,32],[7,32],[8,32],[9,32],[10,32],[11,32],[12,32],[13,32],[5,33],[6,33],[7,33],[8,33],[9,33],[10,33],[11,33],[12,33],[13,33],[5,34],[6,34],[7,34],[8,34],[9,34],[10,34],[11,34],[12,34],[13,34],[14,20],[14,21],[14,22],[14,23],[14,24],[14,25],[14,26],[14,27],[14,28],[14,29],[14,30],[14,31],[14,32],[14,33],[14,34]],
+      "instanceId": 9,
+      "layer": 1,
+      "items": [
+        {
+          "kind": 1,
+          "occupiedPositions": [[13,33],[14,33],[14,32],[14,31],[14,30],[14,29],[14,28],[13,28],[12,28],[11,28],[10,28]],
+          "instanceId": 143,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[7,28],[7,27],[8,27],[8,28]],
+          "instanceId": 144,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[14,20],[13,20],[12,20],[11,20],[10,20],[9,20],[8,20],[7,20],[7,21],[7,22],[6,22],[6,23]],
+          "instanceId": 145,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,21],[9,21],[10,21],[10,22],[9,22]],
+          "instanceId": 146,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,29],[10,29],[11,29],[12,29],[13,29],[13,30],[13,31],[13,32],[12,32]],
+          "instanceId": 147,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,32],[6,33],[7,33],[7,34],[6,34],[5,34],[5,33],[5,32],[5,31],[5,30],[5,29]],
+          "instanceId": 148,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[5,20],[6,20],[6,21],[5,21]],
+          "instanceId": 149,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,30],[9,31],[9,32],[9,33]],
+          "instanceId": 150,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,22],[12,22],[13,22],[13,23],[13,24],[13,25],[13,26],[13,27],[14,27],[14,26],[14,25],[14,24]],
+          "instanceId": 151,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,25],[10,25],[9,25],[9,24]],
+          "instanceId": 152,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,22],[8,23],[8,24],[8,25]],
+          "instanceId": 153,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[9,28],[9,27],[9,26],[10,26],[10,27],[11,27],[11,26]],
+          "instanceId": 154,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,29],[7,29],[8,29],[8,30],[8,31],[8,32]],
+          "instanceId": 155,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,26],[7,26],[6,26],[6,27],[6,28],[5,28]],
+          "instanceId": 156,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[5,27],[5,26],[5,25],[5,24],[5,23],[5,22]],
+          "instanceId": 157,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[8,33],[8,34],[9,34],[10,34],[11,34],[12,34],[13,34],[14,34]],
+          "instanceId": 158,
+          "layer": 2,
+          "direction": 3,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,31],[10,31],[10,32]],
+          "instanceId": 159,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[10,23],[10,24],[11,24],[11,23]],
+          "instanceId": 160,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[12,24],[12,25],[12,26],[12,27]],
+          "instanceId": 161,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,24],[7,24],[7,25]],
+          "instanceId": 162,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[6,31],[6,30],[7,30],[7,31],[7,32]],
+          "instanceId": 163,
+          "layer": 2,
+          "direction": 1,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[10,30],[11,30],[12,30]],
+          "instanceId": 164,
+          "layer": 2,
+          "direction": 3,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[11,32],[11,33],[12,33]],
+          "instanceId": 165,
+          "layer": 2,
+          "direction": 3,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[14,23],[14,22],[14,21]],
+          "instanceId": 166,
+          "layer": 2,
+          "direction": 2,
+          "colorId": 7
+        },
+        {
+          "kind": 1,
+          "occupiedPositions": [[13,21],[12,21],[11,21]],
+          "instanceId": 167,
+          "layer": 2,
+          "direction": 4,
+          "colorId": 7
+        }
+      ]
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,19],[8,18],[8,17],[8,16],[7,16],[6,16],[6,17],[6,18],[6,19],[6,20],[5,20],[5,19]],
+      "instanceId": 30,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,20],[8,20],[9,20],[10,20],[10,19],[10,18],[9,18],[9,17],[9,16],[10,16]],
+      "instanceId": 16,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,25],[11,24],[11,23],[11,22],[11,21],[11,20],[11,19],[12,19],[13,19],[14,19],[14,18]],
+      "instanceId": 50,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[13,21],[13,22],[12,22],[12,21],[12,20],[13,20]],
+      "instanceId": 65,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,21],[7,22],[8,22],[9,22],[9,23]],
+      "instanceId": 3,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,21],[9,21],[8,21]],
+      "instanceId": 26,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[5,24],[5,23],[5,22]],
+      "instanceId": 66,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,24],[10,23],[10,22]],
+      "instanceId": 63,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,23],[7,23],[6,23]],
+      "instanceId": 48,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,20],[14,21],[14,22],[14,23],[14,24],[14,25],[13,25],[13,24],[13,23],[12,23],[12,24]],
+      "instanceId": 12,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,25],[7,25],[7,26],[8,26],[9,26],[9,25],[9,24],[8,24],[7,24],[6,24]],
+      "instanceId": 28,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,27],[0,28],[0,29],[1,29],[1,28],[1,27],[2,27],[3,27],[4,27],[5,27],[5,26]],
+      "instanceId": 64,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,26],[10,27],[10,28],[10,29],[9,29],[9,30],[10,30],[11,30],[11,29],[11,28]],
+      "instanceId": 38,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[12,28],[12,27],[11,27],[11,26],[12,26],[13,26],[13,27],[13,28]],
+      "instanceId": 41,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,31],[8,30],[8,29],[8,28],[7,28],[7,27],[6,27]],
+      "instanceId": 17,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,27],[9,27],[9,28]],
+      "instanceId": 77,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[6,28],[5,28],[4,28]],
+      "instanceId": 81,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,29],[6,29],[5,29],[4,29],[3,29],[3,28],[2,28]],
+      "instanceId": 51,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,29],[13,29],[12,29],[12,30],[12,31],[12,32],[12,33]],
+      "instanceId": 86,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[1,30],[2,30],[3,30],[4,30],[5,30],[6,30],[7,30]],
+      "instanceId": 40,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[13,30],[13,31],[13,32],[13,33],[13,34],[14,34],[15,34]],
+      "instanceId": 58,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[2,33],[1,33],[1,34],[2,34],[3,34],[4,34],[4,33],[5,33],[5,32],[5,31]],
+      "instanceId": 21,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[8,32],[8,33],[7,33],[7,32],[7,31],[6,31],[6,32],[6,33]],
+      "instanceId": 47,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[9,32],[9,31],[10,31],[11,31]],
+      "instanceId": 83,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[11,33],[11,32],[10,32]],
+      "instanceId": 102,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,33],[9,33],[9,34]],
+      "instanceId": 20,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[5,34],[6,34],[7,34],[8,34]],
+      "instanceId": 25,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[10,34],[11,34],[12,34]],
+      "instanceId": 76,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,28],[18,27],[18,26],[17,26],[16,26],[15,26],[14,26]],
+      "instanceId": 55,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,27],[14,28],[15,28]],
+      "instanceId": 24,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,30],[15,30],[16,30]],
+      "instanceId": 11,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,33],[14,33],[14,32],[14,31]],
+      "instanceId": 71,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 4,
+      "occupiedPositions": [[19,20]],
+      "instanceId": 502,
+      "layer": 2,
+      "direction1": [-1,0],
+      "direction2": [0,1]
+    },
+    {
+      "kind": 4,
+      "occupiedPositions": [[0,20]],
+      "instanceId": 503,
+      "layer": 2,
+      "direction1": [1,0],
+      "direction2": [0,1]
+    },
+    {
+      "kind": 4,
+      "occupiedPositions": [[19,14]],
+      "instanceId": 878,
+      "layer": 2,
+      "direction1": [-1,0],
+      "direction2": [0,-1]
+    },
+    {
+      "kind": 4,
+      "occupiedPositions": [[0,14]],
+      "instanceId": 501,
+      "layer": 2,
+      "direction1": [1,0],
+      "direction2": [0,-1]
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,34],[0,33],[0,32],[0,31],[0,30]],
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,3],[18,3],[18,4],[19,4],[19,5]],
+      "instanceId": 2,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[4,14],[3,14],[2,14]],
+      "instanceId": 4,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,0],[1,0],[1,1],[0,1],[0,2],[1,2],[2,2],[2,1],[2,0]],
+      "instanceId": 5,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3,11],[3,10],[4,10],[4,11],[4,12],[3,12]],
+      "instanceId": 8,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,23],[0,22],[1,22],[2,22],[3,22],[3,21],[3,20],[4,20],[4,21],[4,22],[4,23]],
+      "instanceId": 15,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[17,20],[16,20],[15,20],[15,19],[15,18]],
+      "instanceId": 19,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,24],[17,24],[18,24],[18,25],[17,25]],
+      "instanceId": 23,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,4],[16,5],[15,5],[15,6],[16,6],[17,6],[17,7],[16,7],[15,7]],
+      "instanceId": 29,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[4,17],[5,17],[5,18],[4,18],[3,18],[3,17],[3,16]],
+      "instanceId": 31,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[2,5],[2,6],[2,7],[3,7],[4,7],[4,6],[3,6],[3,5],[3,4]],
+      "instanceId": 33,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,9],[16,8],[15,8]],
+      "instanceId": 34,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,25],[0,24],[1,24],[2,24],[2,25],[2,26]],
+      "instanceId": 44,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,5],[0,4],[0,3]],
+      "instanceId": 45,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,17],[19,16],[18,16],[17,16],[17,17],[17,18],[17,19],[16,19],[16,18],[16,17],[16,16]],
+      "instanceId": 46,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,29],[16,29],[17,29],[17,30],[17,31],[17,32],[17,33]],
+      "instanceId": 49,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,28],[19,29],[18,29],[18,30],[19,30],[19,31],[19,32]],
+      "instanceId": 54,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,31],[15,31],[15,32],[16,32],[16,33],[16,34],[17,34],[18,34],[19,34]],
+      "instanceId": 57,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,5],[17,5],[17,4]],
+      "instanceId": 59,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,27],[16,27],[17,27],[17,28]],
+      "instanceId": 60,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[17,1],[16,1],[16,0],[17,0]],
+      "instanceId": 62,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[1,32],[1,31],[2,31],[2,32]],
+      "instanceId": 67,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,17],[7,18],[7,19]],
+      "instanceId": 69,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3,31],[4,31],[4,32],[3,32],[3,33]],
+      "instanceId": 72,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3,23],[2,23],[1,23]],
+      "instanceId": 74,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[12,18],[11,18],[11,17],[11,16],[12,16],[13,16],[14,16],[14,15]],
+      "instanceId": 75,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[12,17],[13,17],[13,18]],
+      "instanceId": 78,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,21],[16,21],[16,22],[15,22],[15,23],[15,24],[15,25]],
+      "instanceId": 80,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[4,26],[4,25],[4,24],[3,24],[3,25],[3,26]],
+      "instanceId": 82,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,0],[18,1],[19,1],[19,0]],
+      "instanceId": 84,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[1,17],[1,18],[0,18],[0,17],[0,16],[1,16],[2,16],[2,17],[2,18]],
+      "instanceId": 88,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[2,13],[2,12],[1,12],[0,12]],
+      "instanceId": 89,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,22],[19,23],[19,24]],
+      "instanceId": 90,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[4,19],[3,19],[2,19],[2,20],[2,21]],
+      "instanceId": 91,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,25],[19,26],[19,27]],
+      "instanceId": 93,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[7,15],[6,15],[5,15],[5,16],[4,16],[4,15],[3,15],[2,15]],
+      "instanceId": 94,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[1,5],[1,4],[1,3],[2,3],[3,3],[3,2]],
+      "instanceId": 98,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,23],[17,23],[18,23]],
+      "instanceId": 99,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[17,21],[17,22],[18,22]],
+      "instanceId": 100,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,17],[18,18],[19,18]],
+      "instanceId": 101,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,31],[18,32],[18,33],[19,33]],
+      "instanceId": 103,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,11],[19,10],[18,10],[18,11],[18,12],[19,12]],
+      "instanceId": 104,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,14],[17,14],[17,15],[16,15],[15,15],[15,14]],
+      "instanceId": 105,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[19,6],[19,7],[19,8],[19,9],[18,9],[17,9]],
+      "instanceId": 106,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[18,6],[18,7],[18,8]],
+      "instanceId": 107,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,11],[1,11],[1,10],[1,9],[1,8]],
+      "instanceId": 108,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[16,3],[17,3],[17,2],[18,2],[19,2]],
+      "instanceId": 110,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[0,10],[0,9],[0,8],[0,7],[1,7],[1,6],[0,6]],
+      "instanceId": 111,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[15,11],[16,11],[17,11]],
+      "instanceId": 113,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3,0],[4,0],[4,1],[3,1]],
+      "instanceId": 114,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[1,25],[1,26],[0,26]],
+      "instanceId": 116,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[14,17],[15,17],[15,16]],
+      "instanceId": 117,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    }
+  ],
+  "width": 20,
+  "height": 35,
+  "name": "",
+  "durationInSec": 150,
+  "difficulty": 3
+}

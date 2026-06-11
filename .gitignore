@@ -1,0 +1,17 @@
+# 逆向/提取数据，不纳入版本库
+docs/crackdata/
+
+# 依赖与构建产物
+code/client/node_modules/
+code/client/dist/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

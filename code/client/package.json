@@ -1,0 +1,22 @@
+{
+  "name": "arrow_jaw",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "pretest": "node scripts/copy-levels.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "copy-levels": "node scripts/copy-levels.mjs",
+    "predev": "node scripts/copy-levels.mjs",
+    "prebuild": "node scripts/copy-levels.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.2",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}

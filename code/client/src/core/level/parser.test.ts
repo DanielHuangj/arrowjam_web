@@ -1,0 +1,376 @@
+import { describe, expect, it } from "vitest";
+import { parseLevelData } from "./parser.ts";
+import { CellMap, snakeStepArrow } from "../board/cell-map.ts";
+import { simulateCanExit } from "../board/path-check.ts";
+import { GameState } from "../game/game-state.ts";
+import type { ArrowItem, LevelData } from "../types.ts";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { ZoneManager, buildZoneItem } from "../mechanics/zone.ts";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const levelsDir = join(__dirname, "../../../public/levels");
+
+function loadJsonLevel(id: number): LevelData {
+  const raw = readFileSync(join(levelsDir, `level-${id}.json`), "utf-8");
+  return JSON.parse(raw) as LevelData;
+}
+
+function emptyLevel(arrows: ArrowItem[]) {
+  return {
+    id: 0,
+    width: 5,
+    height: 5,
+    name: "test",
+    durationInSec: 60,
+    difficulty: 1,
+    arrows,
+    corners: [],
+    zones: [],
+    bundles: [],
+    pipes: [],
+    curtains: [],
+    keys: [],
+  };
+}
+
+describe("parseLevelData", () => {
+  it("parses level 29 with 120 arrows", () => {
+    const level = parseLevelData(29, loadJsonLevel(29));
+    expect(level.width).toBe(27);
+    expect(level.height).toBe(36);
+    expect(level.arrows.length).toBe(120);
+    expect(level.corners).toEqual([]);
+  });
+
+  it("parses level 25 with corners", () => {
+    const level = parseLevelData(25, loadJsonLevel(25));
+    expect(level.corners.length).toBe(6);
+    expect(level.zones).toEqual([]);
+  });
+
+  it("parses level 26 with kind12 zone", () => {
+    const level = parseLevelData(26, loadJsonLevel(26));
+    expect(level.zones.length).toBe(1);
+    expect(level.arrows.some((a) => a.zoneId === 1)).toBe(true);
+    expect(level.arrows.some((a) => a.zoneId === null)).toBe(true);
+  });
+
+  it("parses level 64", () => {
+    const level = parseLevelData(64, loadJsonLevel(64));
+    expect(level.arrows.length).toBe(87);
+  });
+
+  it("parses level 33 with kind8 bundles", () => {
+    const level = parseLevelData(33, loadJsonLevel(33));
+    expect(level.bundles.length).toBe(2);
+  });
+
+  it("parses level 36 with six kind8 strips", () => {
+    const level = parseLevelData(36, loadJsonLevel(36));
+    expect(level.bundles.length).toBe(6);
+  });
+
+  it("parses level 41 with kind3 pipes", () => {
+    const level = parseLevelData(41, loadJsonLevel(41));
+    expect(level.pipes.length).toBe(3);
+    expect(level.pipes[0]!.passes.length).toBe(2);
+  });
+});
+
+describe("snakeStepArrow", () => {
+  it("moves straight arrow like a snake", () => {
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[3, 0], [3, 1], [3, 2]],
+      direction: 1,
+      colorId: 3,
+    };
+    const stepped = snakeStepArrow(arrow);
+    expect(stepped.occupiedPositions).toEqual([[3, 1], [3, 2], [3, 3]]);
+  });
+});
+
+describe("simulateCanExit", () => {
+  it("allows arrow facing empty path to edge", () => {
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [2, 1]],
+      direction: 2,
+      colorId: 3,
+    };
+    expect(simulateCanExit(arrow, [arrow], [], { width: 5, height: 5 })).toBe(
+      true,
+    );
+  });
+
+  it("blocks when another arrow is ahead", () => {
+    const a: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 3], [2, 2]],
+      direction: 2,
+      colorId: 3,
+    };
+    const b: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 1], [2, 0]],
+      direction: 1,
+      colorId: 6,
+    };
+    expect(simulateCanExit(a, [a, b], [], { width: 5, height: 5 })).toBe(false);
+  });
+});
+
+describe("ZoneManager", () => {
+  const zone = buildZoneItem({
+    instanceId: 1,
+    occupiedPositions: [
+      [2, 2],
+      [3, 2],
+    ],
+    items: [{ kind: 1, instanceId: 2 }],
+  });
+
+  it("hides zone content while overlay occupies zone cells", () => {
+    const zm = new ZoneManager([zone]);
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2]],
+      direction: 2,
+      colorId: 6,
+    };
+    const onZone: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [1, 2]],
+      direction: 3,
+      colorId: 3,
+    };
+    const offZone: ArrowItem = {
+      kind: 1,
+      instanceId: 3,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[0, 0]],
+      direction: 3,
+      colorId: 3,
+    };
+
+    expect(zm.isArrowActive(onZone, [inner, onZone, offZone], [])).toBe(true);
+    expect(zm.isArrowActive(inner, [inner, onZone, offZone], [])).toBe(false);
+    expect(zm.isZoneContentRevealed(1, [inner, onZone, offZone], [])).toBe(
+      false,
+    );
+    expect(zm.isZoneContentRevealed(1, [inner, offZone], [])).toBe(true);
+    expect(zm.isArrowActive(inner, [inner, offZone], [])).toBe(true);
+  });
+
+  it("waits until overlay arrow is removed before revealing zone", () => {
+    const zm = new ZoneManager([zone]);
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2]],
+      direction: 2,
+      colorId: 6,
+    };
+    const onZone: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [1, 2]],
+      direction: 3,
+      colorId: 3,
+    };
+
+    expect(zm.isZoneContentRevealed(1, [inner, onZone], [])).toBe(false);
+    expect(zm.isZoneContentRevealed(1, [inner], [])).toBe(true);
+  });
+
+  it("does not recurse infinitely when multiple zones cross-check reveal", () => {
+    const zone1 = buildZoneItem({
+      instanceId: 1,
+      occupiedPositions: [[2, 2]],
+      items: [{ kind: 1, instanceId: 10 }],
+    });
+    const zone2 = buildZoneItem({
+      instanceId: 2,
+      occupiedPositions: [[4, 4]],
+      items: [{ kind: 1, instanceId: 20 }],
+    });
+    const zm = new ZoneManager([zone1, zone2]);
+    const inner1: ArrowItem = {
+      kind: 1,
+      instanceId: 10,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2]],
+      direction: 2,
+      colorId: 6,
+    };
+    const inner2: ArrowItem = {
+      kind: 1,
+      instanceId: 20,
+      layer: 2,
+      zoneId: 2,
+      occupiedPositions: [[4, 4]],
+      direction: 2,
+      colorId: 6,
+    };
+    expect(() =>
+      zm.isZoneContentRevealed(1, [inner1, inner2], []),
+    ).not.toThrow();
+    expect(zm.isZoneContentRevealed(1, [inner1, inner2], [])).toBe(true);
+    expect(zm.isZoneContentRevealed(2, [inner1, inner2], [])).toBe(true);
+  });
+
+  it("stays revealed when animating arrow passes through zone cells", () => {
+    const zm = new ZoneManager([zone]);
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2]],
+      direction: 2,
+      colorId: 6,
+    };
+    const passing: ArrowItem = {
+      kind: 1,
+      instanceId: 9,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [2, 1]],
+      direction: 1,
+      colorId: 3,
+    };
+
+    expect(zm.isZoneContentRevealed(1, [inner], [])).toBe(true);
+    expect(zm.isZoneContentRevealed(1, [inner, passing], [])).toBe(true);
+    expect(zm.isArrowActive(inner, [inner, passing], [])).toBe(true);
+  });
+});
+
+describe("GameState", () => {
+  it("bump animation returns blocked arrow to origin", () => {
+    const blocked: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 3], [2, 2]],
+      direction: 2,
+      colorId: 3,
+    };
+    const blocker: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 1], [2, 0]],
+      direction: 1,
+      colorId: 6,
+    };
+    const gs = new GameState(emptyLevel([blocked, blocker]));
+    const origin = blocked.occupiedPositions.map((p) => [...p]);
+
+    expect(gs.tryLaunch(1)).toBe(true);
+    expect(gs.animation?.mode).toBe("bump");
+    while (gs.phase === "animating") gs.advanceAnimation();
+
+    expect(gs.phase).toBe("playing");
+    expect(gs.arrows.find((a) => a.instanceId === 1)?.occupiedPositions).toEqual(
+      origin,
+    );
+    expect(gs.mistakeCount).toBe(1);
+  });
+
+  it("reveals zone arrows when overlay on zone cells is cleared", () => {
+    const zone = buildZoneItem({
+      instanceId: 1,
+      occupiedPositions: [[2, 2]],
+      items: [{ kind: 1, instanceId: 2 }],
+    });
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2], [2, 1]],
+      direction: 2,
+      colorId: 6,
+    };
+    const onZone: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [1, 2]],
+      direction: 3,
+      colorId: 3,
+    };
+    const offZone: ArrowItem = {
+      kind: 1,
+      instanceId: 3,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[0, 0], [1, 0]],
+      direction: 3,
+      colorId: 3,
+    };
+    const gs = new GameState({
+      ...emptyLevel([inner, onZone, offZone]),
+      zones: [zone],
+    });
+
+    expect(gs.getActiveArrows().map((a) => a.instanceId).sort()).toEqual([
+      1, 3,
+    ]);
+    expect(gs.getRevealedZoneArrows()).toEqual([]);
+
+    gs.arrows = gs.arrows.filter((a) => a.instanceId !== 1);
+    gs.rebuildCellMap();
+    expect(gs.getActiveArrows().map((a) => a.instanceId).sort()).toEqual([
+      2, 3,
+    ]);
+    expect(gs.getRevealedZoneArrows().map((a) => a.instanceId)).toEqual([2]);
+  });
+
+  it("launches a single launchable arrow", () => {
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[2, 2], [2, 1]],
+      direction: 2,
+      colorId: 3,
+    };
+    const gs = new GameState(emptyLevel([arrow]));
+    expect(gs.tryLaunch(1)).toBe(true);
+    while (gs.phase === "animating") gs.advanceAnimation();
+    expect(gs.phase).toBe("won");
+    expect(gs.arrows.length).toBe(0);
+  });
+});

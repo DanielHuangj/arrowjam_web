@@ -52,4 +52,27 @@ describe("GameState cleared traces", () => {
     expect(traces).toContainEqual([2, 5]);
     expect(gs.arrows.length).toBe(0);
   });
+
+  it("tryAutoLaunch picks a launchable arrow", () => {
+    const gs = new GameState(
+      minimalLevel([
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          zoneId: null,
+          occupiedPositions: [
+            [0, 5],
+            [1, 5],
+            [2, 5],
+          ],
+        },
+      ]),
+    );
+
+    expect(gs.tryAutoLaunch()).toBe(true);
+    expect(gs.phase).toBe("animating");
+  });
 });

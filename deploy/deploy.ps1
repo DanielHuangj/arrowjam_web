@@ -50,7 +50,14 @@ if (-not $SkipHttps -and $Domain -and $Domain -ne "your-domain.com") {
     Write-Host "== 4/5 Skip HTTPS (no domain or -SkipHttps) =="
 }
 
-$BaseUrl = if ($Domain -and $Domain -ne "your-domain.com") { "https://$Domain" } else { "http://$($Host_.Split('@')[-1])" }
+$SiteUrl = $env:SITE_URL
+$BaseUrl = if ($SiteUrl) {
+    $SiteUrl.TrimEnd("/")
+} elseif ($Domain -and $Domain -ne "your-domain.com") {
+    "https://$Domain"
+} else {
+    "http://$($Host_.Split('@')[-1])"
+}
 Write-Host "== 5/5 Remote smoke test $BaseUrl =="
 & (Join-Path $PSScriptRoot "smoke-test.ps1") -BaseUrl $BaseUrl
 

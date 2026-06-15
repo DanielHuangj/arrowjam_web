@@ -116,6 +116,31 @@ body {
   background: #565f89;
 }
 
+.hud-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-auto-clear {
+  background: #3d3f5c;
+  border: 1px solid #7aa2f7;
+  color: #7aa2f7;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-auto-clear:hover:not(:disabled) {
+  background: #4a4d6e;
+}
+
+.btn-auto-clear:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .btn-add-time {
   background: #2d4a3e;
   border: 1px solid #9ece6a;
@@ -124,7 +149,6 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  margin-left: auto;
 }
 
 .btn-add-time:hover {

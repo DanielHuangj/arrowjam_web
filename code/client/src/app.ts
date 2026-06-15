@@ -71,6 +71,10 @@ export class App {
         this.state?.addTime(100);
       });
 
+      shell.hud.querySelector(".btn-auto-clear")!.addEventListener("click", () => {
+        this.tryAutoClear();
+      });
+
       this.input = new InputHandler(
         this.canvas,
         () => this.state,
@@ -154,6 +158,13 @@ export class App {
       difficulty: this.state.level.difficulty,
     });
 
+    const autoBtn = this.hudEl.querySelector(".btn-auto-clear") as HTMLButtonElement | null;
+    if (autoBtn) {
+      const canAuto =
+        this.state.phase === "playing" && this.state.getLaunchableIds().size > 0;
+      autoBtn.disabled = !canAuto;
+    }
+
     const launchable = this.state.getLaunchableIds();
     const hidden = this.state.getPipeHiddenArrowIds();
     const visible = (arrows: typeof this.state.arrows) =>
@@ -179,6 +190,11 @@ export class App {
         occupiedCells: this.state.getOccupiedArrowCellKeys(),
       },
     );
+  }
+
+  private tryAutoClear(): void {
+    if (!this.state) return;
+    this.state.tryAutoLaunch();
   }
 
   private checkEndState(): void {

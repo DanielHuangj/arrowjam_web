@@ -792,6 +792,17 @@ export class GameState {
     return ids;
   }
 
+  /** 自动消除：选取一条当前可立即出界的箭并发射（与手动点击等效） */
+  tryAutoLaunch(): boolean {
+    this.recoverAnimationState();
+    if (this.phase !== "playing") return false;
+
+    const launchable = [...this.getLaunchableIds()];
+    if (launchable.length === 0) return false;
+
+    return this.tryLaunch(launchable[0]!);
+  }
+
   findOperableArrowAtCell(pos: Vec2): ArrowItem | null {
     if (this.curtainManager.isCellCovered(pos)) return null;
     const active = this.getActiveArrows();

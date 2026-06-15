@@ -54,7 +54,10 @@ export function renderGameShell(root: HTMLElement): {
           <span class="timer"></span>
           <span class="arrow-count"></span>
         </div>
-        <button class="btn-add-time" type="button" title="测试用：增加 100 秒">+100s</button>
+        <div class="hud-actions">
+          <button class="btn-auto-clear" type="button" title="自动消除一条当前无阻挡、可立即出界的箭">自动消除</button>
+          <button class="btn-add-time" type="button" title="测试用：增加 100 秒">+100s</button>
+        </div>
       </header>
       <div class="board-wrap">
         <canvas id="board"></canvas>

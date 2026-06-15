@@ -8,17 +8,16 @@ export default defineConfig({
   resolve: {
     alias: {
       "@arrowjaw/shared": path.resolve(__dirname, "../shared/src/index.ts"),
+      "@arrowjaw/client": path.resolve(__dirname, "../client/src"),
     },
   },
   server: {
-    host: "127.0.0.1",
-    port: 5173,
+    port: 5174,
     strictPort: true,
     open: false,
   },
   preview: {
-    host: "127.0.0.1",
-    port: 5173,
+    port: 5174,
     strictPort: true,
   },
   test: {

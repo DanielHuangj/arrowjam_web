@@ -287,8 +287,13 @@ export class BoardRenderer {
 
   canvasToCell(board: BoardSize, clientX: number, clientY: number): [number, number] | null {
     const rect = this.canvas.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
+    const { width: boardW, height: boardH } = boardPixelSize(board);
+    const styleW = parseFloat(this.canvas.style.width) || boardW;
+    const styleH = parseFloat(this.canvas.style.height) || boardH;
+    const scaleX = styleW > 0 ? rect.width / styleW : 1;
+    const scaleY = styleH > 0 ? rect.height / styleH : 1;
+    const x = (clientX - rect.left) / scaleX;
+    const y = (clientY - rect.top) / scaleY;
     const gx = Math.floor(x / STEP);
     const gy = Math.floor(y / STEP);
     if (gx < 0 || gy < 0 || gx >= board.width || gy >= board.height) return null;

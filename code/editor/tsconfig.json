@@ -16,9 +16,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@arrowjaw/shared": ["../shared/src/index.ts"],
-      "@arrowjaw/shared/*": ["../shared/src/*"]
+      "@arrowjaw/client/*": ["../client/src/*"]
     }
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  "include": ["src"]
 }

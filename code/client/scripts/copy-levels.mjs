@@ -1,4 +1,11 @@
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +15,20 @@ const srcDir = join(root, "..", "..", "docs", "crackdata", "关卡提取");
 const destDir = join(root, "public", "levels");
 
 mkdirSync(destDir, { recursive: true });
+
+if (!existsSync(srcDir)) {
+  const manifest = join(destDir, "manifest.json");
+  if (existsSync(manifest)) {
+    console.log(
+      "crackdata 源目录不存在，跳过拷贝，使用已有 public/levels/",
+    );
+    process.exit(0);
+  }
+  console.error(
+    "缺少 docs/crackdata/关卡提取/ 且 public/levels/ 为空，无法构建关卡数据",
+  );
+  process.exit(1);
+}
 
 const levels = [];
 const pattern = /^0605-arrowJam-main-level-(\d+)-seed-1\.json$/;

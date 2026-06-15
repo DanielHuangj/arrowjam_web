@@ -6,9 +6,10 @@ import type {
   CurtainItem,
   KeyArrowItem,
   PipeItem,
+  Vec2,
   ZoneItem,
 } from "../core/types.ts";
-import { DIR_NAME } from "../core/types.ts";
+import { vecKey } from "../core/types.ts";
 import {
   BUNDLE_COLORS,
   BUNDLE_LINE_W,
@@ -16,26 +17,29 @@ import {
   BUNDLE_WAVE_LEN,
   CELL,
   GAP,
-  LINE_W,
-  R_BODY,
-  R_HEAD,
   STEP,
   THEME,
+  TRACE_DOT_COLOR,
+  TRACE_DOT_RADIUS,
   ZONE_FILL,
   ZONE_STROKE,
-  colorForId,
 } from "./colors.ts";
+import { drawArrowEditor, drawArrowGame } from "./arrow-drawer.ts";
 import { drawCornerInCell } from "./corner-drawer.ts";
 import { drawCurtainInBoard } from "./curtain-drawer.ts";
 import { drawKeyInCell } from "./key-drawer.ts";
 import { drawPipeInBoard } from "./pipe-drawer.ts";
 
-const DIR_TRI: Record<string, [number, number][]> = {
-  up: [[0, -4.5], [4, 2], [-4, 2]],
-  down: [[0, 4.5], [4, -2], [-4, -2]],
-  left: [[-4.5, 0], [2, 4], [2, -4]],
-  right: [[4.5, 0], [-2, 4], [-2, -4]],
-};
+export type BoardRenderStyle = "editor" | "game";
+
+export interface BoardDrawOptions {
+  style?: BoardRenderStyle;
+  clearedTraces?: Vec2[];
+  /** 不绘制痕迹的格（仍有箭占用） */
+  occupiedCells?: Set<string>;
+}
+
+const DEFAULT_DRAW_OPTIONS: BoardDrawOptions = { style: "editor" };
 
 export function boardPixelSize(board: BoardSize): { width: number; height: number } {
   return {
@@ -52,7 +56,10 @@ export class BoardRenderer {
   private ctx: CanvasRenderingContext2D;
   private dpr = 1;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private defaultStyle: BoardRenderStyle = "editor",
+  ) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D not supported");
     this.ctx = ctx;
@@ -92,33 +99,41 @@ export class BoardRenderer {
     curtains: (CurtainItem & {
       bounds: { minX: number; minY: number; maxX: number; maxY: number };
     })[] = [],
+    options: BoardDrawOptions = DEFAULT_DRAW_OPTIONS,
   ): void {
+    const style = options.style ?? this.defaultStyle;
+    const isGame = style === "game";
+
     this.resize(board);
     const { width, height } = boardPixelSize(board);
-    this.ctx.fillStyle = THEME.panel;
+    this.ctx.fillStyle = isGame ? THEME.gamePanel : THEME.panel;
     this.ctx.fillRect(0, 0, width, height);
 
-    for (let y = 0; y < board.height; y++) {
-      for (let x = 0; x < board.width; x++) {
-        const gx = x * STEP;
-        const gy = y * STEP;
-        this.ctx.fillStyle = THEME.gridCell;
-        this.ctx.strokeStyle = THEME.gridLine;
-        this.ctx.lineWidth = 1;
-        roundRect(this.ctx, gx, gy, CELL, CELL, 4);
-        this.ctx.fill();
-        this.ctx.stroke();
+    if (!isGame) {
+      for (let y = 0; y < board.height; y++) {
+        for (let x = 0; x < board.width; x++) {
+          const gx = x * STEP;
+          const gy = y * STEP;
+          this.ctx.fillStyle = THEME.gridCell;
+          this.ctx.strokeStyle = THEME.gridLine;
+          this.ctx.lineWidth = 1;
+          roundRect(this.ctx, gx, gy, CELL, CELL, 4);
+          this.ctx.fill();
+          this.ctx.stroke();
+        }
       }
     }
 
-    // layer 1: 子区域框（始终显示，最底层）
+    if (isGame && options.clearedTraces?.length) {
+      this.drawClearedTraces(options.clearedTraces, options.occupiedCells);
+    }
+
     for (const zone of zones) {
       this.drawZone(zone);
     }
 
-    // layer 2: 已揭示的子区域（可见箭头 → 管道 → 角块/捆绑）
     for (const arrow of zoneArrows) {
-      this.drawArrow(arrow, launchableIds.has(arrow.instanceId));
+      this.drawArrow(arrow, launchableIds.has(arrow.instanceId), isGame);
     }
     for (const pipe of zonePipes) {
       this.drawPipe(pipe);
@@ -130,9 +145,8 @@ export class BoardRenderer {
       this.drawBundle(strip);
     }
 
-    // layer 2: 顶层（可见箭头 → 管道遮住管内箭头 → 角块/捆绑）
     for (const arrow of topArrows) {
-      this.drawArrow(arrow, launchableIds.has(arrow.instanceId));
+      this.drawArrow(arrow, launchableIds.has(arrow.instanceId), isGame);
     }
     for (const pipe of topPipes) {
       this.drawPipe(pipe);
@@ -144,15 +158,26 @@ export class BoardRenderer {
       this.drawBundle(strip);
     }
 
-    // layer 3: 钥匙标记（叠在箭身之上）
     for (const key of keys) {
       const [x, y] = key.occupiedPositions[0] ?? [0, 0];
       drawKeyInCell(this.ctx, x, y, STEP);
     }
 
-    // layer 8: 幕布遮罩（最上层）
     for (const curtain of curtains) {
       drawCurtainInBoard(this.ctx, curtain, STEP);
+    }
+  }
+
+  private drawClearedTraces(traces: Vec2[], occupied?: Set<string>): void {
+    const ctx = this.ctx;
+    ctx.fillStyle = TRACE_DOT_COLOR;
+    for (const [x, y] of traces) {
+      const key = vecKey([x, y]);
+      if (occupied?.has(key)) continue;
+      const [cx, cy] = cellCenter(x, y);
+      ctx.beginPath();
+      ctx.arc(cx, cy, TRACE_DOT_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -177,12 +202,10 @@ export class BoardRenderer {
     drawCornerInCell(this.ctx, x, y, corner, STEP);
   }
 
-  /** kind 3: Q 版粗管道 */
   private drawPipe(pipe: PipeItem): void {
     drawPipeInBoard(this.ctx, pipe, STEP);
   }
 
-  /** layer 3: 彩色波纹捆绑线，叠在箭身之上 */
   private drawBundle(strip: BundleItem): void {
     const pos = strip.occupiedPositions;
     if (pos.length < 2) return;
@@ -194,13 +217,11 @@ export class BoardRenderer {
     this.ctx.lineCap = "round";
     this.ctx.lineJoin = "round";
 
-    // 底层白色描边，增强对比
     this.ctx.strokeStyle = "rgba(255,255,255,0.9)";
     this.ctx.lineWidth = BUNDLE_LINE_W + 3;
     this.drawWavyPath(points, 0);
     this.ctx.stroke();
 
-    // 彩色波纹主线
     this.ctx.strokeStyle = color;
     this.ctx.lineWidth = BUNDLE_LINE_W;
     this.drawWavyPath(points, Math.PI / 2);
@@ -209,7 +230,6 @@ export class BoardRenderer {
     this.ctx.restore();
   }
 
-  /** 沿折线绘制正弦波纹 */
   private drawWavyPath(points: [number, number][], phase: number): void {
     const samples = samplePolyline(points, 4);
     if (samples.length < 2) return;
@@ -229,60 +249,12 @@ export class BoardRenderer {
     }
   }
 
-  private drawArrow(arrow: ArrowItem, launchable: boolean): void {
-    const color = colorForId(arrow.colorId);
-    const dirName = DIR_NAME[arrow.direction];
-    const pos = arrow.occupiedPositions;
-
-    if (pos.length >= 2) {
-      this.ctx.strokeStyle = color;
-      this.ctx.lineWidth = LINE_W;
-      this.ctx.lineCap = "round";
-      this.ctx.lineJoin = "round";
-      this.ctx.globalAlpha = launchable ? 1 : 0.75;
-      this.ctx.beginPath();
-      const [x0, y0] = cellCenter(pos[0]![0], pos[0]![1]);
-      this.ctx.moveTo(x0, y0);
-      for (let i = 1; i < pos.length; i++) {
-        const [cx, cy] = cellCenter(pos[i]![0], pos[i]![1]);
-        this.ctx.lineTo(cx, cy);
-      }
-      this.ctx.stroke();
-      this.ctx.globalAlpha = 1;
+  private drawArrow(arrow: ArrowItem, launchable: boolean, gameStyle: boolean): void {
+    if (gameStyle) {
+      drawArrowGame(this.ctx, arrow, launchable);
+    } else {
+      drawArrowEditor(this.ctx, arrow, launchable);
     }
-
-    for (let i = 0; i < pos.length; i++) {
-      const [x, y] = pos[i]!;
-      const [cx, cy] = cellCenter(x, y);
-      const isHead = i === pos.length - 1;
-      if (isHead) {
-        this.ctx.fillStyle = color;
-        this.ctx.strokeStyle = "#fff";
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.arc(cx, cy, R_HEAD, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.stroke();
-        this.drawHeadTriangle(cx, cy, dirName);
-      } else {
-        this.ctx.fillStyle = color;
-        this.ctx.beginPath();
-        this.ctx.arc(cx, cy, R_BODY, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
-  }
-
-  private drawHeadTriangle(cx: number, cy: number, dirName: string): void {
-    const pts = DIR_TRI[dirName];
-    if (!pts) return;
-    this.ctx.fillStyle = "rgba(255,255,255,0.95)";
-    this.ctx.beginPath();
-    this.ctx.moveTo(cx + pts[0]![0], cy + pts[0]![1]);
-    this.ctx.lineTo(cx + pts[1]![0], cy + pts[1]![1]);
-    this.ctx.lineTo(cx + pts[2]![0], cy + pts[2]![1]);
-    this.ctx.closePath();
-    this.ctx.fill();
   }
 
   canvasToCell(board: BoardSize, clientX: number, clientY: number): [number, number] | null {

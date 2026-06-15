@@ -70,6 +70,7 @@ export class GameState {
   curtainManager: CurtainManager;
   keys: KeyArrowItem[];
   private keyCells: Set<string>;
+  private clearedTraceCells = new Set<string>();
   mistakeCount = 0;
   animation: LaunchAnimation | null = null;
 
@@ -356,6 +357,13 @@ export class GameState {
     const removedArrows = this.arrows.filter((a) => removeIds.has(a.instanceId));
 
     this.applyKeyRewards(removedArrows, anim);
+    for (const id of anim.memberIds) {
+      const orig = anim.originalPositionsById[id];
+      if (!orig) continue;
+      for (const pos of orig) {
+        this.clearedTraceCells.add(vecKey(pos));
+      }
+    }
     this.arrows = this.arrows.filter((a) => !removeIds.has(a.instanceId));
     if (anim.stripIds.length > 0) {
       this.bundles = this.bundles.filter(
@@ -830,5 +838,22 @@ export class GameState {
 
   getActiveCurtainsForRender() {
     return this.curtainManager.getActiveCurtains();
+  }
+
+  getClearedTraceCells(): Vec2[] {
+    return [...this.clearedTraceCells].map((k) => {
+      const [x, y] = k.split(",").map(Number);
+      return [x!, y!] as Vec2;
+    });
+  }
+
+  getOccupiedArrowCellKeys(): Set<string> {
+    const keys = new Set<string>();
+    for (const arrow of this.arrows) {
+      for (const pos of arrow.occupiedPositions) {
+        keys.add(vecKey(pos));
+      }
+    }
+    return keys;
   }
 }

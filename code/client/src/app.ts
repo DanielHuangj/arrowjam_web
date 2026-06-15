@@ -61,7 +61,7 @@ export class App {
       this.canvas = shell.canvas;
       this.renderer = new (
         await import("./render/board-renderer.ts")
-      ).BoardRenderer(this.canvas);
+      ).BoardRenderer(this.canvas, "game");
 
       shell.hud.querySelector(".btn-back")!.addEventListener("click", () => {
         this.showLevelSelect();
@@ -173,6 +173,11 @@ export class App {
       this.state.getTopLevelPipes(),
       this.state.getVisibleKeys(),
       this.state.getActiveCurtainsForRender(),
+      {
+        style: "game",
+        clearedTraces: this.state.getClearedTraceCells(),
+        occupiedCells: this.state.getOccupiedArrowCellKeys(),
+      },
     );
   }
 

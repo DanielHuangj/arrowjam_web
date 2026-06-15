@@ -13,6 +13,7 @@ export const FALLBACK_COLOR = "#adb5bd";
 export const THEME = {
   bg: "#1a1b26",
   panel: "#24283b",
+  gamePanel: "#2a3148",
   gridCell: "#16161e",
   gridLine: "#2a2f45",
   text: "#c0caf5",
@@ -27,6 +28,7 @@ export const CELL = 34;
 export const GAP = 3;
 export const STEP = CELL + GAP;
 export const LINE_W = 6;
+export const GAME_LINE_W = 7;
 export const R_BODY = 5.5;
 export const R_HEAD = 7;
 export const R_CORNER = 6;
@@ -42,6 +44,11 @@ export const CURTAIN_STROKE = "rgba(210, 214, 220, 0.95)";
 export const CURTAIN_HEALTH_COLOR = "#ffd43b";
 export const KEY_COLOR = "#ffd43b";
 export const KEY_STROKE = "#f08c00";
+export const SHADOW_DX = 2;
+export const SHADOW_DY = 2;
+export const SHADOW_COLOR = "rgba(0, 0, 0, 0.28)";
+export const TRACE_DOT_RADIUS = 3;
+export const TRACE_DOT_COLOR = "rgba(255, 255, 255, 0.18)";
 
 export function colorForId(colorId: number): string {
   return COLORS[colorId] ?? FALLBACK_COLOR;

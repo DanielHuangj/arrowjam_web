@@ -135,6 +135,7 @@ export function drawArrowGame(
   ctx: CanvasRenderingContext2D,
   arrow: ArrowItem,
   _launchable: boolean,
+  vanishProgress = 0,
 ): void {
   const color = colorForId(arrow.colorId);
   const dirName = DIR_NAME[arrow.direction];
@@ -144,9 +145,23 @@ export function drawArrowGame(
   const points = pos.map(([x, y]) => cellCenter(x, y));
   const bodyPoints = shortenLineAtHead(points, GAME_HEAD_BASE_INSET);
 
+  const fade = vanishProgress > 0 ? Math.max(0, 1 - vanishProgress * 1.15) : 1;
+  const shrink = vanishProgress > 0 ? 1 - vanishProgress * 0.35 : 1;
+  const cx =
+    points.reduce((sum, [x]) => sum + x, 0) / points.length;
+  const cy =
+    points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  ctx.globalAlpha = fade;
+
+  if (shrink < 1) {
+    ctx.translate(cx, cy);
+    ctx.scale(shrink, shrink);
+    ctx.translate(-cx, -cy);
+  }
 
   ctx.translate(SHADOW_DX, SHADOW_DY);
   ctx.strokeStyle = SHADOW_COLOR;
@@ -163,6 +178,25 @@ export function drawArrowGame(
   drawWedgeHead(ctx, hx, hy, dirName, GAME_DIR_TRI);
 
   ctx.restore();
+
+  if (vanishProgress > 0) {
+    for (const [x, y] of pos) {
+      const [px, py] = cellCenter(x, y);
+      const sparkR = 2 + vanishProgress * 10;
+      const sparkA = Math.max(0, (1 - vanishProgress) * 0.8);
+      ctx.save();
+      ctx.globalAlpha = sparkA;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(px, py, sparkR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, sparkR * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 }
 
 export function arrowBodyCellCount(arrow: ArrowItem): number {

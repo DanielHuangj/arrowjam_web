@@ -27,6 +27,9 @@ export class App {
   private lastTime = 0;
   private animAccum = 0;
   private modalShown = false;
+  private targetVanishMode = false;
+  private targetVanishHoverInvalid = false;
+  private boardWrapEl: HTMLElement | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -59,6 +62,8 @@ export class App {
       this.hudEl = shell.hud;
       this.overlayEl = shell.overlay;
       this.canvas = shell.canvas;
+      this.boardWrapEl = shell.boardWrap;
+      this.targetVanishMode = false;
       this.renderer = new (
         await import("./render/board-renderer.ts")
       ).BoardRenderer(this.canvas, "game");
@@ -75,10 +80,22 @@ export class App {
         this.tryAutoClear();
       });
 
+      shell.hud.querySelector(".btn-random-vanish")!.addEventListener("click", () => {
+        this.tryRandomVanish();
+      });
+
+      shell.hud.querySelector(".btn-target-vanish")!.addEventListener("click", () => {
+        this.toggleTargetVanishMode();
+      });
+
       this.input = new InputHandler(
         this.canvas,
         () => this.state,
         this.renderer,
+        () => this.targetVanishMode,
+        (invalid) => {
+          this.targetVanishHoverInvalid = invalid;
+        },
       );
 
       // 调试：卡死时在控制台执行 __arrowJawDebug()
@@ -151,6 +168,11 @@ export class App {
   private renderFrame(): void {
     if (!this.state || !this.renderer || !this.hudEl) return;
 
+    if (this.state.phase !== "playing") {
+      this.targetVanishMode = false;
+      this.targetVanishHoverInvalid = false;
+    }
+
     updateHud(this.hudEl, {
       name: this.state.level.name,
       remainingSeconds: this.state.remainingSeconds,
@@ -165,10 +187,41 @@ export class App {
       autoBtn.disabled = !canAuto;
     }
 
+    const vanishBtn = this.hudEl.querySelector(".btn-random-vanish") as HTMLButtonElement | null;
+    if (vanishBtn) {
+      const canVanish =
+        this.state.phase === "playing" &&
+        this.state.getRandomVanishCandidates().length > 0;
+      vanishBtn.disabled = !canVanish;
+    }
+
+    const targetBtn = this.hudEl.querySelector(".btn-target-vanish") as HTMLButtonElement | null;
+    if (targetBtn) {
+      const canTarget =
+        this.state.phase === "playing" &&
+        this.state.getTargetVanishCandidates().length > 0;
+      targetBtn.disabled = !canTarget && !this.targetVanishMode;
+      targetBtn.classList.toggle("active", this.targetVanishMode);
+    }
+
+    this.boardWrapEl?.classList.toggle("target-vanish-mode", this.targetVanishMode);
+    this.boardWrapEl?.classList.toggle(
+      "target-vanish-invalid",
+      this.targetVanishMode && this.targetVanishHoverInvalid,
+    );
+
     const launchable = this.state.getLaunchableIds();
     const hidden = this.state.getPipeHiddenArrowIds();
     const visible = (arrows: typeof this.state.arrows) =>
       arrows.filter((a) => !hidden.has(a.instanceId));
+
+    const vanishProgressById = new Map<number, number>();
+    if (this.state.animation?.mode === "vanish") {
+      const progress = this.state.getVanishAnimProgress();
+      for (const id of this.state.animation.memberIds) {
+        vanishProgressById.set(id, progress);
+      }
+    }
 
     this.renderer.drawBoard(
       this.state.level,
@@ -188,6 +241,7 @@ export class App {
         style: "game",
         clearedTraces: this.state.getClearedTraceCells(),
         occupiedCells: this.state.getOccupiedArrowCellKeys(),
+        vanishProgressById,
       },
     );
   }
@@ -195,6 +249,26 @@ export class App {
   private tryAutoClear(): void {
     if (!this.state) return;
     this.state.tryAutoLaunch();
+  }
+
+  private tryRandomVanish(): void {
+    if (!this.state) return;
+    this.targetVanishMode = false;
+    this.state.tryRandomVanish();
+  }
+
+  private toggleTargetVanishMode(): void {
+    if (!this.state || this.state.phase !== "playing") return;
+    if (
+      !this.targetVanishMode &&
+      this.state.getTargetVanishCandidates().length === 0
+    ) {
+      return;
+    }
+    this.targetVanishMode = !this.targetVanishMode;
+    if (!this.targetVanishMode) {
+      this.targetVanishHoverInvalid = false;
+    }
   }
 
   private checkEndState(): void {
@@ -269,6 +343,9 @@ export class App {
     this.hudEl = null;
     this.overlayEl = null;
     this.canvas = null;
+    this.boardWrapEl = null;
+    this.targetVanishMode = false;
+    this.targetVanishHoverInvalid = false;
     this.modalShown = false;
   }
 }

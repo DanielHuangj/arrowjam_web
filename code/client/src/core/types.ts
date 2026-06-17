@@ -63,7 +63,7 @@ export type GamePhase =
   | "won"
   | "lost";
 
-export type LaunchMode = "exit" | "bump";
+export type LaunchMode = "exit" | "bump" | "vanish";
 
 export interface PipeTransitState {
   pipeId: number;

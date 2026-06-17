@@ -164,6 +164,67 @@ body {
   cursor: not-allowed;
 }
 
+.btn-random-vanish {
+  background: #4a3548;
+  border: 1px solid #e599f7;
+  color: #e599f7;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-random-vanish:hover:not(:disabled) {
+  background: #5a4258;
+}
+
+.btn-random-vanish:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-target-vanish {
+  background: #3d3548;
+  border: 1px solid #f7768e;
+  color: #f7768e;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-target-vanish:hover:not(:disabled) {
+  background: #4d4258;
+}
+
+.btn-target-vanish.active {
+  background: #5a3548;
+  border-color: #ff9eaf;
+  color: #ff9eaf;
+  box-shadow: 0 0 0 2px rgba(247, 118, 142, 0.35);
+}
+
+.btn-target-vanish:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.board-wrap.target-vanish-mode {
+  cursor: crosshair;
+}
+
+.board-wrap.target-vanish-mode #board {
+  cursor: crosshair;
+}
+
+.board-wrap.target-vanish-mode.target-vanish-invalid,
+.board-wrap.target-vanish-mode.target-vanish-invalid #board {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath stroke='%23f7768e' stroke-width='2.5' stroke-linecap='round' d='M12 3v18M3 12h18'/%3E%3C/svg%3E")
+    12 12,
+    crosshair;
+}
+
 .btn-add-time {
   background: #2d4a3e;
   border: 1px solid #9ece6a;

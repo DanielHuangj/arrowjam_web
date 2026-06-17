@@ -49,6 +49,9 @@ if (-not $SkipBuild) {
             npm install
         }
         npm run build
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm run build 失败 (exit $LASTEXITCODE)"
+        }
     } finally {
         Pop-Location
     }

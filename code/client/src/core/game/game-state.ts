@@ -17,6 +17,7 @@ import { simulateCanExit } from "../board/path-check.ts";
 import { BundleManager } from "../mechanics/bundle.ts";
 import { CurtainManager } from "../mechanics/curtain.ts";
 import {
+  arrowHasKey,
   buildKeyCellSet,
   countKeysOnPositions,
   isKeyCellVisible,
@@ -29,6 +30,18 @@ import {
 } from "../mechanics/pipe.ts";
 import { getCornerAt } from "../mechanics/corner.ts";
 import { ZoneManager } from "../mechanics/zone.ts";
+
+export const VANISH_ANIM_STEPS = 12;
+export const RANDOM_VANISH_COUNT = 3;
+
+function shuffle<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr;
+}
 
 function clonePositions(positions: Vec2[]): Vec2[] {
   return positions.map(([x, y]) => [x, y]);
@@ -326,6 +339,7 @@ export class GameState {
   }
 
   private maxAnimationSteps(): number {
+    if (this.animation?.mode === "vanish") return VANISH_ANIM_STEPS;
     const len = Math.max(
       ...this.arrows.map((a) => a.occupiedPositions.length),
       1,
@@ -413,11 +427,15 @@ export class GameState {
 
     this.animation.stepCount += 1;
     if (this.animation.stepCount > this.maxAnimationSteps()) {
-      if (this.animation.mode === "exit") {
+      if (this.animation.mode === "exit" || this.animation.mode === "vanish") {
         this.completeLaunchAnimation();
       } else {
         this.finishAnimationOrPlaying();
       }
+      return true;
+    }
+
+    if (this.animation.mode === "vanish") {
       return true;
     }
 
@@ -801,6 +819,121 @@ export class GameState {
     if (launchable.length === 0) return false;
 
     return this.tryLaunch(launchable[0]!);
+  }
+
+  /** 可被随机/指定消除的箭头：当前可见、非捆绑、无钥匙 */
+  getRandomVanishCandidates(): ArrowItem[] {
+    return this.getActiveArrows().filter((a) => this.canVanishArrow(a));
+  }
+
+  /** 可被指定消除的箭头 */
+  getTargetVanishCandidates(): ArrowItem[] {
+    return this.getRandomVanishCandidates();
+  }
+
+  canTargetVanish(arrow: ArrowItem): boolean {
+    return this.canVanishArrow(arrow);
+  }
+
+  private canVanishArrow(arrow: ArrowItem): boolean {
+    if (this.curtainManager.isArrowHidden(arrow)) return false;
+    if (!this.zoneManager.isArrowActive(arrow, this.arrows, this.corners)) {
+      return false;
+    }
+    if (this.bundleManager.getGroupForArrow(arrow.instanceId)) return false;
+    if (arrowHasKey(arrow, this.keyCells)) return false;
+    return true;
+  }
+
+  /** 指定消除模式下悬停格：可消除 / 不可消除物件 / 空格 */
+  getTargetVanishHoverAtCell(pos: Vec2): "valid" | "invalid" | "none" {
+    if (this.curtainManager.isCellCovered(pos)) return "invalid";
+    if (this.findTargetVanishArrowAtCell(pos)) return "valid";
+    if (this.findOperableArrowAtCell(pos)) return "invalid";
+    if (this.hasVisibleNonArrowItemAt(pos)) return "invalid";
+    return "none";
+  }
+
+  private hasVisibleNonArrowItemAt(pos: Vec2): boolean {
+    const match = ([x, y]: Vec2) => x === pos[0] && y === pos[1];
+    for (const corner of this.getActiveCorners()) {
+      if (corner.occupiedPositions.some(match)) return true;
+    }
+    for (const bundle of [
+      ...this.getDrawableTopLevelBundles(),
+      ...this.getDrawableRevealedZoneBundles(),
+    ]) {
+      if (bundle.occupiedPositions.some(match)) return true;
+    }
+    for (const pipe of this.getActivePipes()) {
+      if (pipe.occupiedPositions.some(match)) return true;
+    }
+    for (const key of this.getVisibleKeys()) {
+      const kpos = key.occupiedPositions[0];
+      if (kpos && match(kpos)) return true;
+    }
+    return false;
+  }
+
+  private startVanishAnimation(memberIds: number[]): boolean {
+    if (memberIds.length === 0) return false;
+    this.phase = "animating";
+    this.animation = {
+      instanceId: memberIds[0]!,
+      memberIds,
+      stripIds: [],
+      mode: "vanish",
+      originalPositionsById: snapshotPositions(this.arrows, memberIds),
+      originalDirectionById: snapshotDirections(this.arrows, memberIds),
+      originalStripPositionsById: {},
+      bumpHistoryById: Object.fromEntries(memberIds.map((id) => [id, []])),
+      stripBumpHistoryById: {},
+      reversing: false,
+      currentDirectionById: snapshotDirections(this.arrows, memberIds),
+      stepCount: 0,
+      pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
+      pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
+    };
+    return true;
+  }
+
+  getVanishAnimProgress(): number {
+    if (this.animation?.mode !== "vanish") return 0;
+    return Math.min(1, this.animation.stepCount / VANISH_ANIM_STEPS);
+  }
+
+  /** 随机消除最多 3 条可见、非捆绑箭（无视阻挡） */
+  tryRandomVanish(count = RANDOM_VANISH_COUNT): boolean {
+    this.recoverAnimationState();
+    if (this.phase !== "playing") return false;
+
+    const candidates = this.getRandomVanishCandidates();
+    if (candidates.length === 0) return false;
+
+    const picked = shuffle(candidates).slice(0, Math.min(count, candidates.length));
+    return this.startVanishAnimation(picked.map((a) => a.instanceId));
+  }
+
+  findTargetVanishArrowAtCell(pos: Vec2): ArrowItem | null {
+    if (this.curtainManager.isCellCovered(pos)) return null;
+    const active = this.getActiveArrows();
+    for (let i = active.length - 1; i >= 0; i--) {
+      const arrow = active[i]!;
+      if (!this.canTargetVanish(arrow)) continue;
+      for (const p of arrow.occupiedPositions) {
+        if (p[0] === pos[0] && p[1] === pos[1]) return arrow;
+      }
+    }
+    return null;
+  }
+
+  /** 指定消除：点击可见、无捆绑/钥匙的箭 */
+  tryTargetVanishAtCell(pos: Vec2): boolean {
+    this.recoverAnimationState();
+    if (this.phase !== "playing") return false;
+    const arrow = this.findTargetVanishArrowAtCell(pos);
+    if (!arrow) return false;
+    return this.startVanishAnimation([arrow.instanceId]);
   }
 
   findOperableArrowAtCell(pos: Vec2): ArrowItem | null {

@@ -56,7 +56,7 @@ export function attachLevelThumbnails(container: HTMLElement): () => void {
     { rootMargin: "120px" },
   );
 
-  for (const canvas of canvases) {
+  for (const canvas of Array.from(canvases)) {
     observer.observe(canvas);
   }
 

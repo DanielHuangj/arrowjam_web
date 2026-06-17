@@ -19,7 +19,7 @@ export function renderLevelSelect(
     </div>
   `;
 
-  const grid = root.querySelector(".level-grid")!;
+  const grid = root.querySelector(".level-grid")! as HTMLElement;
   for (const lv of levels) {
     const btn = document.createElement("button");
     btn.className = "level-btn";
@@ -59,6 +59,8 @@ export function renderGameShell(root: HTMLElement): {
         </div>
         <div class="hud-actions">
           <button class="btn-auto-clear" type="button" title="自动消除一条当前无阻挡、可立即出界的箭">自动消除</button>
+          <button class="btn-random-vanish" type="button" title="随机消除最多 3 条当前可见、无捆绑/钥匙的箭">随机消除</button>
+          <button class="btn-target-vanish" type="button" title="点选消除：点击一条可见、无捆绑/钥匙的箭">指定消除</button>
           <button class="btn-add-time" type="button" title="测试用：增加 100 秒">+100s</button>
         </div>
       </header>

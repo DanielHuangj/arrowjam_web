@@ -37,6 +37,8 @@ export interface BoardDrawOptions {
   clearedTraces?: Vec2[];
   /** 不绘制痕迹的格（仍有箭占用） */
   occupiedCells?: Set<string>;
+  /** 随机消除湮灭进度 0~1，按 instanceId */
+  vanishProgressById?: ReadonlyMap<number, number>;
 }
 
 const DEFAULT_DRAW_OPTIONS: BoardDrawOptions = { style: "editor" };
@@ -133,7 +135,12 @@ export class BoardRenderer {
     }
 
     for (const arrow of zoneArrows) {
-      this.drawArrow(arrow, launchableIds.has(arrow.instanceId), isGame);
+      this.drawArrow(
+        arrow,
+        launchableIds.has(arrow.instanceId),
+        isGame,
+        options.vanishProgressById?.get(arrow.instanceId) ?? 0,
+      );
     }
     for (const pipe of zonePipes) {
       this.drawPipe(pipe);
@@ -146,7 +153,12 @@ export class BoardRenderer {
     }
 
     for (const arrow of topArrows) {
-      this.drawArrow(arrow, launchableIds.has(arrow.instanceId), isGame);
+      this.drawArrow(
+        arrow,
+        launchableIds.has(arrow.instanceId),
+        isGame,
+        options.vanishProgressById?.get(arrow.instanceId) ?? 0,
+      );
     }
     for (const pipe of topPipes) {
       this.drawPipe(pipe);
@@ -249,9 +261,14 @@ export class BoardRenderer {
     }
   }
 
-  private drawArrow(arrow: ArrowItem, launchable: boolean, gameStyle: boolean): void {
+  private drawArrow(
+    arrow: ArrowItem,
+    launchable: boolean,
+    gameStyle: boolean,
+    vanishProgress = 0,
+  ): void {
     if (gameStyle) {
-      drawArrowGame(this.ctx, arrow, launchable);
+      drawArrowGame(this.ctx, arrow, launchable, vanishProgress);
     } else {
       drawArrowEditor(this.ctx, arrow, launchable);
     }

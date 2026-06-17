@@ -14,13 +14,37 @@ const root = join(__dirname, "..");
 const srcDir = join(root, "..", "..", "docs", "crackdata", "关卡提取");
 const destDir = join(root, "public", "levels");
 
+function collectKinds(itemModels) {
+  const kinds = new Set();
+  const walk = (items) => {
+    for (const item of items) {
+      kinds.add(item.kind);
+      if (item.kind === 12 && item.items) walk(item.items);
+    }
+  };
+  walk(itemModels ?? []);
+  return [...kinds].sort((a, b) => a - b);
+}
+
+function refreshManifestKinds(manifestPath) {
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  for (const entry of manifest.levels) {
+    const levelPath = join(destDir, entry.file);
+    if (!existsSync(levelPath)) continue;
+    const data = JSON.parse(readFileSync(levelPath, "utf-8"));
+    entry.kinds = collectKinds(data.itemModels);
+  }
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+}
+
 mkdirSync(destDir, { recursive: true });
 
 if (!existsSync(srcDir)) {
-  const manifest = join(destDir, "manifest.json");
-  if (existsSync(manifest)) {
+  const manifestPath = join(destDir, "manifest.json");
+  if (existsSync(manifestPath)) {
+    refreshManifestKinds(manifestPath);
     console.log(
-      "crackdata 源目录不存在，跳过拷贝，使用已有 public/levels/",
+      "crackdata 源目录不存在，已根据 public/levels/ 刷新 manifest kinds",
     );
     process.exit(0);
   }
@@ -42,14 +66,8 @@ for (const file of readdirSync(srcDir)) {
 
   copyFileSync(join(srcDir, file), join(destDir, `level-${id}.json`));
 
-  const kinds = new Set();
-  const walk = (items) => {
-    for (const item of items) {
-      kinds.add(item.kind);
-      if (item.kind === 12 && item.items) walk(item.items);
-    }
-  };
-  walk(data.itemModels);
+  const kindList = collectKinds(data.itemModels);
+  const kinds = new Set(kindList);
   const pureKind1 = kinds.size === 1 && kinds.has(1);
   const p1Playable = [...kinds].every((k) => k === 1 || k === 4 || k === 12);
   const p2Playable =
@@ -72,6 +90,7 @@ for (const file of readdirSync(srcDir)) {
     width: data.width,
     height: data.height,
     durationInSec: data.durationInSec ?? 120,
+    kinds: kindList,
     pureKind1,
     p1Playable,
     p2Playable,

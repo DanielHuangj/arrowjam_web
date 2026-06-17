@@ -42,6 +42,8 @@ export interface LevelManifestEntry {
   width: number;
   height: number;
   durationInSec: number;
+  /** 关卡包含的物件 kind（含子区域内），升序 */
+  kinds: number[];
   pureKind1: boolean;
   p1Playable: boolean;
   p2Playable: boolean;

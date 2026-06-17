@@ -8,6 +8,10 @@
       "width": 20,
       "height": 32,
       "durationInSec": 150,
+      "kinds": [
+        1,
+        4
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -22,6 +26,10 @@
       "width": 16,
       "height": 15,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -36,6 +44,10 @@
       "width": 20,
       "height": 16,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -50,6 +62,11 @@
       "width": 21,
       "height": 21,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        4,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -64,6 +81,9 @@
       "width": 27,
       "height": 36,
       "durationInSec": 150,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -78,6 +98,11 @@
       "width": 20,
       "height": 25,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        8,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -92,6 +117,10 @@
       "width": 20,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        4
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -106,6 +135,9 @@
       "width": 27,
       "height": 24,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -120,6 +152,11 @@
       "width": 21,
       "height": 24,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        8,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -134,6 +171,9 @@
       "width": 29,
       "height": 25,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -148,6 +188,11 @@
       "width": 26,
       "height": 30,
       "durationInSec": 150,
+      "kinds": [
+        1,
+        4,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -162,6 +207,10 @@
       "width": 20,
       "height": 29,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        8
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -176,6 +225,9 @@
       "width": 30,
       "height": 29,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -190,6 +242,11 @@
       "width": 20,
       "height": 28,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        8,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -204,6 +261,11 @@
       "width": 20,
       "height": 35,
       "durationInSec": 150,
+      "kinds": [
+        1,
+        4,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -218,6 +280,9 @@
       "width": 28,
       "height": 31,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -232,6 +297,10 @@
       "width": 20,
       "height": 19,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -246,6 +315,10 @@
       "width": 20,
       "height": 31,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -260,6 +333,11 @@
       "width": 20,
       "height": 24,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -274,6 +352,9 @@
       "width": 20,
       "height": 35,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -288,6 +369,11 @@
       "width": 26,
       "height": 32,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3,
+        4
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -302,6 +388,10 @@
       "width": 20,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -316,6 +406,9 @@
       "width": 26,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -330,6 +423,10 @@
       "width": 19,
       "height": 30,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -344,6 +441,11 @@
       "width": 26,
       "height": 35,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3,
+        8
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -358,6 +460,9 @@
       "width": 24,
       "height": 35,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -372,6 +477,11 @@
       "width": 20,
       "height": 27,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        4,
+        8
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -386,6 +496,11 @@
       "width": 18,
       "height": 25,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -400,6 +515,10 @@
       "width": 20,
       "height": 25,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        4
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -414,6 +533,9 @@
       "width": 25,
       "height": 34,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -428,6 +550,11 @@
       "width": 26,
       "height": 36,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3,
+        8
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -442,6 +569,10 @@
       "width": 20,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -456,6 +587,11 @@
       "width": 20,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        4,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": true,
       "p2Playable": false,
@@ -470,6 +606,9 @@
       "width": 23,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,
@@ -484,6 +623,10 @@
       "width": 28,
       "height": 36,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        3
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -498,6 +641,11 @@
       "width": 20,
       "height": 24,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        8,
+        12
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": true,
@@ -512,6 +660,11 @@
       "width": 16,
       "height": 16,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        6,
+        11
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -526,6 +679,11 @@
       "width": 20,
       "height": 20,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        6,
+        11
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -540,6 +698,12 @@
       "width": 20,
       "height": 26,
       "durationInSec": 120,
+      "kinds": [
+        1,
+        6,
+        8,
+        11
+      ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
@@ -554,6 +718,9 @@
       "width": 28,
       "height": 27,
       "durationInSec": 120,
+      "kinds": [
+        1
+      ],
       "pureKind1": true,
       "p1Playable": true,
       "p2Playable": false,

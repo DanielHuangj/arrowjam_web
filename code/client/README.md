@@ -12,6 +12,17 @@ npm run dev
 
 浏览器打开 **http://127.0.0.1:5173/**（Vite 启动后终端会显示地址）。
 
+局域网访问（手机等同网段设备）：
+
+```bash
+npm run dev:lan
+# 或：npm run dev -- --host 0.0.0.0
+```
+
+终端会显示 `Network: http://192.168.x.x:5173/`，用该地址访问。本机也可用 `http://127.0.0.1:5173/` 或 `http://localhost:5173/`。
+
+> **注意**：`npm run dev --host 0.0.0.0` 写法**无效**（`--host` 不会传给 Vite），中间必须有 `--`。
+
 > **不要用 Cursor 内置 Simple Browser 预览**。若 dev 服务未启动时在内置浏览器里打开过 localhost，Chrome 会停在 `chrome-error://chromewebdata/` 错误页，再刷新会出现 `Unsafe attempt to load URL` 跨域报错。请改用 **系统 Chrome / Edge** 直接访问上述地址。
 
 ## 常见问题
@@ -34,7 +45,8 @@ netstat -ano | findstr :5173
 
 | 命令 | 说明 |
 |------|------|
-| `npm run dev` | 开发服务器（自动拷贝关卡 JSON） |
+| `npm run dev` | 开发服务器（仅本机 127.0.0.1） |
+| `npm run dev:lan` | 开发服务器（0.0.0.0，局域网可访问） |
 | `npm run build` | 生产构建 |
 | `npm test` | 单元测试 |
 | `npm run copy-levels` | 从 `docs/crackdata/关卡提取/` 拷贝关卡到 `public/levels/` |

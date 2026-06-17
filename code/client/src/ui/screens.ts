@@ -1,4 +1,10 @@
 import type { LevelManifestEntry } from "../core/types.ts";
+import { attachLevelThumbnails, prefetchLevelThumbnails } from "./level-thumbnails.ts";
+
+export function formatLevelKindLabel(kinds: number[] | undefined): string {
+  if (!kinds?.length) return "";
+  return `（K${kinds.join("/")}）`;
+}
 
 export function renderLevelSelect(
   root: HTMLElement,
@@ -16,27 +22,24 @@ export function renderLevelSelect(
   const grid = root.querySelector(".level-grid")!;
   for (const lv of levels) {
     const btn = document.createElement("button");
-    const badge = lv.pureKind1
-      ? "P0"
-      : lv.p4Playable
-        ? "P4"
-        : lv.p3Playable
-          ? "P3"
-          : lv.p2Playable
-            ? "P2"
-            : lv.p1Playable
-              ? "P1"
-              : "";
-    btn.className = "level-btn" + (badge ? " playable" : "");
+    btn.className = "level-btn";
+    const kindLabel = formatLevelKindLabel(lv.kinds);
     btn.innerHTML = `
-      <span class="level-id">${lv.id}</span>
-      <span class="level-meta">${lv.width}×${lv.height}</span>
-      ${badge ? `<span class="badge">${badge}</span>` : ""}
+      <div class="level-thumb-wrap">
+        <canvas class="level-thumb" data-level-id="${lv.id}" aria-hidden="true"></canvas>
+      </div>
+      <div class="level-btn-footer">
+        <span class="level-id">${lv.id}${kindLabel}</span>
+        <span class="level-meta">${lv.width}×${lv.height}</span>
+      </div>
     `;
-    btn.title = `${lv.name || "Level " + lv.id} · 难度 ${lv.difficulty}`;
+    btn.title = `${lv.name || "Level " + lv.id}${kindLabel} · 难度 ${lv.difficulty}`;
     btn.addEventListener("click", () => onSelect(lv.id));
     grid.appendChild(btn);
   }
+
+  attachLevelThumbnails(grid);
+  prefetchLevelThumbnails(levels);
 }
 
 export function renderGameShell(root: HTMLElement): {

@@ -8,6 +8,7 @@ import type {
   GameSnapshot,
   KeyArrowItem,
   LaunchAnimation,
+  LostReason,
   PipeItem,
   Vec2,
 } from "../types.ts";
@@ -30,6 +31,10 @@ import {
 } from "../mechanics/pipe.ts";
 import { getCornerAt } from "../mechanics/corner.ts";
 import { ZoneManager } from "../mechanics/zone.ts";
+import { flipUncoveredArrows } from "../mechanics/flip.ts";
+import { BombManager, BOMB_EXPLOSION_DURATION } from "../mechanics/bomb.ts";
+import { MovingWallManager, wouldStepIntoWall } from "../mechanics/moving-wall.ts";
+import { FrozenManager } from "../mechanics/frozen.ts";
 
 export const VANISH_ANIM_STEPS = 12;
 export const RANDOM_VANISH_COUNT = 3;
@@ -82,10 +87,15 @@ export class GameState {
   bundleManager: BundleManager;
   curtainManager: CurtainManager;
   keys: KeyArrowItem[];
+  bombManager: BombManager;
+  wallManager: MovingWallManager;
+  frozenManager: FrozenManager;
   private keyCells: Set<string>;
   private clearedTraceCells = new Set<string>();
   mistakeCount = 0;
   animation: LaunchAnimation | null = null;
+  lostReason: LostReason | null = null;
+  private bombExplosion: { cells: Vec2[]; elapsed: number } | null = null;
 
   constructor(level: GameLevel) {
     this.level = level;
@@ -118,8 +128,12 @@ export class GameState {
       ...k,
       occupiedPositions: clonePositions(k.occupiedPositions),
     }));
+    this.bombManager = new BombManager(level.bombs ?? [], this.arrows);
+    this.wallManager = new MovingWallManager(level.movingWalls ?? []);
+    this.frozenManager = new FrozenManager(level.frozenOverlays ?? []);
     this.keyCells = buildKeyCellSet(this.keys);
     this.rebuildCellMap();
+    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
   }
 
   private getCurtainCells(): Set<string> {
@@ -130,8 +144,49 @@ export class GameState {
     return this.arrows.filter(
       (a) =>
         !this.curtainManager.isArrowHidden(a) &&
-        this.zoneManager.isArrowActive(a, this.arrows, this.corners),
+        this.zoneManager.isArrowActive(a, this.arrows, this.corners) &&
+        !this.frozenManager.isHostFrozen(a.instanceId),
     );
+  }
+
+  private isArrowCoveredForMechanics(arrow: ArrowItem): boolean {
+    if (this.curtainManager.isArrowHidden(arrow)) return true;
+    if (!this.zoneManager.isArrowActive(arrow, this.arrows, this.corners)) {
+      return true;
+    }
+    if (this.frozenManager.isHostFrozen(arrow.instanceId)) return true;
+    return false;
+  }
+
+  private isHostCoveredForBomb(hostArrowId: number): boolean {
+    const host = this.arrows.find((a) => a.instanceId === hostArrowId);
+    if (!host) return true;
+    return this.isArrowCoveredForMechanics(host);
+  }
+
+  getWallBlockerCells(): Set<string> {
+    return this.wallManager.getBlockerCells();
+  }
+
+  private onArrowEliminationBatch(
+    removedArrows: ArrowItem[],
+    originalPositionsById?: Record<number, Vec2[]>,
+  ): void {
+    if (removedArrows.length === 0) return;
+
+    const forFrozen = removedArrows.map((arrow) => {
+      const orig = originalPositionsById?.[arrow.instanceId];
+      return orig ? { ...arrow, occupiedPositions: orig } : arrow;
+    });
+    this.frozenManager.onAdjacentElimination(forFrozen);
+    this.arrows = flipUncoveredArrows(this.arrows, (a) =>
+      this.isArrowCoveredForMechanics(a),
+    );
+    this.wallManager.advanceAll();
+
+    const hostIds = new Set(removedArrows.map((a) => a.instanceId));
+    this.bombManager.removeForHosts(hostIds);
+    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
   }
 
   getActiveCorners(): CornerItem[] {
@@ -248,16 +303,47 @@ export class GameState {
   }
 
   tick(dt: number): void {
+    if (this.phase === "exploding") {
+      if (this.bombExplosion) {
+        this.bombExplosion.elapsed += dt;
+        if (this.bombExplosion.elapsed >= BOMB_EXPLOSION_DURATION) {
+          this.lostReason = "bomb";
+          this.phase = "lost";
+          this.bombExplosion = null;
+        }
+      }
+      return;
+    }
+
     if (this.phase !== "playing" && this.phase !== "animating") return;
     if (this.phase === "playing" || this.phase === "animating") {
       this.remainingSeconds -= dt;
       if (this.remainingSeconds <= 0) {
         this.remainingSeconds = 0;
         if (this.arrows.length > 0 && this.phase === "playing") {
+          this.lostReason = "time";
           this.phase = "lost";
         }
       }
     }
+    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
+    const explodedCells = this.bombManager.tick(dt);
+    if (
+      explodedCells.length > 0 &&
+      this.arrows.length > 0 &&
+      (this.phase === "playing" || this.phase === "animating")
+    ) {
+      this.startBombExplosion(explodedCells);
+    }
+  }
+
+  private startBombExplosion(cells: Vec2[]): void {
+    this.bombExplosion = {
+      cells: cells.map(([x, y]) => [x, y] as Vec2),
+      elapsed: 0,
+    };
+    this.finishAnimation();
+    this.phase = "exploding";
   }
 
   tryLaunch(instanceId: number): boolean {
@@ -284,6 +370,7 @@ export class GameState {
           this.level,
           this.getActivePipes(),
           this.getCurtainCells(),
+          this.getWallBlockerCells(),
         )
       : simulateCanExit(
           arrow,
@@ -292,6 +379,7 @@ export class GameState {
           this.level,
           this.getActivePipes(),
           this.getCurtainCells(),
+          this.getWallBlockerCells(),
         );
     if (!canExit) this.mistakeCount++;
 
@@ -389,8 +477,10 @@ export class GameState {
     }
 
     this.applyPipeCrossingDamage(anim);
+    this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
     this.finishAnimation();
     this.rebuildCellMap();
+    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
     this.phase = this.arrows.length === 0 ? "won" : "playing";
   }
 
@@ -468,6 +558,7 @@ export class GameState {
     const activePipes = this.getActivePipes();
     const activeCorners = this.getActiveCorners();
     const curtainCells = this.getCurtainCells();
+    const wallCells = this.getWallBlockerCells();
     for (const arrow of members) {
       const dir = anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
       const transit = anim.pipeTransitById[arrow.instanceId] ?? null;
@@ -478,6 +569,7 @@ export class GameState {
         activeCorners,
         activePipes,
         curtainCells,
+        wallCells,
       );
       anim.currentDirectionById[arrow.instanceId] = result.dir;
       anim.pipeTransitById[arrow.instanceId] = result.transit;
@@ -599,6 +691,8 @@ export class GameState {
     const activePipes = this.getActivePipes();
     const activeCorners = this.getActiveCorners();
     const curtainCells = this.getCurtainCells();
+    const wallCells = this.getWallBlockerCells();
+    let hitWall = false;
     for (const arrow of members) {
       anim.bumpHistoryById[arrow.instanceId] ??= [];
       anim.bumpHistoryById[arrow.instanceId]!.push(
@@ -613,7 +707,9 @@ export class GameState {
         activeCorners,
         activePipes,
         curtainCells,
+        wallCells,
       );
+      if (result.blocked) hitWall = true;
       anim.currentDirectionById[arrow.instanceId] = result.dir;
       anim.pipeTransitById[arrow.instanceId] = result.transit;
       if (result.pipeExitedId != null) {
@@ -648,7 +744,7 @@ export class GameState {
       return true;
     }
 
-    const blocked = stepped.some((arrow, idx) => {
+    const blocked = hitWall || stepped.some((arrow, idx) => {
       const memberId = members[idx]!.instanceId;
       if (anim.pipeTransitById[memberId]) return false;
       const dir =
@@ -676,11 +772,15 @@ export class GameState {
     arrow: ArrowItem,
     memberIds: Set<number>,
   ): boolean {
+    const wallCells = this.getWallBlockerCells();
     const head = arrow.occupiedPositions.at(-1);
     if (!head) return false;
-    if (this.cellMap.isBlockedExcept(head, memberIds)) return true;
     const dir =
       this.animation?.currentDirectionById[arrow.instanceId] ?? arrow.direction;
+    if (wallCells.size > 0 && wouldStepIntoWall(head, dir, wallCells)) {
+      return true;
+    }
+    if (this.cellMap.isBlockedExcept(head, memberIds)) return true;
     if (this.getCurtainCells().has(vecKey(head))) return true;
     if (isHeadBlockedByPipe(head, dir, this.getActivePipes())) return true;
     return getCornerAt(head, this.getActiveCorners()) != null;
@@ -790,6 +890,7 @@ export class GameState {
             this.level,
             this.getActivePipes(),
             this.getCurtainCells(),
+            this.getWallBlockerCells(),
           )
         ) {
           for (const id of group.arrowIds) ids.add(id);
@@ -802,6 +903,7 @@ export class GameState {
           this.level,
           this.getActivePipes(),
           this.getCurtainCells(),
+          this.getWallBlockerCells(),
         )
       ) {
         ids.add(arrow.instanceId);
@@ -842,6 +944,7 @@ export class GameState {
     }
     if (this.bundleManager.getGroupForArrow(arrow.instanceId)) return false;
     if (arrowHasKey(arrow, this.keyCells)) return false;
+    if (this.frozenManager.isHostFrozen(arrow.instanceId)) return false;
     return true;
   }
 
@@ -999,5 +1102,39 @@ export class GameState {
       }
     }
     return keys;
+  }
+
+  getMovingWalls() {
+    return this.wallManager.getWalls();
+  }
+
+  getFrozenOverlays() {
+    return this.frozenManager.getOverlays();
+  }
+
+  getBombs() {
+    this.bombManager.syncWithArrows(this.arrows);
+    return this.bombManager.getDrawableBombs();
+  }
+
+  getBombDrawStates() {
+    this.bombManager.syncWithArrows(this.arrows);
+    return this.bombManager.getDrawableStates();
+  }
+
+  getBombExplosion(): { cells: Vec2[]; progress: number } | null {
+    if (!this.bombExplosion) return null;
+    return {
+      cells: this.bombExplosion.cells,
+      progress: Math.min(1, this.bombExplosion.elapsed / BOMB_EXPLOSION_DURATION),
+    };
+  }
+
+  getLostReason(): LostReason | null {
+    return this.lostReason;
+  }
+
+  getUrgentBombRemaining(): number | null {
+    return this.bombManager.getUrgentRemaining();
   }
 }

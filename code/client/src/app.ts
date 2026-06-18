@@ -23,6 +23,7 @@ export class App {
   private overlayEl: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private levels: LevelManifestEntry[] = [];
+  private devTests: LevelManifestEntry[] = [];
   private rafId = 0;
   private lastTime = 0;
   private animAccum = 0;
@@ -39,13 +40,18 @@ export class App {
     showLoading(this.root);
     const manifest = await loadManifest();
     this.levels = manifest.levels;
+    this.devTests = manifest.devTests ?? [];
     this.showLevelSelect();
   }
 
   private showLevelSelect(): void {
     this.stopLoop();
     this.disposeGame();
-    renderLevelSelect(this.root, this.levels, (id) => void this.startLevel(id));
+    renderLevelSelect(
+      this.root,
+      { levels: this.levels, devTests: this.devTests },
+      (id) => void this.startLevel(id),
+    );
   }
 
   private async startLevel(id: number): Promise<void> {
@@ -178,6 +184,7 @@ export class App {
       remainingSeconds: this.state.remainingSeconds,
       arrowCount: this.state.arrows.length,
       difficulty: this.state.level.difficulty,
+      bombRemaining: this.state.getUrgentBombRemaining(),
     });
 
     const autoBtn = this.hudEl.querySelector(".btn-auto-clear") as HTMLButtonElement | null;
@@ -242,6 +249,11 @@ export class App {
         clearedTraces: this.state.getClearedTraceCells(),
         occupiedCells: this.state.getOccupiedArrowCellKeys(),
         vanishProgressById,
+        movingWalls: this.state.getMovingWalls(),
+        frozenOverlays: this.state.getFrozenOverlays(),
+        bombStates: this.state.getBombDrawStates(),
+        bombExplosion: this.state.getBombExplosion(),
+        urgentBombRemaining: this.state.getUrgentBombRemaining(),
       },
     );
   }
@@ -309,10 +321,16 @@ export class App {
       );
     } else if (this.state.phase === "lost") {
       this.modalShown = true;
+      const reason = this.state.getLostReason();
+      const title = reason === "bomb" ? "炸弹爆炸！" : "时间到";
+      const body =
+        reason === "bomb"
+          ? `定时炸弹引爆 · 还有 ${this.state.arrows.length} 条箭未清除`
+          : `还有 ${this.state.arrows.length} 条箭未清除`;
       showModal(
         this.overlayEl,
-        "时间到",
-        `还有 ${this.state.arrows.length} 条箭未清除`,
+        title,
+        body,
         [
           {
             label: "重玩",

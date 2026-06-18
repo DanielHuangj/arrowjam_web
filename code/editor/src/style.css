@@ -7,7 +7,7 @@
   --accent: #4dabf7;
   --warn: #fcc419;
   --error: #ff6b6b;
-  --sidebar-w: 140px;
+  --sidebar-w: 168px;
   --props-w: 280px;
   --menu-h: 40px;
   --tab-h: 32px;
@@ -58,6 +58,12 @@ body,
   font-size: 13px;
 }
 
+.tool-sidebar button {
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
 .menu-bar button:hover,
 .tool-sidebar button:hover,
 .props-panel button:hover {
@@ -66,9 +72,26 @@ body,
 }
 
 .menu-bar button.active,
-.tool-sidebar button.active {
+.tool-sidebar button.active,
+.props-panel button.active {
   background: #364fc7;
   border-color: #364fc7;
+}
+
+.wall-path-hint {
+  color: #fcc419;
+  font-size: 12px;
+  margin: 8px 0 4px;
+}
+
+.wall-path-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wall-path-actions button {
+  flex: 1;
 }
 
 .tool-sidebar button.tool-disabled,
@@ -157,6 +180,14 @@ body,
   overflow: auto;
   position: relative;
   background: #141517;
+}
+
+.canvas-wrap.viewport-pan-ready {
+  cursor: grab;
+}
+
+.canvas-wrap.viewport-panning {
+  cursor: grabbing;
 }
 
 #board-canvas {

@@ -40,10 +40,38 @@ export interface BaseItem {
 }
 
 export interface ArrowItem extends BaseItem {
-  kind: 1;
+  kind: 1 | 2;
   direction: Direction;
   colorId: number;
   zoneId: number | null;
+  /** kind 2：默认朝向 */
+  direction1?: Direction;
+  /** kind 2：翻转后朝向 */
+  direction2?: Direction;
+}
+
+export interface BombItem extends BaseItem {
+  kind: 5;
+  time: number;
+  zoneId: number | null;
+  /** 解析期绑定：宿主箭 instanceId */
+  hostArrowId: number;
+}
+
+export interface MovingWallItem extends BaseItem {
+  kind: 7;
+  movingPath: Vec2[];
+  movingDistance: number;
+  movingType: 1 | 2;
+  zoneId: null;
+}
+
+export interface FrozenOverlayItem extends BaseItem {
+  kind: 13;
+  health: number;
+  zoneId: number | null;
+  /** 解析期绑定：宿主箭 instanceId */
+  hostArrowId: number;
 }
 
 export interface CornerItem extends BaseItem {
@@ -124,6 +152,9 @@ export interface GameLevel {
   pipes: PipeItem[];
   curtains: CurtainItem[];
   keys: KeyArrowItem[];
+  bombs: BombItem[];
+  movingWalls: MovingWallItem[];
+  frozenOverlays: FrozenOverlayItem[];
 }
 
 export type ValidationSeverity = "error" | "warning";

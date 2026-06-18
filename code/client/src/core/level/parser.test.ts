@@ -32,6 +32,9 @@ function emptyLevel(arrows: ArrowItem[]) {
     pipes: [],
     curtains: [],
     keys: [],
+    bombs: [],
+    movingWalls: [],
+    frozenOverlays: [],
   };
 }
 
@@ -76,6 +79,70 @@ describe("parseLevelData", () => {
     const level = parseLevelData(41, loadJsonLevel(41));
     expect(level.pipes.length).toBe(3);
     expect(level.pipes[0]!.passes.length).toBe(2);
+  });
+
+  it("parses P5 mechanic kinds", () => {
+    const level = parseLevelData(9001, {
+      width: 12,
+      height: 12,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[0, 0], [1, 0]],
+        },
+        {
+          kind: 2,
+          instanceId: 2,
+          layer: 2,
+          direction1: 3,
+          direction2: 4,
+          colorId: 7,
+          occupiedPositions: [[3, 0], [4, 0]],
+        },
+        {
+          kind: 7,
+          instanceId: 7,
+          layer: 2,
+          occupiedPositions: [[6, 0]],
+          movingPath: [[6, 0], [6, 1], [6, 2]],
+          movingDistance: 1,
+          movingType: 1,
+        },
+        {
+          kind: 1,
+          instanceId: 10,
+          layer: 2,
+          direction: 1,
+          colorId: 3,
+          occupiedPositions: [[8, 0], [8, 1]],
+        },
+        {
+          kind: 5,
+          instanceId: 5,
+          layer: 3,
+          time: 10,
+          occupiedPositions: [[8, 1]],
+        },
+        {
+          kind: 13,
+          instanceId: 13,
+          layer: 8,
+          health: 2,
+          occupiedPositions: [[8, 0], [8, 1]],
+        },
+      ],
+    });
+    expect(level.arrows.some((a) => a.kind === 2)).toBe(true);
+    expect(level.movingWalls.length).toBe(1);
+    expect(level.bombs[0]!.hostArrowId).toBe(10);
+    expect(level.frozenOverlays[0]!.hostArrowId).toBe(10);
   });
 });
 

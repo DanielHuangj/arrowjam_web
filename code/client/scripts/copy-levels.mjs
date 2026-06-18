@@ -34,6 +34,14 @@ function refreshManifestKinds(manifestPath) {
     const data = JSON.parse(readFileSync(levelPath, "utf-8"));
     entry.kinds = collectKinds(data.itemModels);
   }
+  if (manifest.devTests) {
+    for (const entry of manifest.devTests) {
+      const levelPath = join(destDir, entry.file);
+      if (!existsSync(levelPath)) continue;
+      const data = JSON.parse(readFileSync(levelPath, "utf-8"));
+      entry.kinds = collectKinds(data.itemModels);
+    }
+  }
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 }
 
@@ -100,8 +108,84 @@ for (const file of readdirSync(srcDir)) {
 }
 
 levels.sort((a, b) => a.id - b.id);
+
+const manifestPath = join(destDir, "manifest.json");
+let devTests = [];
+if (existsSync(manifestPath)) {
+  try {
+    const prev = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    devTests = prev.devTests ?? [];
+  } catch {
+    devTests = [];
+  }
+}
+if (devTests.length === 0) {
+  devTests = [
+    {
+      id: 9001,
+      file: "level-9001.json",
+      name: "[测] 翻转箭",
+      difficulty: 1,
+      width: 12,
+      height: 12,
+      durationInSec: 120,
+      kinds: [1, 2],
+      pureKind1: false,
+      p1Playable: true,
+      p2Playable: false,
+      p3Playable: false,
+      p4Playable: false,
+    },
+    {
+      id: 9002,
+      file: "level-9002.json",
+      name: "[测] 移动墙",
+      difficulty: 1,
+      width: 14,
+      height: 14,
+      durationInSec: 120,
+      kinds: [1, 7],
+      pureKind1: false,
+      p1Playable: true,
+      p2Playable: false,
+      p3Playable: false,
+      p4Playable: false,
+    },
+    {
+      id: 9003,
+      file: "level-9003.json",
+      name: "[测] 冻结解冻",
+      difficulty: 1,
+      width: 12,
+      height: 12,
+      durationInSec: 120,
+      kinds: [1, 13],
+      pureKind1: false,
+      p1Playable: true,
+      p2Playable: false,
+      p3Playable: false,
+      p4Playable: false,
+    },
+    {
+      id: 9004,
+      file: "level-9004.json",
+      name: "[测] 定时炸弹",
+      difficulty: 1,
+      width: 12,
+      height: 12,
+      durationInSec: 300,
+      kinds: [1, 5, 6, 11],
+      pureKind1: false,
+      p1Playable: false,
+      p2Playable: false,
+      p3Playable: false,
+      p4Playable: true,
+    },
+  ];
+}
+
 writeFileSync(
-  join(destDir, "manifest.json"),
-  JSON.stringify({ levels }, null, 2) + "\n",
+  manifestPath,
+  JSON.stringify({ devTests, levels }, null, 2) + "\n",
 );
 console.log(`Copied ${levels.length} levels to public/levels/`);

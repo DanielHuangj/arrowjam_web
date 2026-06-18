@@ -22,6 +22,52 @@ describe("shared parser", () => {
     expect(level.zones.length).toBeGreaterThan(0);
     expect(level.bundles.length).toBeGreaterThan(0);
   });
+
+  it("rejects moving wall without path in strict mode", () => {
+    const data: LevelData = {
+      width: 10,
+      height: 10,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 7,
+          instanceId: 8,
+          layer: 2,
+          occupiedPositions: [[3, 1]],
+          movingPath: [[3, 1]],
+          movingDistance: 1,
+          movingType: 1,
+        },
+      ],
+    };
+    expect(() => parseLevelData(1, data)).toThrow(/missing movingPath/);
+  });
+
+  it("allows incomplete moving wall path in editor mode", () => {
+    const data: LevelData = {
+      width: 10,
+      height: 10,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 7,
+          instanceId: 8,
+          layer: 2,
+          occupiedPositions: [[3, 1]],
+          movingPath: [[3, 1]],
+          movingDistance: 1,
+          movingType: 1,
+        },
+      ],
+    };
+    const level = parseLevelData(1, data, { allowIncompleteMovingWalls: true });
+    expect(level.movingWalls).toHaveLength(1);
+    expect(level.movingWalls[0]!.movingPath).toEqual([[3, 1]]);
+  });
 });
 
 describe("shared validator", () => {

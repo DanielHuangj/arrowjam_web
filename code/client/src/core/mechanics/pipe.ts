@@ -14,6 +14,7 @@ import {
   getReflectedDirection,
   isValidCornerEntry,
 } from "./corner.ts";
+import { wouldStepIntoWall } from "./moving-wall.ts";
 
 export interface PipePass {
   position: Vec2;
@@ -199,6 +200,7 @@ export function advanceArrowStep(
   corners: CornerItem[],
   pipes: PipeItem[],
   curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
 ): ArrowStepResult {
   if (transit && transit.pathIndex < transit.path.length - 1) {
     const nextIdx = transit.pathIndex + 1;
@@ -221,11 +223,23 @@ export function advanceArrowStep(
     };
   }
 
-  let next = snakeStepArrow(arrow, dir);
   let newDir = dir;
-  const head = next.occupiedPositions.at(-1)!;
+  const head = arrow.occupiedPositions.at(-1)!;
 
-  if (curtainCells.has(vecKey(head))) {
+  if (extraBlockerCells.size > 0 && wouldStepIntoWall(head, dir, extraBlockerCells)) {
+    return {
+      arrow,
+      dir: newDir,
+      transit: null,
+      blocked: true,
+      pipeExitedId: null,
+    };
+  }
+
+  const next = snakeStepArrow(arrow, dir);
+  const nextHead = next.occupiedPositions.at(-1)!;
+
+  if (curtainCells.has(vecKey(nextHead))) {
     return {
       arrow: next,
       dir: newDir,
@@ -235,7 +249,7 @@ export function advanceArrowStep(
     };
   }
 
-  if (isHeadBlockedByPipe(head, newDir, pipes)) {
+  if (isHeadBlockedByPipe(nextHead, newDir, pipes)) {
     return {
       arrow: next,
       dir: newDir,
@@ -245,13 +259,13 @@ export function advanceArrowStep(
     };
   }
 
-  const corner = getCornerAt(head, corners);
+  const corner = getCornerAt(nextHead, corners);
   if (corner && isValidCornerEntry(newDir, corner)) {
     newDir = getReflectedDirection(newDir, corner);
-    next = { ...next, direction: newDir };
+    next.direction = newDir;
   }
 
-  const newTransit = tryStartPipeTransit(head, newDir, pipes);
+  const newTransit = tryStartPipeTransit(nextHead, newDir, pipes);
   return {
     arrow: next,
     dir: newDir,
@@ -305,6 +319,7 @@ export function simulateCanExitWithPipes(
   board: BoardSize,
   pipes: PipeItem[],
   curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
 ): boolean {
   const simPipes = pipes.map((p) => ({
     ...p,
@@ -334,6 +349,7 @@ export function simulateCanExitWithPipes(
       corners,
       activePipes(simPipes),
       curtainCells,
+      extraBlockerCells,
     );
 
     if (result.blocked) return false;
@@ -348,6 +364,8 @@ export function simulateCanExitWithPipes(
     if (!inBounds(head, board.width, board.height)) continue;
 
     if (curtainCells.has(vecKey(head))) return false;
+
+    if (extraBlockerCells.has(vecKey(head))) return false;
 
     if (!transit && isCellOnOtherArrow(head, arrow.instanceId, allArrows)) {
       return false;

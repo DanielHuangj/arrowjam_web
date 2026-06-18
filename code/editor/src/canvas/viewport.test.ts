@@ -1,5 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { pointerToCell } from "./viewport.ts";
+import { pointerToCell, shouldStartViewportPan } from "./viewport.ts";
+
+describe("shouldStartViewportPan", () => {
+  const vp = { scale: 1, offsetX: 0, offsetY: 0, panning: false, spaceHeld: false };
+
+  it("starts pan with ctrl + left button", () => {
+    expect(
+      shouldStartViewportPan({ button: 0, ctrlKey: true } as MouseEvent, vp),
+    ).toBe(true);
+  });
+
+  it("starts pan with space held", () => {
+    expect(
+      shouldStartViewportPan({ button: 0, ctrlKey: false } as MouseEvent, {
+        ...vp,
+        spaceHeld: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("starts pan with middle button", () => {
+    expect(shouldStartViewportPan({ button: 1, ctrlKey: false } as MouseEvent, vp)).toBe(
+      true,
+    );
+  });
+
+  it("does not pan with plain left click", () => {
+    expect(shouldStartViewportPan({ button: 0, ctrlKey: false } as MouseEvent, vp)).toBe(
+      false,
+    );
+  });
+});
 
 describe("pointerToCell", () => {
   it("maps click to grid cell with scale 1", () => {

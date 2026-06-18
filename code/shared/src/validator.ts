@@ -70,7 +70,7 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       }
     }
 
-    if (item.kind === 1 || item.kind === 3) {
+    if (item.kind === 1 || item.kind === 2) {
       if (!isPolylineContinuous(item.occupiedPositions)) {
         push(issues, "V04", "error", `物件 #${item.instanceId} 折线不连续`, item.instanceId);
       }
@@ -88,15 +88,25 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
 
     if (item.kind === 12 && item.items) {
       for (const child of item.items) {
-        if (![1, 4, 8].includes(child.kind)) {
+        if (![1, 2, 4, 5, 8, 13].includes(child.kind)) {
           push(
             issues,
             "V06",
             "error",
-            `区域 #${item.instanceId} 子项 kind ${child.kind} 不允许（仅 1/4/8）`,
+            `区域 #${item.instanceId} 子项 kind ${child.kind} 不允许（仅 1/2/4/5/8/13）`,
             child.instanceId,
           );
         }
+      }
+    }
+
+    if (item.kind === 3) {
+      if (!isPolylineContinuous(item.occupiedPositions)) {
+        push(issues, "V04", "error", `物件 #${item.instanceId} 折线不连续`, item.instanceId);
+      }
+      const keys = item.occupiedPositions.map((p) => vecKey(p));
+      if (new Set(keys).size !== keys.length) {
+        push(issues, "V12", "error", `物件 #${item.instanceId} 路径自交`, item.instanceId);
       }
     }
 
@@ -152,6 +162,98 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       }
     }
 
+    if (item.kind === 2) {
+      const d1 = item.direction1 as number | undefined;
+      const d2 = item.direction2 as number | undefined;
+      if (d1 == null || d2 == null || item.colorId == null) {
+        push(issues, "V-NEW-02", "error", `翻转箭 #${item.instanceId} 缺少 direction1/2/colorId`, item.instanceId);
+      }
+      if (item.layer !== 2) {
+        push(issues, "V-NEW-02", "warning", `翻转箭 #${item.instanceId} layer 应为 2`, item.instanceId);
+      }
+    }
+
+    if (item.kind === 5) {
+      if (item.time == null || (item.time as number) <= 0) {
+        push(issues, "V-NEW-05", "error", `炸弹 #${item.instanceId} 缺少有效 time`, item.instanceId);
+      }
+      if (item.occupiedPositions.length !== 1) {
+        push(issues, "V-NEW-05", "error", `炸弹 #${item.instanceId} 须占 1 格`, item.instanceId);
+      }
+      if (item.layer !== 3) {
+        push(issues, "V-NEW-05", "warning", `炸弹 #${item.instanceId} layer 应为 3`, item.instanceId);
+      }
+      const cell = item.occupiedPositions[0];
+      if (cell) {
+        const hasHost = all.some(
+          (o) =>
+            (o.kind === 1 || o.kind === 2) &&
+            o.occupiedPositions.some((p) => vecKey(p) === vecKey(cell)),
+        );
+        if (!hasHost) {
+          push(issues, "V-NEW-05", "error", `炸弹 #${item.instanceId} 未绑定箭`, item.instanceId);
+        }
+      }
+    }
+
+    if (item.kind === 7) {
+      const path = item.movingPath as Vec2[] | undefined;
+      if (!path || path.length < 2) {
+        push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} movingPath 至少 2 格`, item.instanceId);
+      } else {
+        for (const p of path) {
+          if (!inBounds(p, data.width, data.height)) {
+            push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} 路径点超出棋盘`, item.instanceId);
+            break;
+          }
+        }
+        for (let i = 1; i < path.length; i++) {
+          const a = path[i - 1]!;
+          const b = path[i]!;
+          const dx = Math.abs(b[0] - a[0]);
+          const dy = Math.abs(b[1] - a[1]);
+          if (dx + dy !== 1) {
+            push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} 路径须正交连续`, item.instanceId);
+            break;
+          }
+        }
+      }
+      const dist = item.movingDistance as number | undefined;
+      if (dist == null || dist < 1) {
+        push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} movingDistance 须 ≥ 1`, item.instanceId);
+      }
+      const mt = item.movingType as number | undefined;
+      if (mt !== 1 && mt !== 2) {
+        push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} movingType 须为 1 或 2`, item.instanceId);
+      }
+      if (inZone) {
+        push(issues, "V-NEW-07", "error", `移动墙 #${item.instanceId} 不可置于子区域内`, item.instanceId);
+      }
+    }
+
+    if (item.kind === 13) {
+      const health = item.health as number | undefined;
+      if (health == null || health < 1) {
+        push(issues, "V-NEW-13", "error", `冻结 #${item.instanceId} health 须 ≥ 1`, item.instanceId);
+      }
+      if (item.layer !== 8) {
+        push(issues, "V-NEW-13", "error", `冻结 #${item.instanceId} layer 须为 8`, item.instanceId);
+      }
+      const host = all.find(
+        (o) =>
+          (o.kind === 1 || o.kind === 2) &&
+          o.occupiedPositions.length === item.occupiedPositions.length &&
+          o.occupiedPositions.every(
+            (p, i) =>
+              p[0] === item.occupiedPositions[i]![0] &&
+              p[1] === item.occupiedPositions[i]![1],
+          ),
+      );
+      if (!host) {
+        push(issues, "V-NEW-13", "error", `冻结 #${item.instanceId} 未绑定同格箭`, item.instanceId);
+      }
+    }
+
     if (item.kind === 6) {
       if (item.health == null) {
         push(issues, "V16", "error", `幕布 #${item.instanceId} 缺少 health`, item.instanceId);
@@ -175,11 +277,11 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       if (keyPos) {
         const hasArrow = all.some(
           (o) =>
-            o.kind === 1 &&
+            (o.kind === 1 || o.kind === 2) &&
             o.occupiedPositions.some((p) => vecKey(p) === vecKey(keyPos)),
         );
         if (!hasArrow) {
-          push(issues, "V14", "warning", `钥匙 #${item.instanceId} 未绑定同格 kind 1 箭`, item.instanceId);
+          push(issues, "V14", "warning", `钥匙 #${item.instanceId} 未绑定同格箭`, item.instanceId);
         }
       }
     }
@@ -192,6 +294,40 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
   for (const [order, count] of curtainOrders) {
     if (count > 1) {
       push(issues, "V13", "warning", `幕布 order ${order} 重复（${count} 个）`);
+    }
+  }
+
+  for (const arrow of all) {
+    if (arrow.kind !== 1 && arrow.kind !== 2) continue;
+    let attachments = 0;
+    const arrowCells = new Set(arrow.occupiedPositions.map((p) => vecKey(p)));
+
+    for (const other of all) {
+      if (other.instanceId === arrow.instanceId) continue;
+      if (other.kind === 13) {
+        if (
+          other.occupiedPositions.length === arrow.occupiedPositions.length &&
+          other.occupiedPositions.every(
+            (p, i) =>
+              p[0] === arrow.occupiedPositions[i]![0] &&
+              p[1] === arrow.occupiedPositions[i]![1],
+          )
+        ) {
+          attachments += 1;
+        }
+      } else if (other.kind === 5 || other.kind === 11) {
+        const cell = other.occupiedPositions[0];
+        if (cell && arrowCells.has(vecKey(cell))) attachments += 1;
+      }
+    }
+    if (attachments > 1) {
+      push(
+        issues,
+        "V-EDIT-01",
+        "error",
+        `箭 #${arrow.instanceId} 不可同时绑定多种附件（钥匙/炸弹/冻结）`,
+        arrow.instanceId,
+      );
     }
   }
 

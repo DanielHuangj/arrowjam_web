@@ -1,0 +1,82 @@
+{
+  "width": 14,
+  "height": 14,
+  "name": "[测] 移动墙",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 1,
+      "instanceId": 10,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6,
+      "occupiedPositions": [[1, 5], [2, 5], [3, 5], [4, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 11,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[10, 12], [10, 11]]
+    },
+    {
+      "kind": 7,
+      "instanceId": 20,
+      "layer": 2,
+      "occupiedPositions": [[8, 5],[8, 4]],
+      "movingPath": [[8, 5], [8, 4], [8, 3], [8, 2]],
+      "movingDistance": 1,
+      "movingType": 1
+    },
+    {
+      "kind": 1,
+      "instanceId": 12,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[11, 12], [11, 11]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 13,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[12, 12], [12, 11]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 14,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[13, 12], [13, 11]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 15,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[11, 9], [11, 8]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 16,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[12, 9], [12, 8]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 17,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3,
+      "occupiedPositions": [[13, 9], [13, 8]]
+    }
+  ]
+}

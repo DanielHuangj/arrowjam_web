@@ -1,14 +1,54 @@
-import type { EditorDocument, GameLevel, Vec2 } from "@arrowjaw/shared";
+import type { EditorDocument, GameLevel, RawItem, Vec2 } from "@arrowjaw/shared";
 import { parseLevelData, parseLevelIdFromFilename } from "@arrowjaw/shared";
 import { BoardRenderer } from "@arrowjaw/client/render/board-renderer.ts";
 import { STEP, CELL } from "@arrowjaw/client/render/colors.ts";
 import type { CurtainItem } from "@arrowjaw/shared";
 import { drawCornerRefractionPreview } from "./corner-preview.ts";
+import { drawFlipArrowPreview, drawFlipPolylinePreview } from "./flip-preview.ts";
+import { drawWallPathPreview } from "./wall-path-preview.ts";
+
+export interface EditorBoardOverlayState {
+  wallPathDraft?: Vec2[];
+  wallPathEditId?: number | null;
+  flipPolyline?: Vec2[];
+  flipDirection1?: number;
+  flipDirection2?: number;
+}
 
 export interface CornerPreview {
   cell: Vec2;
   d1: Vec2;
   d2: Vec2;
+}
+
+function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
+  const inZone = doc.editContext.zoneInstanceId != null;
+  if (inZone) {
+    return {
+      movingWalls: [] as GameLevel["movingWalls"],
+      frozenOverlays: [] as GameLevel["frozenOverlays"],
+      bombStates: [] as { bomb: GameLevel["bombs"][number]; remaining: number | null }[],
+    };
+  }
+  return {
+    movingWalls: level.movingWalls,
+    frozenOverlays: level.frozenOverlays,
+    bombStates: level.bombs.map((bomb) => ({ bomb, remaining: null as number | null })),
+  };
+}
+
+function findRawItem(doc: EditorDocument, id: number): RawItem | null {
+  function walk(items: RawItem[]): RawItem | null {
+    for (const item of items) {
+      if (item.instanceId === id) return item;
+      if (item.items) {
+        const found = walk(item.items);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return walk(doc.itemModels);
 }
 
 function zoneItemsVisible<T extends { zoneId: number | null }>(
@@ -42,15 +82,19 @@ function editorVisibleLayers(doc: EditorDocument, level: GameLevel) {
 
 export function documentToGameLevel(doc: EditorDocument): GameLevel {
   const id = parseLevelIdFromFilename(doc.source.name);
-  return parseLevelData(id, {
-    width: doc.meta.width,
-    height: doc.meta.height,
-    name: doc.meta.name,
-    durationInSec: doc.meta.durationInSec,
-    difficulty: doc.meta.difficulty,
-    levelKind: doc.meta.levelKind,
-    itemModels: doc.itemModels,
-  });
+  return parseLevelData(
+    id,
+    {
+      width: doc.meta.width,
+      height: doc.meta.height,
+      name: doc.meta.name,
+      durationInSec: doc.meta.durationInSec,
+      difficulty: doc.meta.difficulty,
+      levelKind: doc.meta.levelKind,
+      itemModels: doc.itemModels,
+    },
+    { allowIncompleteMovingWalls: true },
+  );
 }
 
 export function curtainWithBounds(c: CurtainItem) {
@@ -88,10 +132,12 @@ export class EditorBoardView {
     draftCells: Vec2[] = [],
     marquee: { x0: number; y0: number; x1: number; y1: number } | null = null,
     cornerHover: CornerPreview | null = null,
+    overlayState: EditorBoardOverlayState = {},
   ): void {
     const level = documentToGameLevel(doc);
     const launchable = new Set<number>();
     const layers = editorVisibleLayers(doc, level);
+    const mechanics = collectMechanicsDrawOptions(doc, level);
 
     this.renderer.drawBoard(
       { width: level.width, height: level.height },
@@ -107,18 +153,25 @@ export class EditorBoardView {
       layers.topPipes,
       layers.keys,
       layers.curtains,
+      {
+        style: "editor",
+        movingWalls: mechanics.movingWalls,
+        frozenOverlays: mechanics.frozenOverlays,
+        bombStates: mechanics.bombStates,
+      },
     );
 
     this.syncOverlay(level.width, level.height);
     this.drawOverlay(
-      level.width,
-      level.height,
+      doc,
+      level,
       hoverCell,
       selectedIds,
       draftCells,
       layers,
       marquee,
       cornerHover,
+      overlayState,
     );
   }
 
@@ -134,16 +187,19 @@ export class EditorBoardView {
   }
 
   private drawOverlay(
-    width: number,
-    height: number,
+    doc: EditorDocument,
+    level: GameLevel,
     hoverCell: Vec2 | null,
     selectedIds: Set<number>,
     draftCells: Vec2[],
     layers: ReturnType<typeof editorVisibleLayers>,
     marquee: { x0: number; y0: number; x1: number; y1: number } | null,
     cornerHover: CornerPreview | null,
+    overlayState: EditorBoardOverlayState,
   ): void {
     const ctx = this.overlayCtx;
+    const width = level.width;
+    const height = level.height;
     const dpr = window.devicePixelRatio || 1;
     ctx.save();
     ctx.scale(1 / dpr, 1 / dpr);
@@ -204,6 +260,38 @@ export class EditorBoardView {
 
     if (cornerHover) {
       drawCornerRefractionPreview(ctx, cornerHover.cell, cornerHover.d1, cornerHover.d2);
+    }
+
+    const allArrows = [...layers.zoneArrows, ...layers.topArrows];
+    for (const arrow of allArrows) {
+      if (arrow.kind === 2) drawFlipArrowPreview(ctx, arrow);
+    }
+
+    if (overlayState.flipPolyline && overlayState.flipPolyline.length >= 2) {
+      drawFlipPolylinePreview(
+        ctx,
+        overlayState.flipPolyline,
+        overlayState.flipDirection1 ?? 3,
+        overlayState.flipDirection2 ?? 3,
+      );
+    }
+
+    for (const wall of level.movingWalls) {
+      if (!selectedIds.has(wall.instanceId) && overlayState.wallPathEditId !== wall.instanceId) {
+        continue;
+      }
+      if (wall.movingPath.length >= 2) {
+        drawWallPathPreview(ctx, wall.movingPath, wall.movingType);
+      }
+    }
+
+    if (overlayState.wallPathDraft && overlayState.wallPathDraft.length >= 1) {
+      const editItem =
+        overlayState.wallPathEditId != null
+          ? findRawItem(doc, overlayState.wallPathEditId)
+          : null;
+      const movingType = (editItem?.movingType as 1 | 2 | undefined) ?? 1;
+      drawWallPathPreview(ctx, overlayState.wallPathDraft, movingType);
     }
 
     const allItems = [

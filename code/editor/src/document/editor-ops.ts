@@ -5,6 +5,87 @@ import {
   nextInstanceId,
 } from "@arrowjaw/shared";
 
+function positionsEqual(a: Vec2[], b: Vec2[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((p, i) => p[0] === b[i]![0] && p[1] === b[i]![1]);
+}
+
+function collectAllItems(items: RawItem[]): RawItem[] {
+  const out: RawItem[] = [];
+  function walk(list: RawItem[]): void {
+    for (const item of list) {
+      out.push(item);
+      if (item.items) walk(item.items);
+    }
+  }
+  walk(items);
+  return out;
+}
+
+function patchAllItems(
+  doc: EditorDocument,
+  patcher: (item: RawItem) => RawItem,
+): EditorDocument {
+  function patchList(items: RawItem[]): RawItem[] {
+    return items.map((item) => {
+      const next = patcher(item);
+      if (next.items) return { ...next, items: patchList(next.items) };
+      return next;
+    });
+  }
+  return { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
+}
+
+/** 宿主箭移动/改坐标后，同步 kind5/kind13 绑定坐标 */
+export function syncAttachmentsForHost(
+  doc: EditorDocument,
+  hostId: number,
+  hostPositions: Vec2[],
+  previousPositions?: Vec2[],
+): EditorDocument {
+  const ref = previousPositions ?? hostPositions;
+
+  return patchAllItems(doc, (item) => {
+    if (item.kind === 13) {
+      if (positionsEqual(item.occupiedPositions, ref)) {
+        return {
+          ...item,
+          occupiedPositions: hostPositions.map(([x, y]) => [x, y] as Vec2),
+        };
+      }
+    }
+    if (item.kind === 5) {
+      const cell = item.occupiedPositions[0];
+      if (!cell) return item;
+      const idx = ref.findIndex((p) => p[0] === cell[0] && p[1] === cell[1]);
+      if (idx >= 0 && idx < hostPositions.length) {
+        const nextCell = hostPositions[idx]!;
+        return { ...item, occupiedPositions: [[nextCell[0], nextCell[1]]] };
+      }
+    }
+    return item;
+  });
+}
+
+function attachmentIdsToRemove(items: RawItem[], removedHost: RawItem): number[] {
+  const ids: number[] = [];
+  for (const item of items) {
+    if (item.kind === 13 && positionsEqual(item.occupiedPositions, removedHost.occupiedPositions)) {
+      ids.push(item.instanceId);
+    }
+    if (item.kind === 5) {
+      const cell = item.occupiedPositions[0];
+      if (
+        cell &&
+        removedHost.occupiedPositions.some((p) => p[0] === cell[0] && p[1] === cell[1])
+      ) {
+        ids.push(item.instanceId);
+      }
+    }
+  }
+  return ids;
+}
+
 export function getActiveItemList(doc: EditorDocument): RawItem[] {
   if (doc.editContext.zoneInstanceId == null) return doc.itemModels;
   const zone = findItemById(doc.itemModels, doc.editContext.zoneInstanceId);
@@ -45,6 +126,16 @@ export function addItem(doc: EditorDocument, item: Omit<RawItem, "instanceId">):
 
 export function removeItems(doc: EditorDocument, ids: number[]): EditorDocument {
   const idSet = new Set(ids);
+  const extra = new Set<number>();
+  for (const id of ids) {
+    const item = findItemById(doc.itemModels, id);
+    if (item && (item.kind === 1 || item.kind === 2)) {
+      for (const attachId of attachmentIdsToRemove(collectAllItems(doc.itemModels), item)) {
+        extra.add(attachId);
+      }
+    }
+  }
+  for (const id of extra) idSet.add(id);
   function filterList(items: RawItem[]): RawItem[] {
     return items
       .filter((i) => !idSet.has(i.instanceId))
@@ -77,7 +168,19 @@ export function updateItem(
       return item;
     });
   }
-  return { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
+  let next = { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
+  if (patch.occupiedPositions) {
+    const oldItem = findItemById(doc.itemModels, id);
+    if (oldItem && (oldItem.kind === 1 || oldItem.kind === 2)) {
+      next = syncAttachmentsForHost(
+        next,
+        id,
+        patch.occupiedPositions,
+        oldItem.occupiedPositions,
+      );
+    }
+  }
+  return next;
 }
 
 export function moveItemPositions(

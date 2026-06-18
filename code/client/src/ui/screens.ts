@@ -8,23 +8,30 @@ export function formatLevelKindLabel(kinds: number[] | undefined): string {
 
 export function renderLevelSelect(
   root: HTMLElement,
-  levels: LevelManifestEntry[],
+  manifest: { levels: LevelManifestEntry[]; devTests?: LevelManifestEntry[] },
   onSelect: (id: number) => void,
 ): void {
   root.innerHTML = `
     <div class="screen level-select">
       <h1>arrow_jaw</h1>
       <p class="subtitle">Arrow Jam 网页 Demo · 选择关卡</p>
-      <div class="level-grid"></div>
+      <div class="level-sections"></div>
     </div>
   `;
 
-  const grid = root.querySelector(".level-grid")! as HTMLElement;
-  for (const lv of levels) {
-    const btn = document.createElement("button");
-    btn.className = "level-btn";
-    const kindLabel = formatLevelKindLabel(lv.kinds);
-    btn.innerHTML = `
+  const sections = root.querySelector(".level-sections")! as HTMLElement;
+
+  const addSection = (title: string, levels: LevelManifestEntry[]) => {
+    if (levels.length === 0) return;
+    const section = document.createElement("section");
+    section.className = "level-section";
+    section.innerHTML = `<h2 class="level-section-title">${title}</h2><div class="level-grid"></div>`;
+    const grid = section.querySelector(".level-grid")! as HTMLElement;
+    for (const lv of levels) {
+      const btn = document.createElement("button");
+      btn.className = "level-btn";
+      const kindLabel = formatLevelKindLabel(lv.kinds);
+      btn.innerHTML = `
       <div class="level-thumb-wrap">
         <canvas class="level-thumb" data-level-id="${lv.id}" aria-hidden="true"></canvas>
       </div>
@@ -33,13 +40,17 @@ export function renderLevelSelect(
         <span class="level-meta">${lv.width}×${lv.height}</span>
       </div>
     `;
-    btn.title = `${lv.name || "Level " + lv.id}${kindLabel} · 难度 ${lv.difficulty}`;
-    btn.addEventListener("click", () => onSelect(lv.id));
-    grid.appendChild(btn);
-  }
+      btn.title = `${lv.name || "Level " + lv.id}${kindLabel} · 难度 ${lv.difficulty}`;
+      btn.addEventListener("click", () => onSelect(lv.id));
+      grid.appendChild(btn);
+    }
+    sections.appendChild(section);
+    attachLevelThumbnails(grid);
+    prefetchLevelThumbnails(levels);
+  };
 
-  attachLevelThumbnails(grid);
-  prefetchLevelThumbnails(levels);
+  addSection("主线关卡", manifest.levels);
+  addSection("机制测试", manifest.devTests ?? []);
 }
 
 export function renderGameShell(root: HTMLElement): {
@@ -86,14 +97,19 @@ export function updateHud(
     remainingSeconds: number;
     arrowCount: number;
     difficulty: number;
+    bombRemaining?: number | null;
   },
 ): void {
   hud.querySelector(".level-name")!.textContent =
     `${data.name} · 难度 ${data.difficulty}`;
   const sec = Math.ceil(data.remainingSeconds);
   const timerEl = hud.querySelector(".timer")!;
-  timerEl.textContent = `⏱ ${sec}s`;
-  timerEl.classList.toggle("urgent", sec <= 10);
+  const bombPart =
+    data.bombRemaining != null
+      ? ` · 💣 ${Math.ceil(data.bombRemaining)}s`
+      : "";
+  timerEl.textContent = `⏱ ${sec}s${bombPart}`;
+  timerEl.classList.toggle("urgent", sec <= 10 || (data.bombRemaining ?? 99) <= 5);
   hud.querySelector(".arrow-count")!.textContent =
     `🎯 剩余 ${data.arrowCount} 条箭`;
 }

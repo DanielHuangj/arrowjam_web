@@ -9,6 +9,12 @@ export interface ViewportState {
   spaceHeld: boolean;
 }
 
+export function shouldStartViewportPan(e: MouseEvent, vp: ViewportState): boolean {
+  if (e.button === 1) return true;
+  if (e.button !== 0) return false;
+  return vp.spaceHeld || e.ctrlKey;
+}
+
 export function createViewport(): ViewportState {
   return { scale: 1, offsetX: 0, offsetY: 0, panning: false, spaceHeld: false };
 }

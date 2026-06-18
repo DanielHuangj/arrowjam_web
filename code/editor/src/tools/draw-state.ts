@@ -5,11 +5,16 @@ import { isPolylineContinuous } from "@arrowjaw/shared";
 export type EditorTool =
   | "select"
   | "arrow"
+  | "flipArrow"
   | "pipe"
   | "corner"
   | "curtain"
   | "bundle"
   | "key"
+  | "bomb"
+  | "frozen"
+  | "movingWall"
+  | "wallPath"
   | "zone";
 
 export interface DrawState {
@@ -17,8 +22,11 @@ export interface DrawState {
   polyline: Vec2[];
   rectStart: Vec2 | null;
   bundleSourceArrowId: number | null;
+  wallPathEditId: number | null;
+  wallPathDraft: Vec2[];
   colorId: number;
   direction: Direction;
+  direction2: Direction;
   cornerD1: Vec2;
   cornerD2: Vec2;
 }
@@ -29,8 +37,11 @@ export function createDrawState(): DrawState {
     polyline: [],
     rectStart: null,
     bundleSourceArrowId: null,
+    wallPathEditId: null,
+    wallPathDraft: [],
     colorId: 6,
     direction: 1,
+    direction2: 3,
     cornerD1: [1, 0],
     cornerD2: [0, -1],
   };
@@ -81,7 +92,7 @@ export function extendPolylineToCell(polyline: Vec2[], target: Vec2): Vec2[] {
 }
 
 export function isPolylineTool(tool: EditorTool): boolean {
-  return tool === "arrow" || tool === "pipe";
+  return tool === "arrow" || tool === "pipe" || tool === "flipArrow";
 }
 
 export function buildArrowItem(polyline: Vec2[], colorId: number, direction: Direction, layer = 2): Omit<RawItem, "instanceId"> {
@@ -91,6 +102,57 @@ export function buildArrowItem(polyline: Vec2[], colorId: number, direction: Dir
     layer,
     direction,
     colorId,
+  };
+}
+
+export function buildFlipArrowItem(
+  polyline: Vec2[],
+  direction1: Direction,
+  direction2: Direction,
+  colorId: number,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 2,
+    occupiedPositions: polyline,
+    layer: 2,
+    direction1,
+    direction2,
+    colorId,
+  };
+}
+
+export function buildBombItem(hostPositions: Vec2[], time = 10): Omit<RawItem, "instanceId"> {
+  const cell = hostPositions[Math.floor(hostPositions.length / 2)] ?? hostPositions[0]!;
+  return {
+    kind: 5,
+    layer: 3,
+    occupiedPositions: [[cell[0], cell[1]]],
+    time,
+  };
+}
+
+export function buildFrozenItem(hostPositions: Vec2[], health = 1): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 13,
+    layer: 8,
+    occupiedPositions: hostPositions.map(([x, y]) => [x, y] as Vec2),
+    health,
+  };
+}
+
+export function buildMovingWallItem(
+  bodyCells: Vec2[],
+  movingPath: Vec2[],
+  movingDistance = 1,
+  movingType: 1 | 2 = 1,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 7,
+    layer: 2,
+    occupiedPositions: bodyCells,
+    movingPath,
+    movingDistance,
+    movingType,
   };
 }
 
@@ -159,4 +221,24 @@ export function headMatchesDirection(polyline: Vec2[], direction: Direction): bo
   const tail = polyline.at(-2)!;
   const head = polyline.at(-1)!;
   return head[0] - tail[0] === vec[0] && head[1] - tail[1] === vec[1];
+}
+
+export function tailMatchesDirection(polyline: Vec2[], direction: Direction): boolean {
+  if (polyline.length < 2) return true;
+  const vec = DIR_VEC[direction];
+  const head = polyline[0]!;
+  const next = polyline[1]!;
+  return next[0] - head[0] === -vec[0] && next[1] - head[1] === -vec[1];
+}
+
+export function directionFromFirstSegment(polyline: Vec2[]): Direction {
+  if (polyline.length < 2) return 3;
+  const a = polyline[0]!;
+  const b = polyline[1]!;
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  if (dx === 0 && dy === 1) return 1;
+  if (dx === 0 && dy === -1) return 2;
+  if (dx === 1 && dy === 0) return 3;
+  return 4;
 }

@@ -184,6 +184,7 @@ export function simulateCanExitBundle(
   board: BoardSize,
   pipes: PipeItem[] = [],
   curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
 ): boolean {
   const members = memberIds
     .map((id) => allArrows.find((a) => a.instanceId === id))
@@ -234,6 +235,7 @@ export function simulateCanExitBundle(
         corners,
         activePipes(simPipes),
         curtainCells,
+        extraBlockerCells,
       );
 
       if (result.blocked) return false;
@@ -250,6 +252,7 @@ export function simulateCanExitBundle(
           head[1] >= 0 &&
           head[1] < board.height
         ) {
+          if (extraBlockerCells.has(vecKey(head))) return false;
           for (const other of allArrows) {
             if (memberSet.has(other.instanceId)) continue;
             for (const p of other.occupiedPositions) {
@@ -382,6 +385,7 @@ export class BundleManager {
     board: BoardSize,
     pipes: PipeItem[] = [],
     curtainCells: Set<string> = new Set(),
+    extraBlockerCells: Set<string> = new Set(),
   ): boolean {
     const members = group.arrowIds
       .map((id) => activeArrows.find((a) => a.instanceId === id))
@@ -394,6 +398,7 @@ export class BundleManager {
       board,
       pipes,
       curtainCells,
+      extraBlockerCells,
     );
   }
 }

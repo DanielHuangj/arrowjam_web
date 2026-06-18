@@ -1,10 +1,13 @@
 import type {
   ArrowItem,
   BoardSize,
+  BombItem,
   BundleItem,
   CornerItem,
   CurtainItem,
+  FrozenOverlayItem,
   KeyArrowItem,
+  MovingWallItem,
   PipeItem,
   Vec2,
   ZoneItem,
@@ -29,6 +32,7 @@ import { drawCornerInCell } from "./corner-drawer.ts";
 import { drawCurtainInBoard } from "./curtain-drawer.ts";
 import { drawKeyInCell } from "./key-drawer.ts";
 import { drawPipeInBoard } from "./pipe-drawer.ts";
+import { drawBomb, drawBombExplosion, drawFrozenOverlay, drawMovingWall } from "./mechanics-drawer.ts";
 
 export type BoardRenderStyle = "editor" | "game";
 
@@ -39,6 +43,12 @@ export interface BoardDrawOptions {
   occupiedCells?: Set<string>;
   /** 随机消除湮灭进度 0~1，按 instanceId */
   vanishProgressById?: ReadonlyMap<number, number>;
+  movingWalls?: MovingWallItem[];
+  frozenOverlays?: FrozenOverlayItem[];
+  bombStates?: { bomb: BombItem; remaining: number | null }[];
+  bombExplosion?: { cells: Vec2[]; progress: number } | null;
+  bombs?: BombItem[];
+  urgentBombRemaining?: number | null;
 }
 
 const DEFAULT_DRAW_OPTIONS: BoardDrawOptions = { style: "editor" };
@@ -152,6 +162,15 @@ export class BoardRenderer {
       this.drawBundle(strip);
     }
 
+    for (const pipe of topPipes) {
+      this.drawPipe(pipe);
+    }
+    if (options.movingWalls) {
+      for (const wall of options.movingWalls) {
+        drawMovingWall(this.ctx, wall);
+      }
+    }
+
     for (const arrow of topArrows) {
       this.drawArrow(
         arrow,
@@ -160,8 +179,10 @@ export class BoardRenderer {
         options.vanishProgressById?.get(arrow.instanceId) ?? 0,
       );
     }
-    for (const pipe of topPipes) {
-      this.drawPipe(pipe);
+    if (options.frozenOverlays) {
+      for (const overlay of options.frozenOverlays) {
+        drawFrozenOverlay(this.ctx, overlay);
+      }
     }
     for (const corner of topCorners) {
       this.drawCorner(corner);
@@ -173,6 +194,25 @@ export class BoardRenderer {
     for (const key of keys) {
       const [x, y] = key.occupiedPositions[0] ?? [0, 0];
       drawKeyInCell(this.ctx, x, y, STEP);
+    }
+
+    if (options.bombStates) {
+      for (const { bomb, remaining } of options.bombStates) {
+        drawBomb(this.ctx, bomb, remaining);
+      }
+    } else if (options.bombs) {
+      const urgent = options.urgentBombRemaining ?? null;
+      for (const bomb of options.bombs) {
+        drawBomb(this.ctx, bomb, urgent);
+      }
+    }
+
+    if (options.bombExplosion) {
+      drawBombExplosion(
+        this.ctx,
+        options.bombExplosion.cells,
+        options.bombExplosion.progress,
+      );
     }
 
     for (const curtain of curtains) {

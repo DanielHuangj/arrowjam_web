@@ -5,7 +5,7 @@ export function buildZoneItem(raw: RawItem): ZoneItem {
   const arrowIds: number[] = [];
   const cornerIds: number[] = [];
   for (const item of raw.items ?? []) {
-    if (item.kind === 1) arrowIds.push(item.instanceId);
+    if (item.kind === 1 || item.kind === 2) arrowIds.push(item.instanceId);
     if (item.kind === 4) cornerIds.push(item.instanceId);
   }
   const xs = raw.occupiedPositions.map((p) => p[0]);

@@ -1,0 +1,32 @@
+{
+  "width": 12,
+  "height": 12,
+  "name": "[测] 定时炸弹",
+  "durationInSec": 300,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 1,
+      "instanceId": 40,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6,
+      "occupiedPositions": [[7, 5], [8, 5], [9, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 43,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7,
+      "occupiedPositions": [[4, 5], [5, 5],[6, 5]]
+    },
+    {
+      "kind": 5,
+      "instanceId": 44,
+      "layer": 3,
+      "time": 12,
+      "occupiedPositions": [[5, 5]]
+    }
+  ]
+}

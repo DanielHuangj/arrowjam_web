@@ -2,12 +2,16 @@ import type { EditorDocument, RawItem, ValidationIssue } from "@arrowjaw/shared"
 
 const KIND_LABELS: Record<number, string> = {
   1: "折线箭",
+  2: "翻转箭",
   3: "管道",
   4: "反射角块",
+  5: "定时炸弹",
   6: "幕布",
+  7: "移动墙",
   8: "捆绑箭",
   11: "钥匙箭",
   12: "子区域",
+  13: "冻结箭",
 };
 
 const COLORS = [
@@ -19,6 +23,11 @@ const COLORS = [
 
 export type PropsChangeHandler = (patch: Record<string, unknown>) => void;
 export type MetaChangeHandler = (patch: Partial<EditorDocument["meta"]>) => void;
+export type WallPathEditHandler = (instanceId: number) => void;
+export type WallPathEditState = {
+  instanceId: number;
+  draftLength: number;
+};
 
 export function renderPropsPanel(
   el: HTMLElement,
@@ -27,6 +36,10 @@ export function renderPropsPanel(
   onMeta: MetaChangeHandler,
   onItem: PropsChangeHandler,
   onEnterZone: (zoneId: number) => void,
+  onStartWallPath?: WallPathEditHandler,
+  wallPathEdit?: WallPathEditState | null,
+  onFinishWallPath?: () => void,
+  onCancelWallPath?: () => void,
 ): void {
   el.innerHTML = "";
 
@@ -35,7 +48,18 @@ export function renderPropsPanel(
   } else if (doc.selectedInstanceIds.length === 1) {
     const id = doc.selectedInstanceIds[0]!;
     const item = findInDoc(doc, id);
-    if (item) renderItemProps(el, item, onItem, onEnterZone);
+    if (item) {
+      renderItemProps(
+        el,
+        item,
+        onItem,
+        onEnterZone,
+        onStartWallPath,
+        wallPathEdit,
+        onFinishWallPath,
+        onCancelWallPath,
+      );
+    }
   } else {
     el.innerHTML = `<h3>已选 ${doc.selectedInstanceIds.length} 个物件</h3>`;
   }
@@ -105,6 +129,10 @@ function renderItemProps(
   item: RawItem,
   onItem: PropsChangeHandler,
   onEnterZone: (zoneId: number) => void,
+  onStartWallPath?: WallPathEditHandler,
+  wallPathEdit?: WallPathEditState | null,
+  onFinishWallPath?: () => void,
+  onCancelWallPath?: () => void,
 ): void {
   const title = `Kind ${item.kind} — ${KIND_LABELS[item.kind] ?? "物件"} #${item.instanceId}`;
   let html = `<h3>${title}</h3>`;
@@ -122,6 +150,20 @@ function renderItemProps(
       </label>
       <label><span>颜色</span><div id="color-swatches"></div></label>
     `;
+  } else if (item.kind === 2) {
+    html += `
+      <label><span>direction1（默认头）</span>
+        <select id="prop-direction1">
+          ${dirOptions(item.direction1 as number | undefined)}
+        </select>
+      </label>
+      <label><span>direction2（翻转头）</span>
+        <select id="prop-direction2">
+          ${dirOptions(item.direction2 as number | undefined)}
+        </select>
+      </label>
+      <label><span>颜色</span><div id="color-swatches"></div></label>
+    `;
   } else if (item.kind === 4) {
     html += `<label><span>direction1</span><div class="dir-btn-group" id="d1-btns"></div></label>`;
     html += `<label><span>direction2</span><div class="dir-btn-group" id="d2-btns"></div></label>`;
@@ -135,6 +177,41 @@ function renderItemProps(
       <label><span>血量</span><input type="number" id="prop-health" min="1" value="${item.health ?? 1}" /></label>
       <label><span>消除顺序 order</span><input type="number" id="prop-order" min="0" value="${item.order ?? 0}" /></label>
     `;
+  } else if (item.kind === 5) {
+    html += `
+      <label><span>倒计时（秒）</span><input type="number" id="prop-time" min="1" value="${item.time ?? 10}" /></label>
+      <p>绑定格: ${formatPositions(item.occupiedPositions)}</p>
+    `;
+  } else if (item.kind === 7) {
+    const path = (item.movingPath as Vec2[] | undefined) ?? [];
+    const isEditing = wallPathEdit?.instanceId === item.instanceId;
+    html += `
+      <label><span>每次移动格数</span><input type="number" id="prop-move-dist" min="1" value="${item.movingDistance ?? 1}" /></label>
+      <label><span>移动方式</span>
+        <select id="prop-move-type">
+          <option value="1" ${item.movingType === 1 ? "selected" : ""}>往复循环</option>
+          <option value="2" ${item.movingType === 2 ? "selected" : ""}>环绕循环</option>
+        </select>
+      </label>
+      <p>路径 (${path.length} 点): ${formatPositions(path)}</p>
+    `;
+    if (isEditing) {
+      html += `
+        <p class="wall-path-hint">路径编辑中：在画布拖拽绘制，Enter 完成，Esc 取消</p>
+        <p>草稿 (${wallPathEdit.draftLength} 点)</p>
+        <div class="wall-path-actions">
+          <button type="button" id="finish-wall-path" class="active">完成路径</button>
+          <button type="button" id="cancel-wall-path">取消</button>
+        </div>
+      `;
+    } else {
+      html += `<button type="button" id="edit-wall-path">编辑路径</button>`;
+    }
+  } else if (item.kind === 13) {
+    html += `
+      <label><span>health</span><input type="number" id="prop-health" min="1" value="${item.health ?? 1}" /></label>
+      <p>冻结区域: ${formatPositions(item.occupiedPositions)}</p>
+    `;
   } else if (item.kind === 11) {
     const pos = item.occupiedPositions[0];
     html += `<p>绑定格: [${pos?.[0] ?? "?"}, ${pos?.[1] ?? "?"}]</p>`;
@@ -147,6 +224,30 @@ function renderItemProps(
 
   el.querySelector("#prop-direction")?.addEventListener("change", (e) => {
     onItem({ direction: parseInt((e.target as HTMLSelectElement).value, 10) });
+  });
+  el.querySelector("#prop-direction1")?.addEventListener("change", (e) => {
+    onItem({ direction1: parseInt((e.target as HTMLSelectElement).value, 10) });
+  });
+  el.querySelector("#prop-direction2")?.addEventListener("change", (e) => {
+    onItem({ direction2: parseInt((e.target as HTMLSelectElement).value, 10) });
+  });
+  el.querySelector("#prop-time")?.addEventListener("change", (e) => {
+    onItem({ time: parseInt((e.target as HTMLInputElement).value, 10) });
+  });
+  el.querySelector("#prop-move-dist")?.addEventListener("change", (e) => {
+    onItem({ movingDistance: parseInt((e.target as HTMLInputElement).value, 10) });
+  });
+  el.querySelector("#prop-move-type")?.addEventListener("change", (e) => {
+    onItem({ movingType: parseInt((e.target as HTMLSelectElement).value, 10) });
+  });
+  el.querySelector("#edit-wall-path")?.addEventListener("click", () => {
+    onStartWallPath?.(item.instanceId);
+  });
+  el.querySelector("#finish-wall-path")?.addEventListener("click", () => {
+    onFinishWallPath?.();
+  });
+  el.querySelector("#cancel-wall-path")?.addEventListener("click", () => {
+    onCancelWallPath?.();
   });
   el.querySelector("#prop-health")?.addEventListener("change", (e) => {
     onItem({ health: parseInt((e.target as HTMLInputElement).value, 10) });
@@ -240,4 +341,24 @@ function findInDoc(doc: EditorDocument, id: number): RawItem | null {
 
 function escapeAttr(s: string): string {
   return s.replace(/"/g, "&quot;");
+}
+
+function dirOptions(selected: number | undefined): string {
+  const opts = [
+    [1, "下"],
+    [2, "上"],
+    [3, "右"],
+    [4, "左"],
+  ] as const;
+  return opts
+    .map(
+      ([v, label]) =>
+        `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`,
+    )
+    .join("");
+}
+
+function formatPositions(positions: { 0: number; 1: number }[]): string {
+  if (positions.length === 0) return "—";
+  return positions.map((p) => `[${p[0]},${p[1]}]`).join(" ");
 }

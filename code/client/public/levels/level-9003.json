@@ -1,0 +1,56 @@
+{
+  "width": 12,
+  "height": 12,
+  "name": "[测] 冻结解冻",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 1,
+      "instanceId": 30,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6,
+      "occupiedPositions": [[5, 5], [6, 5]]
+    },
+    {
+      "kind": 13,
+      "instanceId": 31,
+      "layer": 8,
+      "health": 2,
+      "occupiedPositions": [[5, 5], [6, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 32,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 3,
+      "occupiedPositions": [[4, 5], [3, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 33,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7,
+      "occupiedPositions": [[7, 5], [8, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 34,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7,
+      "occupiedPositions": [[7, 4], [8, 4]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 35,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7,
+      "occupiedPositions": [[5, 4], [6, 4]]
+    }
+  ]
+}

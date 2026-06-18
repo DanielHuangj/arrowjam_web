@@ -4,6 +4,9 @@ export type {
   BoardSize,
   BaseItem,
   ArrowItem,
+  BombItem,
+  MovingWallItem,
+  FrozenOverlayItem,
   CornerItem,
   ZoneItem,
   BundleItem,
@@ -53,6 +56,7 @@ export interface LevelManifestEntry {
 
 export interface LevelManifest {
   levels: LevelManifestEntry[];
+  devTests?: LevelManifestEntry[];
 }
 
 export type GamePhase =
@@ -60,8 +64,11 @@ export type GamePhase =
   | "loading"
   | "playing"
   | "animating"
+  | "exploding"
   | "won"
   | "lost";
+
+export type LostReason = "time" | "bomb";
 
 export type LaunchMode = "exit" | "bump" | "vanish";
 

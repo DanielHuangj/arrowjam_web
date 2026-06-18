@@ -17,6 +17,9 @@ function minimalLevel(arrows: GameLevel["arrows"]): GameLevel {
     pipes: [],
     curtains: [],
     keys: [],
+    bombs: [],
+    movingWalls: [],
+    frozenOverlays: [],
   };
 }
 
@@ -136,5 +139,47 @@ describe("GameState cleared traces", () => {
     }
     expect(gs.arrows.length).toBe(1);
     expect(gs.arrows[0]!.instanceId).toBe(2);
+  });
+
+  it("flip arrow toggles direction after another arrow eliminated", () => {
+    const gs = new GameState(
+      minimalLevel([
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          zoneId: null,
+          occupiedPositions: [
+            [0, 6],
+            [1, 6],
+            [2, 6],
+          ],
+        },
+        {
+          kind: 2,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          direction1: 3,
+          direction2: 4,
+          colorId: 7,
+          zoneId: null,
+          occupiedPositions: [
+            [5, 6],
+            [6, 6],
+            [7, 6],
+          ],
+        },
+      ]),
+    );
+    expect(gs.tryTargetVanishAtCell([2, 6])).toBe(true);
+    while (gs.phase === "animating") {
+      gs.advanceAnimation();
+    }
+    const flip = gs.arrows.find((a) => a.instanceId === 2)!;
+    expect(flip.direction).toBe(4);
+    expect(flip.occupiedPositions[0]).toEqual([7, 6]);
   });
 });

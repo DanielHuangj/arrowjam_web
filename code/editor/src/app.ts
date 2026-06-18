@@ -20,6 +20,7 @@ import {
   pointerToCell,
   resetViewport,
   zoomAt,
+  shouldStartViewportPan,
   type ViewportState,
 } from "./canvas/viewport.ts";
 import {
@@ -51,21 +52,35 @@ import { renderPropsPanel } from "./ui/props-panel.ts";
 import {
   extendPolylineToCell,
   buildArrowItem,
+  buildBombItem,
   buildBundleItem,
   buildCornerItem,
   buildCurtainItem,
+  buildFlipArrowItem,
+  buildFrozenItem,
   buildKeyItem,
+  buildMovingWallItem,
   buildPipeItem,
   buildZoneItem,
   createDrawState,
+  directionFromFirstSegment,
   directionFromLastSegment,
   headMatchesDirection,
   isValidPolyline,
   type DrawState,
   type EditorTool,
 } from "./tools/draw-state.ts";
+import { extendWallPathToCell } from "./canvas/wall-path-preview.ts";
 
-const ZONE_EDIT_TOOLS = new Set<EditorTool>(["select", "arrow", "corner", "bundle"]);
+const ZONE_EDIT_TOOLS = new Set<EditorTool>([
+  "select",
+  "arrow",
+  "flipArrow",
+  "corner",
+  "bundle",
+  "bomb",
+  "frozen",
+]);
 
 interface TabState {
   id: string;
@@ -95,6 +110,7 @@ export class EditorApp {
   private marqueeActive = false;
   private selectionAddMode = false;
   private polylineDragging = false;
+  private wallPathDragging = false;
   private boardView: EditorBoardView;
   private rafId = 0;
   private statusHint: string | null = null;
@@ -185,14 +201,18 @@ export class EditorApp {
   }
 
   private buildTools(): void {
-    const tools: { tool: EditorTool; label: string }[] = [
-      { tool: "select", label: "选择" },
-      { tool: "arrow", label: "K1 箭" },
-      { tool: "pipe", label: "K3 管" },
-      { tool: "corner", label: "K4 角" },
-      { tool: "curtain", label: "K6 幕" },
-      { tool: "key", label: "K11 钥" },
-      { tool: "zone", label: "K12 区" },
+    const tools: { tool: EditorTool; label: string; title: string }[] = [
+      { tool: "select", label: "选择", title: "选择/移动物件" },
+      { tool: "arrow", label: "K1 折线箭", title: "折线箭 kind1" },
+      { tool: "flipArrow", label: "K2 翻转箭", title: "翻转箭：消除 kind1/kind2 时切换方向" },
+      { tool: "pipe", label: "K3 管道", title: "管道 kind3" },
+      { tool: "corner", label: "K4 反射角", title: "反射角块 kind4" },
+      { tool: "curtain", label: "K6 幕布", title: "幕布 kind6" },
+      { tool: "key", label: "K11 钥匙箭", title: "钥匙箭 kind11" },
+      { tool: "bomb", label: "K5 定时炸弹", title: "定时炸弹：先选中 kind1/2 箭再添加" },
+      { tool: "frozen", label: "K13 冻结箭", title: "冻结箭：先选中 kind1/2 箭再添加" },
+      { tool: "movingWall", label: "K7 移动墙", title: "移动墙：框选墙身后编辑路径" },
+      { tool: "zone", label: "K12 子区域", title: "子区域 kind12" },
     ];
     this.els.tools.innerHTML = `<div class="tool-label">物件工具</div>`;
     for (const t of tools) {
@@ -200,19 +220,29 @@ export class EditorApp {
       b.type = "button";
       b.dataset.tool = t.tool;
       b.textContent = t.label;
+      b.title = t.title;
       b.addEventListener("click", () => this.setTool(t.tool));
       this.els.tools.appendChild(b);
     }
     const bundleBtn = document.createElement("button");
     bundleBtn.type = "button";
     bundleBtn.dataset.tool = "bundle";
-    bundleBtn.textContent = "K8 捆绑";
+    bundleBtn.textContent = "K8 捆绑箭";
+    bundleBtn.title = "捆绑箭：先选中 kind1/2 箭再框选条带";
     bundleBtn.addEventListener("click", () => this.startBundle());
     this.els.tools.appendChild(bundleBtn);
   }
 
   private setTool(tool: EditorTool): void {
     if (this.playMode || !this.isToolAllowed(tool)) return;
+    if (tool === "bomb") {
+      this.startBomb();
+      return;
+    }
+    if (tool === "frozen") {
+      this.startFrozen();
+      return;
+    }
     const tab = this.activeTab();
     tab.draw = { ...createDrawState(), tool };
     if (tool === "select") {
@@ -261,13 +291,140 @@ export class EditorApp {
     return true;
   }
 
+  private findSelectedHostArrow(): RawItem | null {
+    const tab = this.activeTab();
+    for (const id of tab.doc.selectedInstanceIds) {
+      const item = findItemById(tab.doc.itemModels, id);
+      if (item && (item.kind === 1 || item.kind === 2)) return item;
+    }
+    return null;
+  }
+
+  private hostHasAttachmentConflict(host: RawItem, excludeKind?: number): boolean {
+    const all = this.collectAllRawItems();
+    const cells = new Set(host.occupiedPositions.map(([x, y]) => `${x},${y}`));
+    let count = 0;
+    for (const item of all) {
+      if (item.kind === 13 && excludeKind !== 13) {
+        if (
+          item.occupiedPositions.length === host.occupiedPositions.length &&
+          item.occupiedPositions.every(
+            (p, i) =>
+              p[0] === host.occupiedPositions[i]![0] &&
+              p[1] === host.occupiedPositions[i]![1],
+          )
+        ) {
+          count += 1;
+        }
+      } else if (item.kind === 5 && excludeKind !== 5) {
+        const c = item.occupiedPositions[0];
+        if (c && cells.has(`${c[0]},${c[1]}`)) count += 1;
+      } else if (item.kind === 11 && excludeKind !== 11) {
+        const c = item.occupiedPositions[0];
+        if (c && cells.has(`${c[0]},${c[1]}`)) count += 1;
+      }
+    }
+    return count > 0;
+  }
+
+  private collectAllRawItems(): RawItem[] {
+    const out: RawItem[] = [];
+    function walk(items: RawItem[]): void {
+      for (const item of items) {
+        out.push(item);
+        if (item.items) walk(item.items);
+      }
+    }
+    walk(this.activeTab().doc.itemModels);
+    return out;
+  }
+
+  private startBomb(): void {
+    if (!this.isToolAllowed("bomb")) return;
+    const host = this.findSelectedHostArrow();
+    if (!host) {
+      alert("请先选中一条 kind 1 或 kind 2 箭");
+      return;
+    }
+    if (this.hostHasAttachmentConflict(host, 5)) {
+      alert("该箭已绑定钥匙、炸弹或冻结，不可重复绑定");
+      return;
+    }
+    this.tryCommitItem(buildBombItem(host.occupiedPositions));
+  }
+
+  private startFrozen(): void {
+    if (!this.isToolAllowed("frozen")) return;
+    const host = this.findSelectedHostArrow();
+    if (!host) {
+      alert("请先选中一条 kind 1 或 kind 2 箭");
+      return;
+    }
+    if (this.hostHasAttachmentConflict(host, 13)) {
+      alert("该箭已绑定钥匙、炸弹或冻结，不可重复绑定");
+      return;
+    }
+    this.tryCommitItem(buildFrozenItem(host.occupiedPositions));
+  }
+
+  private startWallPathEdit(instanceId: number): void {
+    const item = findItemById(this.activeTab().doc.itemModels, instanceId);
+    if (!item || item.kind !== 7) return;
+    const tab = this.activeTab();
+    tab.draw = {
+      ...createDrawState(),
+      tool: "wallPath",
+      wallPathEditId: instanceId,
+      wallPathDraft: [...((item.movingPath as Vec2[] | undefined) ?? [])],
+    };
+    this.refresh();
+  }
+
+  private finishWallPathEdit(): void {
+    const tab = this.activeTab();
+    const id = tab.draw.wallPathEditId;
+    if (id == null) return;
+    const path = tab.draw.wallPathDraft;
+    if (path.length < 2) {
+      alert("移动路径至少 2 格");
+      return;
+    }
+    this.commit(updateItem(tab.doc, id, { movingPath: path.map(([x, y]) => [x, y]) }));
+    tab.draw = { ...createDrawState(), tool: "select" };
+    this.wallPathDragging = false;
+    this.refresh();
+  }
+
+  private cancelWallPathEdit(): void {
+    const tab = this.activeTab();
+    if (tab.draw.tool !== "wallPath") return;
+    tab.draw = { ...createDrawState(), tool: "select" };
+    this.wallPathDragging = false;
+    this.refresh();
+  }
+
+  private applyWallPathAtCell(tab: TabState, cell: Vec2): void {
+    const path = tab.draw.wallPathDraft;
+    const last = path.at(-1);
+    const same = last != null && last[0] === cell[0] && last[1] === cell[1];
+    const adjacent =
+      last != null &&
+      Math.abs(cell[0] - last[0]) + Math.abs(cell[1] - last[1]) === 1;
+
+    if (path.length === 0 || (!same && !adjacent)) {
+      tab.draw.wallPathDraft = extendWallPathToCell([cell], cell);
+    } else if (!same) {
+      tab.draw.wallPathDraft = extendWallPathToCell(path, cell);
+    }
+  }
+
   private startBundle(): void {
     if (!this.isToolAllowed("bundle")) return;
     const tab = this.activeTab();
     const arrowId = tab.doc.selectedInstanceIds.find((id: number) => {
       function has(items: RawItem[]): boolean {
         for (const i of items) {
-          if (i.instanceId === id && i.kind === 1) return true;
+          if (i.instanceId === id && (i.kind === 1 || i.kind === 2)) return true;
           if (i.items && has(i.items)) return true;
         }
         return false;
@@ -275,7 +432,7 @@ export class EditorApp {
       return has(tab.doc.itemModels);
     });
     if (!arrowId) {
-      alert("请先选中一条 kind 1 折线箭");
+      alert("请先选中一条 kind 1 或 kind 2 折线箭");
       return;
     }
     tab.draw = { ...createDrawState(), tool: "bundle", bundleSourceArrowId: arrowId };
@@ -317,6 +474,10 @@ export class EditorApp {
       if (e.code === "Space") {
         const tab = this.activeTab();
         tab.viewport = { ...tab.viewport, spaceHeld: false };
+        this.els.wrap.classList.remove("viewport-pan-ready", "viewport-panning");
+      }
+      if (e.key === "Control") {
+        this.els.wrap.classList.remove("viewport-pan-ready", "viewport-panning");
       }
     });
 
@@ -353,8 +514,11 @@ export class EditorApp {
   private onMouseDown(e: MouseEvent): void {
     if (this.playMode) return;
     const tab = this.activeTab();
-    if (tab.viewport.spaceHeld || e.button === 1) {
+    if (shouldStartViewportPan(e, tab.viewport)) {
+      e.preventDefault();
       this.panStart = { x: e.clientX, y: e.clientY, ox: tab.viewport.offsetX, oy: tab.viewport.offsetY };
+      this.els.wrap.classList.add("viewport-panning");
+      this.els.wrap.classList.remove("viewport-pan-ready");
       return;
     }
     const cell = this.cellFromEvent(e);
@@ -381,7 +545,7 @@ export class EditorApp {
       return;
     }
 
-    if (tool === "arrow" || tool === "pipe") {
+    if (tool === "arrow" || tool === "pipe" || tool === "flipArrow") {
       const next = extendPolylineToCell(tab.draw.polyline, cell);
       if (!canPlaceInEditContext(tab.doc, next)) {
         this.placeBlocked();
@@ -390,6 +554,13 @@ export class EditorApp {
       this.polylineDragging = true;
       tab.draw.polyline = next;
       this.refresh();
+      return;
+    }
+
+    if (tool === "wallPath" && cell) {
+      this.applyWallPathAtCell(tab, cell);
+      this.wallPathDragging = true;
+      this.renderCanvas();
       return;
     }
 
@@ -407,7 +578,7 @@ export class EditorApp {
       return;
     }
 
-    if (tool === "curtain" || tool === "zone" || tool === "bundle") {
+    if (tool === "curtain" || tool === "zone" || tool === "bundle" || tool === "movingWall") {
       tab.draw.rectStart = cell;
       this.refresh();
     }
@@ -464,12 +635,22 @@ export class EditorApp {
       this.polylineDragging &&
       (e.buttons & 1) &&
       cell &&
-      (tab.draw.tool === "arrow" || tab.draw.tool === "pipe")
+      (tab.draw.tool === "arrow" || tab.draw.tool === "pipe" || tab.draw.tool === "flipArrow")
     ) {
       const next = extendPolylineToCell(tab.draw.polyline, cell);
       if (next.length !== tab.draw.polyline.length) {
         if (!canPlaceInEditContext(tab.doc, next)) return;
         tab.draw.polyline = next;
+        this.renderCanvas();
+      }
+      return;
+    }
+
+    if (this.wallPathDragging && (e.buttons & 1) && cell && tab.draw.tool === "wallPath") {
+      const path = tab.draw.wallPathDraft;
+      const next = extendWallPathToCell(path, cell);
+      if (next.length !== path.length) {
+        tab.draw.wallPathDraft = next;
         this.renderCanvas();
       }
       return;
@@ -491,11 +672,19 @@ export class EditorApp {
     const tab = this.activeTab();
     if (this.panStart) {
       this.panStart = null;
+      this.els.wrap.classList.remove("viewport-panning");
+      if (tab.viewport.spaceHeld || e.ctrlKey) {
+        this.els.wrap.classList.add("viewport-pan-ready");
+      }
       return;
     }
 
     if (this.polylineDragging) {
       this.polylineDragging = false;
+    }
+    if (this.wallPathDragging) {
+      this.wallPathDragging = false;
+      this.renderProps();
     }
 
     if (this.dragId != null) {
@@ -540,7 +729,7 @@ export class EditorApp {
     }
 
     const tool = tab.draw.tool;
-    if ((tool === "arrow" || tool === "pipe") && tab.draw.polyline.length >= 2) {
+    if ((tool === "arrow" || tool === "pipe" || tool === "flipArrow") && tab.draw.polyline.length >= 2) {
       // wait for dblclick or enter to finish - on mouse up for polyline we keep building
       return;
     }
@@ -556,6 +745,15 @@ export class EditorApp {
       } else if (tool === "bundle") {
         if (draft.length >= 2 && draft.length <= 4) {
           this.tryCommitItem(buildBundleItem(draft));
+        }
+      } else if (tool === "movingWall") {
+        if (this.isInZoneEdit()) {
+          alert("移动墙不可放在子区域内");
+        } else {
+          const nextDoc = addItem(tab.doc, buildMovingWallItem(draft, [], 1, 1));
+          this.commit(nextDoc);
+          const newId = nextDoc.selectedInstanceIds[0]!;
+          this.startWallPathEdit(newId);
         }
       }
       tab.draw.rectStart = null;
@@ -579,14 +777,39 @@ export class EditorApp {
 
     if (tab.draw.tool === "arrow" && tab.draw.polyline.length >= 2) {
       this.finishPolyline("arrow");
+    } else if (tab.draw.tool === "flipArrow" && tab.draw.polyline.length >= 2) {
+      this.finishPolyline("flipArrow");
     } else if (tab.draw.tool === "pipe" && tab.draw.polyline.length >= 2) {
       this.finishPolyline("pipe");
     }
   }
 
-  private finishPolyline(kind: "arrow" | "pipe"): void {
+  private finishPolyline(kind: "arrow" | "pipe" | "flipArrow"): void {
     const tab = this.activeTab();
     const pl = tab.draw.polyline;
+
+    if (kind === "flipArrow") {
+      if (pl.length < 2) return;
+      if (!canPlaceInEditContext(tab.doc, pl)) {
+        this.placeBlocked();
+        return;
+      }
+      const d1 = directionFromLastSegment(pl);
+      const d2 = directionFromFirstSegment(pl);
+      this.tryCommitItem(
+        buildFlipArrowItem(
+          pl.map(([x, y]) => [x, y] as Vec2),
+          d1,
+          d2,
+          tab.draw.colorId,
+        ),
+      );
+      tab.draw.polyline = [];
+      this.polylineDragging = false;
+      this.refresh();
+      return;
+    }
+
     if (!isValidPolyline(pl)) {
       alert("折线无效：须至少 2 格、连续、不自交");
       tab.draw.polyline = [];
@@ -620,14 +843,20 @@ export class EditorApp {
     const tab = this.activeTab();
     if (e.code === "Space") {
       tab.viewport = { ...tab.viewport, spaceHeld: true };
+      this.els.wrap.classList.add("viewport-pan-ready");
       e.preventDefault();
+    }
+    if (e.key === "Control") {
+      this.els.wrap.classList.add("viewport-pan-ready");
     }
     if (e.key === "Escape") {
       if (this.playMode) this.togglePlayMode();
+      else if (tab.draw.tool === "wallPath") this.cancelWallPathEdit();
       else if (tab.doc.editContext.zoneInstanceId != null) this.commit(exitZone(tab.doc));
       else {
         tab.draw = createDrawState();
         this.polylineDragging = false;
+        this.wallPathDragging = false;
         this.refresh();
       }
     }
@@ -671,8 +900,25 @@ export class EditorApp {
       if (blocked) this.placeBlocked();
       else this.commit(pasteItems(tab.doc, this.clipboard));
     }
-    if (e.key === "Enter" && (tab.draw.tool === "arrow" || tab.draw.tool === "pipe")) {
-      this.finishPolyline(tab.draw.tool);
+    if (e.key === "Enter") {
+      if (e.repeat) return;
+      const target = e.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      if (tab.draw.tool === "wallPath") {
+        this.finishWallPathEdit();
+      } else if (
+        tab.draw.tool === "arrow" ||
+        tab.draw.tool === "pipe" ||
+        tab.draw.tool === "flipArrow"
+      ) {
+        this.finishPolyline(tab.draw.tool);
+      }
     }
   }
 
@@ -869,6 +1115,14 @@ export class EditorApp {
       const visible = (arrows: typeof gs.arrows) =>
         arrows.filter((a) => !hidden.has(a.instanceId));
 
+      const vanishProgressById = new Map<number, number>();
+      if (gs.animation?.mode === "vanish") {
+        const progress = gs.getVanishAnimProgress();
+        for (const id of gs.animation.memberIds) {
+          vanishProgressById.set(id, progress);
+        }
+      }
+
       renderer.drawBoard(
         gs.level,
         launchable,
@@ -883,6 +1137,15 @@ export class EditorApp {
         gs.getTopLevelPipes(),
         gs.getVisibleKeys(),
         gs.getActiveCurtainsForRender(),
+        {
+          style: "game",
+          vanishProgressById,
+          movingWalls: gs.getMovingWalls(),
+          frozenOverlays: gs.getFrozenOverlays(),
+          bombStates: gs.getBombDrawStates(),
+          bombExplosion: gs.getBombExplosion(),
+          urgentBombRemaining: gs.getUrgentBombRemaining(),
+        },
       );
     };
 
@@ -997,12 +1260,32 @@ export class EditorApp {
       draft,
       marquee,
       cornerHover,
+      {
+        wallPathDraft: tab.draw.wallPathDraft,
+        wallPathEditId: tab.draw.wallPathEditId,
+        flipPolyline: tab.draw.tool === "flipArrow" ? tab.draw.polyline : undefined,
+        flipDirection1:
+          tab.draw.tool === "flipArrow"
+            ? directionFromLastSegment(tab.draw.polyline)
+            : undefined,
+        flipDirection2:
+          tab.draw.tool === "flipArrow"
+            ? directionFromFirstSegment(tab.draw.polyline)
+            : undefined,
+      },
     );
   }
 
   private renderProps(): void {
     const tab = this.activeTab();
     const issues = validateLevelData(levelDataFromDocument(tab.doc));
+    const wallPathEdit =
+      tab.draw.tool === "wallPath" && tab.draw.wallPathEditId != null
+        ? {
+            instanceId: tab.draw.wallPathEditId,
+            draftLength: tab.draw.wallPathDraft.length,
+          }
+        : null;
     renderPropsPanel(
       this.els.props,
       tab.doc,
@@ -1013,6 +1296,10 @@ export class EditorApp {
         if (id) this.commit(updateItem(tab.doc, id, patch));
       },
       (zoneId) => this.enterZoneEdit(zoneId),
+      (id) => this.startWallPathEdit(id),
+      wallPathEdit,
+      () => this.finishWallPathEdit(),
+      () => this.cancelWallPathEdit(),
     );
   }
 
@@ -1027,10 +1314,13 @@ export class EditorApp {
     const valid = blocking ? '<span class="invalid">校验未通过</span>' : "校验通过";
     const hint = this.statusHint
       ? `<span class="invalid">${this.statusHint}</span>`
-      : `${save} · ${valid}`;
+      : tab.draw.tool === "wallPath"
+        ? '<span class="wall-path-hint">路径编辑中 · Enter 完成 · Esc 取消</span>'
+        : `${save} · ${valid}`;
     this.els.status.innerHTML = `
       <span>${this.hoverCell ? `[${this.hoverCell[0]}, ${this.hoverCell[1]}]` : "—"}</span>
       <span>${scale}% · ${mid}</span>
+      <span>滚轮缩放 · Ctrl/Space+拖拽平移</span>
       <span>${hint}</span>
     `;
   }

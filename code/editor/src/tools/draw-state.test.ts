@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extendPolylineToCell } from "./draw-state.ts";
+import {
+  buildFlipArrowItem,
+  extendPolylineToCell,
+  tailMatchesDirection,
+} from "./draw-state.ts";
 
 describe("extendPolylineToCell", () => {
   it("extends horizontally on drag", () => {
@@ -35,5 +39,34 @@ describe("extendPolylineToCell", () => {
     );
     expect(result.length).toBeLessThan(5);
     expect(result.at(-1)).not.toEqual([0, 0]);
+  });
+
+  it("builds flip arrow item", () => {
+    const item = buildFlipArrowItem(
+      [
+        [1, 5],
+        [2, 5],
+        [3, 5],
+      ],
+      3,
+      4,
+      6,
+    );
+    expect(item.kind).toBe(2);
+    expect(item.direction1).toBe(3);
+    expect(item.direction2).toBe(4);
+  });
+
+  it("validates direction2 against first segment", () => {
+    expect(
+      tailMatchesDirection(
+        [
+          [5, 6],
+          [6, 6],
+          [7, 6],
+        ],
+        4,
+      ),
+    ).toBe(true);
   });
 });

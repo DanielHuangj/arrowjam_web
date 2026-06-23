@@ -1,4 +1,5 @@
 import type { EditorDocument, RawItem, Vec2 } from "@arrowjaw/shared";
+import { BOARD_MAX_SIZE, BOARD_MIN_SIZE, boardSizeRangeLabel, isBoardSizeValid } from "./board-limits.ts";
 import {
   createDocumentFromJson,
   createEmptyDocument,
@@ -49,6 +50,7 @@ import {
   supportsFSA,
 } from "./io/file-service.ts";
 import { renderPropsPanel } from "./ui/props-panel.ts";
+import { showAiGenerateDialog } from "./ui/ai-generate-dialog.ts";
 import {
   extendPolylineToCell,
   buildArrowItem,
@@ -97,6 +99,7 @@ export class EditorApp {
   private activeTabId: string | null = null;
   private clipboard: RawItem[] = [];
   private playMode = false;
+  private autoPlayActive = false;
   private gameState: GameState | null = null;
   private playRenderer: BoardRenderer | null = null;
   private playInput: InputHandler | null = null;
@@ -186,6 +189,7 @@ export class EditorApp {
       { label: "保存", action: () => this.save() },
       { label: "另存为", action: () => this.saveAs() },
       { label: "导出", action: () => this.exportFile() },
+      { label: "AI 辅助生成", action: () => this.showAiGenerateDialog() },
       { label: "试玩", action: () => this.togglePlayMode() },
       { label: "撤销", action: () => this.doUndo() },
       { label: "重做", action: () => this.doRedo() },
@@ -1002,13 +1006,17 @@ export class EditorApp {
     exportDownload(content, tab.doc.source.name);
   }
 
+  private showAiGenerateDialog(): void {
+    showAiGenerateDialog(this.els.modal);
+  }
+
   private showNewDialog(): void {
     this.els.modal.classList.remove("hidden");
     this.els.modal.innerHTML = `
       <div class="modal">
         <h2>新建关卡</h2>
-        <label><span>宽度</span><input id="nw" type="number" value="20" min="20" max="255" /></label>
-        <label><span>高度</span><input id="nh" type="number" value="32" min="20" max="255" /></label>
+        <label><span>宽度</span><input id="nw" type="number" value="20" min="${BOARD_MIN_SIZE}" max="${BOARD_MAX_SIZE}" /></label>
+        <label><span>高度</span><input id="nh" type="number" value="32" min="${BOARD_MIN_SIZE}" max="${BOARD_MAX_SIZE}" /></label>
         <label><span>名称</span><input id="nn" type="text" value="" /></label>
         <label><span>时限</span><input id="nd" type="number" value="150" min="1" /></label>
         <div class="actions modal-actions">
@@ -1023,6 +1031,10 @@ export class EditorApp {
     this.els.modal.querySelector("#modal-ok")?.addEventListener("click", () => {
       const w = parseInt((this.els.modal.querySelector("#nw") as HTMLInputElement).value, 10);
       const h = parseInt((this.els.modal.querySelector("#nh") as HTMLInputElement).value, 10);
+      if (!isBoardSizeValid(w, h)) {
+        alert(`宽度与高度须在 ${boardSizeRangeLabel()} 之间`);
+        return;
+      }
       const name = (this.els.modal.querySelector("#nn") as HTMLInputElement).value;
       const d = parseInt((this.els.modal.querySelector("#nd") as HTMLInputElement).value, 10);
       this.newTab(
@@ -1079,11 +1091,21 @@ export class EditorApp {
       this.playInput?.dispose();
       this.playInput = new InputHandler(this.els.canvas, () => this.gameState, this.playRenderer);
       this.els.playControls.innerHTML = `
+        <button type="button" id="play-auto" class="play-auto-btn" title="自动依次点击当前无阻挡、可立即出界的箭">一键试玩</button>
         <button type="button" id="play-reset">重置</button>
         <button type="button" id="play-exit">退出 (Esc)</button>
       `;
+      this.els.playControls.querySelector("#play-auto")?.addEventListener("click", () => {
+        this.autoPlayActive = !this.autoPlayActive;
+        if (this.autoPlayActive && this.gameState?.phase === "playing") {
+          this.gameState.tryAutoLaunch();
+        }
+        this.syncAutoPlayButton();
+      });
       this.els.playControls.querySelector("#play-reset")?.addEventListener("click", () => {
+        this.autoPlayActive = false;
         this.gameState = new GameState(documentToGameLevel(tab.doc));
+        this.syncAutoPlayButton();
       });
       this.els.playControls.querySelector("#play-exit")?.addEventListener("click", () =>
         this.togglePlayMode(),
@@ -1091,12 +1113,30 @@ export class EditorApp {
       this.startPlayLoop();
     } else {
       cancelAnimationFrame(this.rafId);
+      this.autoPlayActive = false;
       this.playInput?.dispose();
       this.playInput = null;
       this.gameState = null;
       this.playRenderer = null;
       this.els.overlay.style.visibility = "";
       this.refresh();
+    }
+  }
+
+  private syncAutoPlayButton(): void {
+    const btn = this.els.playControls.querySelector("#play-auto") as HTMLButtonElement | null;
+    const gs = this.gameState;
+    if (!btn || !gs) return;
+
+    const canLaunch = gs.phase === "playing" && gs.getLaunchableIds().size > 0;
+    if (this.autoPlayActive) {
+      btn.textContent = "停止试玩";
+      btn.classList.add("active");
+      btn.disabled = false;
+    } else {
+      btn.textContent = "一键试玩";
+      btn.classList.remove("active");
+      btn.disabled = !canLaunch;
     }
   }
 
@@ -1176,7 +1216,17 @@ export class EditorApp {
         gs.recoverAnimationState();
       }
 
+      if (this.autoPlayActive) {
+        if (gs.phase === "won" || gs.phase === "lost") {
+          this.autoPlayActive = false;
+        } else if (gs.phase === "playing") {
+          const launched = gs.tryAutoLaunch();
+          if (!launched) this.autoPlayActive = false;
+        }
+      }
+
       renderPlayFrame();
+      this.syncAutoPlayButton();
       this.rafId = requestAnimationFrame(tick);
     };
 

@@ -25,4 +25,11 @@ interface Window {
     suggestedName?: string;
     types?: { description: string; accept: Record<string, string[]> }[];
   }): Promise<FileSystemFileHandle>;
+  showDirectoryPicker?(options?: { mode?: "read" | "readwrite" }): Promise<FileSystemDirectoryHandle>;
+}
+
+interface FileSystemDirectoryHandle extends FileSystemHandle {
+  readonly kind: "directory";
+  getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandle>;
+  removeEntry(name: string, options?: { recursive?: boolean }): Promise<void>;
 }

@@ -6,6 +6,9 @@ code/client/node_modules/
 code/client/dist/
 code/editor/node_modules/
 code/editor/dist/
+code/editor/ai-config.local.json
+code/editor/public/ai-config.local.json
+code/editor/public/ai-output-dir.local.json
 code/shared/node_modules/
 code/shared/dist/
 deploy/deploy.env

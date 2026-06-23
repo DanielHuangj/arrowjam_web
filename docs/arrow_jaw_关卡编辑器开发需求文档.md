@@ -26,13 +26,13 @@ Arrow Jam 关卡数据采用 JSON 文件（`arrowJam-main-level-{N}.json`）存�
 - **文件管理**：新建 / 打开 / 保存 / 另存为 / 导出
 - **数据校验**：保存前自动校验，阻塞级错误禁止写入
 - **试玩预览**：内置试玩模式，验证关卡可玩性
+- **AI 辅助生成**（P8）：大模型批量生成关卡 JSON，自动校验与修正（见 [P8 关联文档](#p8--ai-辅助生成关联文档)）
 
 ### 1.4 不在本期范围
 
 - Electron / Tauri 桌面应用包装
 - JSON diff / 版本对比 UI
 - 多人协作、云端存储、账号系统
-- 自动关卡生成 / AI 辅助设计
 - 音效与复杂粒子特效
 
 ### 1.5 技术选型
@@ -603,6 +603,27 @@ P5 玩法实现完成后，编辑器扩展见：
 - [arrow_jaw_新机制编辑器开发需求文档.md](arrow_jaw_新机制编辑器开发需求文档.md)
 - [arrow_jaw_新机制编辑器开发步骤拆解.md](arrow_jaw_新机制编辑器开发步骤拆解.md)
 - 产品需求原文：[Arrow Jam 新增规则编辑器需求.md](Arrow%20Jam%20新增规则编辑器需求.md)
+
+---
+
+## P7 — AI 辅助关卡编辑（关联文档）
+
+AI 辅助生成/改写关卡时，须以功能图谱为规则参考、以编辑指南为设计规范：
+
+- [arrow_jaw_游戏功能图谱.md](arrow_jaw_游戏功能图谱.md) — 玩法规则、kind 机制、JSON 结构、校验索引
+- [arrow_jaw_AI关卡编辑指南.md](arrow_jaw_AI关卡编辑指南.md) — 可玩性原则、依赖图设计、JSON 输出与自检清单
+- 可玩性理论：[Arrow Jam 可玩性分析.md](Arrow%20Jam%20可玩性分析.md)
+
+---
+
+## P8 — AI 辅助生成（关联文档）
+
+在 P7 知识库基础上，编辑器内实现 OpenAI 兼容大模型的**批量关卡生成**（提示词优化 → 生成 → 校验 → 最多 2 轮修正 → 落盘汇总）：
+
+- [arrow_jaw_AI辅助生成需求文档.md](arrow_jaw_AI辅助生成需求文档.md) — 功能范围、UI、三阶段流程、配置、文件命名、验收标准
+- [arrow_jaw_AI辅助生成开发步骤拆解.md](arrow_jaw_AI辅助生成开发步骤拆解.md) — E-AI0 ~ E-AI6 实现步骤与 DoD
+
+**首次配置（实现后）**：复制 `code/editor/ai-config.example.json` 为 `ai-config.local.json`，填入 `baseUrl`、`apiKey`、`model`。
 
 ---
 

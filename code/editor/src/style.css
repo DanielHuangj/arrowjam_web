@@ -333,6 +333,126 @@ body,
   border-color: #364fc7;
 }
 
+.modal.ai-generate {
+  min-width: 420px;
+  max-width: 520px;
+}
+
+.ai-gen-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.ai-gen-form label span {
+  color: var(--muted);
+}
+
+.ai-gen-form input,
+.ai-gen-form select,
+.ai-gen-form textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ai-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.kind-checkboxes {
+  margin-bottom: 10px;
+}
+
+.kind-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.kind-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.kind-item {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  margin-bottom: 0 !important;
+  font-size: 12px;
+}
+
+.ai-keywords textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.ai-base-hint {
+  font-size: 0.85rem;
+  color: var(--muted, #888);
+  margin: -0.25rem 0 0.75rem;
+}
+
+.ai-base-file-row button.hidden {
+  display: none;
+}
+
+.dir-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.dir-row label {
+  flex: 1;
+}
+
+.dir-row button {
+  margin-bottom: 10px;
+  white-space: nowrap;
+}
+
+.ai-config-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.ai-config-hint.ai-config-error {
+  color: #e67700;
+}
+
+.ai-progress {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(54, 79, 199, 0.12);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.ai-summary p {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.ai-fail-details {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.ai-fail-details ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
 .play-overlay {
   position: absolute;
   top: 8px;
@@ -341,6 +461,36 @@ body,
   display: flex;
   gap: 8px;
   z-index: 20;
+}
+
+.play-overlay button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #2a2a2e;
+  color: #e0e0e0;
+  cursor: pointer;
+}
+
+.play-overlay button:hover:not(:disabled) {
+  background: #38383d;
+}
+
+.play-overlay button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.play-auto-btn {
+  border-color: #7aa2f7;
+  color: #7aa2f7;
+  font-weight: 600;
+}
+
+.play-auto-btn.active {
+  background: #3d3f5c;
+  border-color: #f7768e;
+  color: #f7768e;
 }
 
 .color-swatch {

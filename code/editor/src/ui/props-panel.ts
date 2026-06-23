@@ -1,4 +1,5 @@
 import type { EditorDocument, RawItem, ValidationIssue } from "@arrowjaw/shared";
+import { BOARD_MAX_SIZE, BOARD_MIN_SIZE } from "../board-limits.ts";
 
 const KIND_LABELS: Record<number, string> = {
   1: "折线箭",
@@ -75,8 +76,8 @@ function renderLevelMeta(
   const m = doc.meta;
   el.innerHTML = `
     <h3>关卡信息</h3>
-    <label><span>宽度</span><input type="number" id="meta-width" min="20" max="255" value="${m.width}" /></label>
-    <label><span>高度</span><input type="number" id="meta-height" min="20" max="255" value="${m.height}" /></label>
+    <label><span>宽度</span><input type="number" id="meta-width" min="${BOARD_MIN_SIZE}" max="${BOARD_MAX_SIZE}" value="${m.width}" /></label>
+    <label><span>高度</span><input type="number" id="meta-height" min="${BOARD_MIN_SIZE}" max="${BOARD_MAX_SIZE}" value="${m.height}" /></label>
     <label><span>名称</span><input type="text" id="meta-name" value="${escapeAttr(m.name)}" /></label>
     <label><span>时限（秒）</span><input type="number" id="meta-duration" min="1" value="${m.durationInSec}" /></label>
     <label><span>难度</span>

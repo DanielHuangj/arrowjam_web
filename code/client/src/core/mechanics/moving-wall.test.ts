@@ -110,4 +110,31 @@ describe("MovingWallManager", () => {
       [8, 3],
     ]);
   });
+
+  it("preserves editor body when rect order differs from path draw direction", () => {
+    const editorBody: MovingWallItem = {
+      kind: 7,
+      instanceId: 3,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [
+        [5, 10],
+        [5, 11],
+        [5, 12],
+      ],
+      movingPath: [
+        [5, 12],
+        [5, 11],
+        [5, 10],
+      ],
+      movingDistance: 1,
+      movingType: 1,
+    };
+    const mgr = new MovingWallManager([editorBody]);
+    expect(mgr.getWalls()[0]!.occupiedPositions).toEqual([
+      [5, 10],
+      [5, 11],
+      [5, 12],
+    ]);
+  });
 });

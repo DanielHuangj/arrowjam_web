@@ -1,9 +1,18 @@
 import type { LevelData, RawItem, ValidationIssue } from "@arrowjaw/shared";
-import { collectAllItems } from "@arrowjaw/shared";
+import {
+  collectAllItems,
+  findArrowHostingCell,
+  findCornerArrowCellOverlaps,
+  findPipeArrowCellOverlaps,
+  isBombAnchoredOnMidBody,
+} from "@arrowjaw/shared";
 import { vecKey } from "@arrowjaw/shared";
 import type { GenerationForm } from "./types.ts";
+import { AI_KIND_OPTIONS } from "./types.ts";
 import { getDifficultyTargets } from "./prompts/playability-rules.ts";
 import { validateSolvability } from "./level-solvability.ts";
+import { validateCornerUtility } from "./level-corner-utility.ts";
+import { validatePipeUtility } from "./level-pipe-utility.ts";
 
 /** kind1/2 折线箭身格不可与其他折线箭共享 */
 
@@ -44,6 +53,61 @@ function findArrowCellOverlaps(items: RawItem[]): { cell: string; ids: number[] 
 
 const ARROW_BODY_KINDS = new Set([1, 2]);
 
+function kindLabel(kind: number): string {
+  return AI_KIND_OPTIONS.find((o) => o.kind === kind)?.label ?? `kind${kind}`;
+}
+
+/** 统计关卡中各 kind 出现次数（含子区域 items） */
+export function countKindsInLevel(items: RawItem[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const item of collectAllItems(items)) {
+    counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function getMissingRequiredKinds(
+  items: RawItem[],
+  allowedKinds: number[],
+): number[] {
+  const counts = countKindsInLevel(items);
+  return allowedKinds.filter((k) => (counts.get(k) ?? 0) < 1);
+}
+
+export function formatRequiredKindsLine(form: GenerationForm): string {
+  const labels = form.allowedKinds.map((k) => `${kindLabel(k)}(kind${k})`);
+  return `勾选 kind 每种至少 1 个：${labels.join("、")}`;
+}
+
+function validateBombAnchors(data: LevelData): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  for (const bomb of collectAllItems(data.itemModels)) {
+    if (bomb.kind !== 5) continue;
+    const cell = bomb.occupiedPositions[0];
+    if (!cell) continue;
+    const host = findArrowHostingCell(data.itemModels, cell);
+    if (!host) continue;
+    if (host.occupiedPositions.length < 3) {
+      issues.push({
+        id: "AI-BOMB-SHORT",
+        severity: "error",
+        message: `炸弹 #${bomb.instanceId} 宿主箭 #${host.instanceId} 仅 ${host.occupiedPositions.length} 格，须 ≥3 格以便绑在中段`,
+        instanceId: bomb.instanceId,
+      });
+      continue;
+    }
+    if (!isBombAnchoredOnMidBody(host.occupiedPositions, cell)) {
+      issues.push({
+        id: "AI-BOMB-ANCHOR",
+        severity: "error",
+        message: `炸弹 #${bomb.instanceId} 应绑在宿主箭 #${host.instanceId} 身中段（非头尾格）`,
+        instanceId: bomb.instanceId,
+      });
+    }
+  }
+  return issues;
+}
+
 export function validateGenerationConstraints(
   data: LevelData,
   form: GenerationForm,
@@ -62,6 +126,14 @@ export function validateGenerationConstraints(
         instanceId: item.instanceId,
       });
     }
+  }
+
+  for (const kind of getMissingRequiredKinds(data.itemModels, form.allowedKinds)) {
+    issues.push({
+      id: "AI-KIND-MIN",
+      severity: "error",
+      message: `缺少用户勾选的 ${kindLabel(kind)}：itemModels 中须至少包含 1 个 kind ${kind}`,
+    });
   }
 
   const arrowCount = countArrows(data.itemModels);
@@ -99,6 +171,40 @@ export function validateGenerationConstraints(
     });
   }
 
+  const pipeOverlaps = findPipeArrowCellOverlaps(data.itemModels);
+  for (const o of pipeOverlaps.slice(0, 5)) {
+    issues.push({
+      id: "AI-PIPE-OVERLAP",
+      severity: "error",
+      message: `管道 #${o.pipeId} 与箭 #${o.arrowId} 共享格子 ${o.cell}（管身与箭身不可重叠）`,
+      instanceId: o.pipeId,
+    });
+  }
+  if (pipeOverlaps.length > 5) {
+    issues.push({
+      id: "AI-PIPE-OVERLAP",
+      severity: "error",
+      message: `另有 ${pipeOverlaps.length - 5} 处管道与箭身格重叠`,
+    });
+  }
+
+  const cornerOverlaps = findCornerArrowCellOverlaps(data.itemModels);
+  for (const o of cornerOverlaps.slice(0, 5)) {
+    issues.push({
+      id: "AI-CORNER-OVERLAP",
+      severity: "error",
+      message: `反射角 #${o.cornerId} 与箭 #${o.arrowId} 共享格子 ${o.cell}（角块与箭身不可重叠）`,
+      instanceId: o.cornerId,
+    });
+  }
+  if (cornerOverlaps.length > 5) {
+    issues.push({
+      id: "AI-CORNER-OVERLAP",
+      severity: "error",
+      message: `另有 ${cornerOverlaps.length - 5} 处反射角与箭身格重叠`,
+    });
+  }
+
   if (form.fillBaseOccupiedCells != null) {
     const minAdded = form.fillMinAddedCells ?? 8;
     const added = bodyCells - form.fillBaseOccupiedCells;
@@ -109,6 +215,18 @@ export function validateGenerationConstraints(
         message: `二次填充须新增至少 ${minAdded} 格箭身占用（相对基础关），当前仅新增 ${Math.max(0, added)} 格`,
       });
     }
+  }
+
+  if (form.allowedKinds.includes(3)) {
+    issues.push(...validatePipeUtility(data));
+  }
+
+  if (form.allowedKinds.includes(4)) {
+    issues.push(...validateCornerUtility(data));
+  }
+
+  if (form.allowedKinds.includes(5)) {
+    issues.push(...validateBombAnchors(data));
   }
 
   if (form.allowedKinds.every((k) => k === 1 || k === 2)) {

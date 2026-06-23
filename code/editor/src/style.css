@@ -453,30 +453,67 @@ body,
   padding-left: 18px;
 }
 
-.play-overlay {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
+.play-toolbar {
   display: flex;
-  gap: 8px;
-  z-index: 20;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #1a1b1e;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
-.play-overlay button {
+.play-toolbar.hidden {
+  display: none !important;
+}
+
+.play-hud {
+  flex: 1;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.play-hud-inner {
+  display: flex;
+  align-items: center;
+}
+
+.play-hud-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.play-hud .timer.urgent {
+  color: #f7768e;
+  font-weight: 600;
+}
+
+.play-controls {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.play-controls button {
   padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid #555;
   background: #2a2a2e;
   color: #e0e0e0;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.play-overlay button:hover:not(:disabled) {
+.play-controls button:hover:not(:disabled) {
   background: #38383d;
 }
 
-.play-overlay button:disabled {
+.play-controls button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -491,6 +528,62 @@ body,
   background: #3d3f5c;
   border-color: #f7768e;
   color: #f7768e;
+}
+
+.play-result-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.play-result-overlay.hidden {
+  display: none !important;
+}
+
+.play-result-modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  min-width: 280px;
+  max-width: 360px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.play-result-modal h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.play-result-modal p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.play-result-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.play-result-actions button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.play-result-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 .color-swatch {

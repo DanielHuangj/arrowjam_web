@@ -14,7 +14,8 @@ import {
 
 const FILL_OUTPUT_SCHEMA = `只输出 JSON（无 markdown、无注释）：
 {"new_itemModels":[...]}
-- new_itemModels：仅**新增**折线箭，不要重复基础关已有箭
+- new_itemModels：仅**新增**物件（折线箭、管道、角块等），不要重复基础关已有 itemModels
+- 合并后须满足用户勾选的每种 kind 至少 1 个（基础关缺的 kind 须在 new_itemModels 中补上）
 - instanceId 从基础关最大 id+1 起递增，勿与基础关 id 冲突`;
 
 export function buildOptimizeFillMessages(
@@ -29,7 +30,7 @@ export function buildOptimizeFillMessages(
 只输出 JSON：
 {"optimized_prompt":"...","design_notes":"..."}
 
-optimized_prompt 须说明：如何填充剩余空格、新箭数量建议、避免与原有箭死锁、dependency 顺序。`,
+optimized_prompt 须说明：如何填充剩余空格、新箭数量建议、避免与原有箭死锁、dependency 顺序；若用户勾选管道/角块等机制，合并后每种勾选 kind 至少 1 个。`,
     },
     {
       role: "user",
@@ -46,7 +47,7 @@ ${buildTargetsBlock(form)}
 ## 基础关折线箭（不可改，供参考布局）
 ${buildBaseFrozenItemsJson(base)}
 
-请输出 optimized_prompt，指导 Phase 2 仅追加新折线箭填满空格。`,
+请输出 optimized_prompt，指导 Phase 2 在空格中追加新物件（折线箭为主，缺失的勾选 kind 须补齐）。`,
     },
   ];
 }
@@ -68,8 +69,8 @@ export function buildFillLevelMessages(
 
 **硬性规则：**
 1. **禁止**输出基础关已有 itemModels；基础关由程序合并，你只需输出新增箭
-2. 新箭只能占用基础关未占用的格子（见下方基础箭 occupiedPositions）
-3. 新物件 kind 只能为: ${allowedOnly}
+2. 新物件只能占用基础关未占用的格子（见下方基础箭 occupiedPositions）
+3. 新物件 kind 只能为: ${allowedOnly}；**合并后每种勾选 kind 至少 1 个**
 4. ${FILL_OUTPUT_SCHEMA}`,
     },
     {
@@ -95,7 +96,7 @@ ${buildGenerateChecklist(form)}
 ## 新箭 Schema（new_itemModels 元素）
 ${LEVEL_SCHEMA_SUMMARY}
 
-请输出 {"new_itemModels":[...]}，仅包含追加的新折线箭。`,
+请输出 {"new_itemModels":[...]}，包含追加的新物件（折线箭 + 须补齐的勾选 kind）。`,
     },
   ];
 }
@@ -131,6 +132,7 @@ ${issueText || "（未知）"}
 
 ## 修正策略
 - AI-FILL-PROGRESS：修正后新箭占用须比基础关至少多 ${minAdded} 格
+- AI-KIND-MIN：合并后缺少的勾选 kind → 在 new_itemModels 中至少添加 1 个
 - AI-UNSOLVABLE / AI-OVERLAP：优先移动/删除 instanceId ≥ ${base.nextNewInstanceId} 的新箭
 - 输出 {"new_itemModels":[...]} = 修正后的**全部新箭**（非基础关箭）
 

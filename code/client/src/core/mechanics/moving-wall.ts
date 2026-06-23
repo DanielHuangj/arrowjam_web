@@ -46,6 +46,31 @@ function resolveInitialPathIndex(wall: MovingWallItem): number {
   return idx >= 0 ? idx : 0;
 }
 
+function bodyPositionsEqual(a: Vec2[], b: Vec2[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((p, i) => p[0] === b[i]![0] && p[1] === b[i]![1]);
+}
+
+/** 匹配编辑器保存的管身段，避免仅用 occupiedPositions[0] 锚点导致开局错位 */
+function resolvePathIndexForBody(wall: MovingWallItem): number {
+  const segmentCount = wall.occupiedPositions.length;
+  if (segmentCount === 0 || wall.movingPath.length === 0) return 0;
+
+  const candidates = [
+    wall.occupiedPositions,
+    [...wall.occupiedPositions].reverse(),
+  ];
+  for (const body of candidates) {
+    for (let start = 0; start < wall.movingPath.length; start++) {
+      const fromPath = wallBodyFromPathIndex(wall, start, segmentCount);
+      if (bodyPositionsEqual(fromPath, body)) {
+        return start;
+      }
+    }
+  }
+  return resolveInitialPathIndex(wall);
+}
+
 function wallBodyFromPathIndex(
   wall: MovingWallItem,
   pathIndex: number,
@@ -70,14 +95,12 @@ export class MovingWallManager {
   constructor(walls: MovingWallItem[]) {
     this.states = walls.map((wall) => {
       const segmentCount = wall.occupiedPositions.length;
-      const pathIndex = resolveInitialPathIndex(wall);
+      const pathIndex = resolvePathIndexForBody(wall);
       return {
         wall: {
           ...wall,
-          occupiedPositions: wallBodyFromPathIndex(
-            wall,
-            pathIndex,
-            segmentCount,
+          occupiedPositions: wall.occupiedPositions.map(
+            ([x, y]) => [x, y] as Vec2,
           ),
         },
         pathIndex,

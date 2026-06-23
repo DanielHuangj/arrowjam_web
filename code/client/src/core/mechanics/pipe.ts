@@ -190,6 +190,8 @@ export interface ArrowStepResult {
   blocked: boolean;
   /** 刚穿出管道出口时返回管道 id */
   pipeExitedId: number | null;
+  /** 刚在反射角上发生折射时返回角块 id */
+  cornerReflectedId: number | null;
 }
 
 /** 单步移动：管道内沿路径蛇行，或普通格移动并在入口进入管道 */
@@ -220,6 +222,7 @@ export function advanceArrowStep(
       transit: atExit ? null : { ...transit, pathIndex: nextIdx },
       blocked: false,
       pipeExitedId: atExit ? transit.pipeId : null,
+      cornerReflectedId: null,
     };
   }
 
@@ -233,6 +236,7 @@ export function advanceArrowStep(
       transit: null,
       blocked: true,
       pipeExitedId: null,
+      cornerReflectedId: null,
     };
   }
 
@@ -246,7 +250,16 @@ export function advanceArrowStep(
       transit: null,
       blocked: true,
       pipeExitedId: null,
+      cornerReflectedId: null,
     };
+  }
+
+  const corner = getCornerAt(nextHead, corners);
+  let cornerReflectedId: number | null = null;
+  if (corner && isValidCornerEntry(newDir, corner)) {
+    newDir = getReflectedDirection(newDir, corner);
+    next.direction = newDir;
+    cornerReflectedId = corner.instanceId;
   }
 
   if (isHeadBlockedByPipe(nextHead, newDir, pipes)) {
@@ -256,13 +269,8 @@ export function advanceArrowStep(
       transit: null,
       blocked: true,
       pipeExitedId: null,
+      cornerReflectedId: null,
     };
-  }
-
-  const corner = getCornerAt(nextHead, corners);
-  if (corner && isValidCornerEntry(newDir, corner)) {
-    newDir = getReflectedDirection(newDir, corner);
-    next.direction = newDir;
   }
 
   const newTransit = tryStartPipeTransit(nextHead, newDir, pipes);
@@ -272,6 +280,7 @@ export function advanceArrowStep(
     transit: newTransit,
     blocked: false,
     pipeExitedId: null,
+    cornerReflectedId,
   };
 }
 
@@ -311,17 +320,8 @@ function cloneTransit(t: PipeTransitState | null): PipeTransitState | null {
   };
 }
 
-/** 模拟蛇形飞出（含角块、管道穿行），用于路径判定 */
-export function simulateCanExitWithPipes(
-  arrow: ArrowItem,
-  allArrows: ArrowItem[],
-  corners: CornerItem[],
-  board: BoardSize,
-  pipes: PipeItem[],
-  curtainCells: Set<string> = new Set(),
-  extraBlockerCells: Set<string> = new Set(),
-): boolean {
-  const simPipes = pipes.map((p) => ({
+function clonePipesForSim(pipes: PipeItem[]): PipeItem[] {
+  return pipes.map((p) => ({
     ...p,
     occupiedPositions: p.occupiedPositions.map(([x, y]) => [x, y] as Vec2),
     passes: p.passes.map((pass) => ({
@@ -330,10 +330,35 @@ export function simulateCanExitWithPipes(
     })),
     health: p.health,
   }));
+}
 
+interface ArrowFlightResult {
+  offBoard: boolean;
+  pipesCrossed: number[];
+  cornersCrossed: number[];
+}
+
+export interface ArrowFlightStep {
+  head: Vec2;
+  /** 进入 head 格时的移动方向 */
+  incidentDir: Direction;
+}
+
+function simulateArrowFlight(
+  arrow: ArrowItem,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): ArrowFlightResult {
+  const simPipes = clonePipesForSim(pipes);
   let positions = arrow.occupiedPositions.map(([x, y]) => [x, y] as Vec2);
   let dir = arrow.direction;
   let transit: PipeTransitState | null = null;
+  const pipesCrossed: number[] = [];
+  const cornersCrossed: number[] = [];
   const maxSteps = (board.width + board.height) * positions.length * 8;
 
   for (let step = 0; step < maxSteps; step++) {
@@ -352,26 +377,181 @@ export function simulateCanExitWithPipes(
       extraBlockerCells,
     );
 
-    if (result.blocked) return false;
+    if (result.blocked) {
+      return { offBoard: false, pipesCrossed, cornersCrossed };
+    }
+
+    if (result.pipeExitedId != null) {
+      pipesCrossed.push(result.pipeExitedId);
+    }
+
+    if (result.cornerReflectedId != null) {
+      cornersCrossed.push(result.cornerReflectedId);
+    }
 
     positions = result.arrow.occupiedPositions;
     dir = result.dir;
     transit = result.transit;
 
-    if (positionsFullyOffBoard(positions, board)) return true;
+    if (positionsFullyOffBoard(positions, board)) {
+      return { offBoard: true, pipesCrossed, cornersCrossed };
+    }
 
     const head = positions[positions.length - 1]!;
     if (!inBounds(head, board.width, board.height)) continue;
 
-    if (curtainCells.has(vecKey(head))) return false;
+    if (curtainCells.has(vecKey(head))) {
+      return { offBoard: false, pipesCrossed, cornersCrossed };
+    }
 
-    if (extraBlockerCells.has(vecKey(head))) return false;
+    if (extraBlockerCells.has(vecKey(head))) {
+      return { offBoard: false, pipesCrossed, cornersCrossed };
+    }
 
     if (!transit && isCellOnOtherArrow(head, arrow.instanceId, allArrows)) {
-      return false;
+      return { offBoard: false, pipesCrossed, cornersCrossed };
     }
   }
-  return false;
+
+  return { offBoard: false, pipesCrossed, cornersCrossed };
+}
+
+/** 模拟飞出轨迹（每步头部落点与入射方向） */
+export function traceArrowFlight(
+  arrow: ArrowItem,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): ArrowFlightStep[] {
+  const simPipes = clonePipesForSim(pipes);
+  let positions = arrow.occupiedPositions.map(([x, y]) => [x, y] as Vec2);
+  let dir = arrow.direction;
+  let transit: PipeTransitState | null = null;
+  const steps: ArrowFlightStep[] = [];
+  const maxSteps = (board.width + board.height) * positions.length * 8;
+
+  for (let step = 0; step < maxSteps; step++) {
+    const inc = dir;
+    const fakeArrow: ArrowItem = {
+      ...arrow,
+      occupiedPositions: positions,
+      direction: dir,
+    };
+    const result = advanceArrowStep(
+      fakeArrow,
+      dir,
+      cloneTransit(transit),
+      corners,
+      activePipes(simPipes),
+      curtainCells,
+      extraBlockerCells,
+    );
+
+    if (result.blocked) break;
+
+    positions = result.arrow.occupiedPositions;
+    dir = result.dir;
+    transit = result.transit;
+    const head = positions[positions.length - 1]!;
+    steps.push({ head: [head[0], head[1]], incidentDir: inc });
+
+    if (positionsFullyOffBoard(positions, board)) break;
+
+    if (!inBounds(head, board.width, board.height)) continue;
+
+    if (curtainCells.has(vecKey(head))) break;
+    if (extraBlockerCells.has(vecKey(head))) break;
+    if (!transit && isCellOnOtherArrow(head, arrow.instanceId, allArrows)) break;
+  }
+
+  return steps;
+}
+
+/** 模拟飞出过程中发生折射的反射角 id 列表 */
+export function getArrowCornerCrossings(
+  arrow: ArrowItem,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): number[] {
+  return simulateArrowFlight(
+    arrow,
+    allArrows,
+    corners,
+    board,
+    pipes,
+    curtainCells,
+    extraBlockerCells,
+  ).cornersCrossed;
+}
+
+/** 模拟飞出过程中从管道出口穿出的 pipe id 列表（每穿出一次计 1 次） */
+export function getArrowPipeCrossings(
+  arrow: ArrowItem,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): number[] {
+  return simulateArrowFlight(
+    arrow,
+    allArrows,
+    corners,
+    board,
+    pipes,
+    curtainCells,
+    extraBlockerCells,
+  ).pipesCrossed;
+}
+
+export function arrowTraversesPipe(
+  arrow: ArrowItem,
+  pipeId: number,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): boolean {
+  return getArrowPipeCrossings(
+    arrow,
+    allArrows,
+    corners,
+    board,
+    pipes,
+    curtainCells,
+    extraBlockerCells,
+  ).includes(pipeId);
+}
+
+/** 模拟蛇形飞出（含角块、管道穿行），用于路径判定 */
+export function simulateCanExitWithPipes(
+  arrow: ArrowItem,
+  allArrows: ArrowItem[],
+  corners: CornerItem[],
+  board: BoardSize,
+  pipes: PipeItem[],
+  curtainCells: Set<string> = new Set(),
+  extraBlockerCells: Set<string> = new Set(),
+): boolean {
+  return simulateArrowFlight(
+    arrow,
+    allArrows,
+    corners,
+    board,
+    pipes,
+    curtainCells,
+    extraBlockerCells,
+  ).offBoard;
 }
 
 export function decrementPipeHealth(pipes: PipeItem[], pipeId: number): void {

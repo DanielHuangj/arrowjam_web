@@ -1,4 +1,5 @@
 import type { GenerationForm } from "../types.ts";
+import { AI_KIND_OPTIONS } from "../types.ts";
 import referenceLevel9001 from "../../../../client/public/levels/level-9001.json?raw";
 
 const ALL_KINDS = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13] as const;
@@ -10,10 +11,21 @@ export function getForbiddenKinds(allowedKinds: number[]): number[] {
 
 export function formatForbiddenKindsBlock(form: GenerationForm): string {
   const forbidden = getForbiddenKinds(form.allowedKinds);
+  const required = form.allowedKinds
+    .map((k) => {
+      const opt = AI_KIND_OPTIONS.find((o) => o.kind === k);
+      const label = opt ? opt.label : `kind${k}`;
+      return `- **${label}（kind ${k}）**：至少 1 个`;
+    })
+    .join("\n");
   return `## kind 白名单（违反则校验失败）
 - **仅允许**: ${form.allowedKinds.join(", ")}
 - **严禁出现**: ${forbidden.join(", ") || "无"}
-- 参考示例中的 kind 若不在白名单内，**不得照搬**`;
+- 参考示例中的 kind 若不在白名单内，**不得照搬**
+
+## 勾选 kind 必现（硬约束）
+用户勾选的每种 kind 在 itemModels（含子区域 items）中**至少出现 1 个**：
+${required}`;
 }
 
 export interface DifficultyTargets {
@@ -76,6 +88,27 @@ const KIND1_REFERENCE_LEVEL_16 = `{
   ]
 }`;
 
+/** kind1 + 弯管示例：health=2，2 条箭可穿行穿出 */
+const KIND1_PIPE_REFERENCE = `{
+  "width": 12,
+  "height": 12,
+  "name": "参考-折线箭+弯管",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {"kind": 3, "instanceId": 1, "layer": 2, "health": 2, "healthViewPathIndex": 2,
+     "occupiedPositions": [[5, 6], [6, 6], [7, 6], [7, 7], [7, 8]],
+     "passes": [{"position": [5, 6], "directions": [[-1, 0], [1, 0]]}, {"position": [7, 8], "directions": [[0, 1], [0, -1]]}]},
+    {"kind": 1, "instanceId": 2, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[3, 6], [4, 6]]},
+    {"kind": 1, "instanceId": 3, "layer": 2, "direction": 2, "colorId": 7, "occupiedPositions": [[7, 9], [7, 10]]},
+    {"kind": 1, "instanceId": 4, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 5], [1, 5], [2, 5]]},
+    {"kind": 1, "instanceId": 5, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 7], [1, 7], [2, 7]]},
+    {"kind": 1, "instanceId": 6, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[9, 0], [9, 1], [9, 2]]},
+    {"kind": 1, "instanceId": 7, "layer": 2, "direction": 1, "colorId": 3, "occupiedPositions": [[9, 5], [9, 6], [9, 7]]},
+    {"kind": 1, "instanceId": 8, "layer": 2, "direction": 4, "colorId": 6, "occupiedPositions": [[11, 8], [10, 8], [9, 8]]}
+  ]
+}`;
+
 /** 根据难度与棋盘尺寸推算箭数量、边箭、建议时限 */
 export function getDifficultyTargets(form: GenerationForm): DifficultyTargets {
   const base = BASE_RANGES[form.difficulty];
@@ -122,8 +155,9 @@ export function getDifficultyTargets(form: GenerationForm): DifficultyTargets {
 
 export const PLAYABILITY_RULES = `## 可玩性硬性要求（生成前必须在脑中验证）
 
-### kind 白名单
-- **只能**输出用户在表单勾选的 kind；未勾选的 kind（如未勾 K2 则禁止 kind2）**一律不得出现**
+### kind 白名单与必现
+- **只能**输出用户在表单勾选的 kind；未勾选的 kind **一律不得出现**
+- **每种勾选的 kind 至少 1 个**（含子区域 items 内物件）；例如勾选管道则须含 ≥1 个 kind3
 - 参考示例若含未勾选 kind，仅学结构与密度，**禁止复制其 kind**
 
 ### 密度与规模
@@ -134,7 +168,17 @@ export const PLAYABILITY_RULES = `## 可玩性硬性要求（生成前必须在�
 
 ### 格位不重叠
 - **不同 kind1/kind2 折线的 occupiedPositions 不得共享任何格子**
-- 生成后逐格检查：任一 [x,y] 只能属于一条折线箭
+- **kind3 管道管身格不得与 kind1/kind2 箭身格重叠**（可邻接，不可同格）
+- **kind4 反射角占 1 格，不得与 kind1/kind2 箭身格重叠**（可邻接，不可同格）
+- **每条反射角须至少有 1 条箭飞出时经其折射**（非贴边装饰）
+- 生成后逐格检查：任一 [x,y] 只能属于一条折线箭；管道/反射角与箭不可同格
+
+### 管道（kind3）须有用
+- 管道是**隐藏通道**：箭从 pass 端点沿允许方向进入，沿管身穿出另一端
+- **可穿行穿出的箭条数须 ≥ health**（每条箭成功穿出计 1 次，与游戏中扣血一致）
+- 禁止「装饰管道」：旁边无箭能进入 pass，或 health 大于实际能穿过的箭数
+- 管身可为**弯曲折线**（L 形、Z 形等），passes 两端 directions 须与该端管身走向匹配
+- 设计范例：health=2 的弯管，至少布置 2 条箭分别从两端 pass 对准进入并可穿出
 
 ### 依赖与可解性
 - 依赖图无环；禁止对向死锁
@@ -166,12 +210,17 @@ function cellsLabel(form: GenerationForm): number {
 
 export function buildReferenceLevelBlock(form: GenerationForm): string {
   const useFlipRef = form.allowedKinds.includes(2);
+  const usePipeRef =
+    !useFlipRef && form.allowedKinds.includes(3) && !form.allowedKinds.includes(12);
   const largeBoard = form.width >= 20 && form.height >= 20;
   let json: string;
   let label: string;
   if (useFlipRef) {
     json = referenceLevel9001.trim();
     label = "level-9001";
+  } else if (usePipeRef) {
+    json = KIND1_PIPE_REFERENCE;
+    label = "折线箭+弯管 12×12";
   } else if (largeBoard) {
     json = KIND1_REFERENCE_LEVEL_16;
     label = "纯折线箭 16×16";
@@ -181,7 +230,9 @@ export function buildReferenceLevelBlock(form: GenerationForm): string {
   }
   const note = useFlipRef
     ? "含 kind2 翻转箭示例；若未勾选某 kind 则不要输出该 kind。"
-    : "**仅 kind1**；用户未勾选翻转箭，禁止输出 kind2。";
+    : usePipeRef
+      ? "含 kind3 弯管：#2/#3 可穿行穿出，health=2；学管道与箭布局，禁止照抄坐标。"
+      : "**仅 kind1**；用户未勾选翻转箭，禁止输出 kind2。";
 
   return `## 参考关卡（${label}）
 ${note}
@@ -196,21 +247,38 @@ export function buildOptimizeOutputSpec(form: GenerationForm): string {
   const kinds = form.allowedKinds.join(", ");
   return `optimized_prompt 必须包含：
 ### 允许 kind 白名单（仅 ${kinds}）
+### 勾选 kind 必现（每种至少 1 个实例，含管道/角块/机制等）
 ### 目标箭数与 occupancy（硬下限 ≥${t.occupancyCellMin} 格，建议 ≥${t.occupancyCellTarget} 格；箭须分布到棋盘内部）
 ### dependency_notes（无环）
 ### 推荐首步与预估步数
 ### 格位不重叠约束
 ${form.allowedKinds.includes(2) ? "### 机制用法（翻转箭）" : "（用户未勾选翻转箭，不得设计 kind2）"}
+${form.allowedKinds.includes(3) ? "### 管道用法（kind3）：可穿行穿出箭数 ≥ health；管身可弯曲" : ""}
+${form.allowedKinds.includes(4) ? "### 反射角（kind4）：占 1 格，不与箭身同格；至少 1 条箭经其折射" : ""}
+${form.allowedKinds.includes(5) ? "### 炸弹（kind5）：绑在宿主箭身中段（≥3 格箭），勿绑头/尾" : ""}
 
-design_notes 须含：瓶颈箭、边箭、重叠检查说明。`;
+design_notes 须含：瓶颈箭、边箭、重叠检查说明${form.allowedKinds.includes(3) ? "、每条管道穿行箭数与 health" : ""}${form.allowedKinds.includes(4) ? "、反射角与箭身格位分离" : ""}${form.allowedKinds.includes(5) ? "、炸弹绑箭身中段" : ""}。`;
 }
 
 export function buildGenerateChecklist(form: GenerationForm): string {
   const t = getDifficultyTargets(form);
+  const bombLine = form.allowedKinds.includes(5)
+    ? "\n- [ ] kind5 炸弹：宿主箭 ≥3 格，occupiedPositions 与身中段同格（非头尾）"
+    : "";
+  const cornerLine = form.allowedKinds.includes(4)
+    ? "\n- [ ] kind4 反射角：占 1 格，不与箭身同格；至少 1 条箭飞出时经其折射"
+    : "";
+  const pipeLine = form.allowedKinds.includes(3)
+    ? "\n- [ ] kind3 管道：passes 端点=路径首尾；healthViewPathIndex=管身中段；管身不与箭身同格\n- [ ] 每条管道：可穿行穿出箭数 ≥ health（弯管/L 形均可）"
+    : "";
+  const flipLine = form.allowedKinds.includes(2)
+    ? "\n- [ ] kind2 翻转箭：direction1=末段方向；direction2=反转后末段方向"
+    : "";
   return `## 生成前自检
 - [ ] 仅含 kind: ${form.allowedKinds.join(", ")}
+- [ ] 每种勾选 kind 至少 1 个（${form.allowedKinds.map((k) => `kind${k}≥1`).join("、")}）
 - [ ] kind1+kind2 箭数 ≥ ${t.arrowCountMin}
 - [ ] 箭身格子数 ≥ ${t.occupancyCellMin}（硬下限），尽量 ≥ ${t.occupancyCellTarget}；中心无大片空白
 - [ ] 任意两箭无共享格子
-- [ ] 依赖无环；durationInSec = ${form.durationInSec}`;
+- [ ] 依赖无环；durationInSec = ${form.durationInSec}${pipeLine}${flipLine}${cornerLine}${bombLine}`;
 }

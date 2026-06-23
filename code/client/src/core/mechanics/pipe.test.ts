@@ -6,6 +6,8 @@ import { parseLevelData } from "../level/parser.ts";
 import { GameState } from "../game/game-state.ts";
 import {
   advanceArrowStep,
+  getArrowPipeCrossings,
+  getArrowCornerCrossings,
   getPipeSideKeys,
   getPipeTraversalPath,
   isDirAllowedAtPass,
@@ -13,7 +15,7 @@ import {
   simulateCanExitWithPipes,
   tryStartPipeTransit,
 } from "./pipe.ts";
-import type { ArrowItem, PipeItem } from "../types.ts";
+import type { ArrowItem, CornerItem, PipeItem } from "../types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const levelsDir = join(__dirname, "../../../public/levels");
@@ -52,6 +54,62 @@ describe("pipe mechanics", () => {
     expect(sides.has("13,7")).toBe(true);
     expect(isHeadBlockedByPipe([13, 7], 1, [horizontalPipe])).toBe(true);
     expect(isHeadBlockedByPipe([13, 7], 3, [horizontalPipe])).toBe(false);
+  });
+
+  it("reflects at corner on pipe side before pipe blocking check", () => {
+    const corner: CornerItem = {
+      kind: 4,
+      instanceId: 99,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[13, 7]],
+      direction1: [1, 0],
+      direction2: [0, -1],
+    };
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[13, 5], [13, 6]],
+      direction: 1,
+      colorId: 3,
+    };
+    const step = advanceArrowStep(arrow, 1, null, [corner], [horizontalPipe]);
+    expect(step.blocked).toBe(false);
+    expect(step.dir).toBe(3);
+    expect(step.cornerReflectedId).toBe(99);
+    expect(step.arrow.occupiedPositions.at(-1)).toEqual([13, 7]);
+  });
+
+  it("tracks corner crossings during full flight simulation", () => {
+    const corner: CornerItem = {
+      kind: 4,
+      instanceId: 5,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[5, 6]],
+      direction1: [1, 0],
+      direction2: [0, -1],
+    };
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[5, 4], [5, 5]],
+      direction: 1,
+      colorId: 3,
+    };
+    expect(
+      getArrowCornerCrossings(
+        arrow,
+        [arrow],
+        [corner],
+        { width: 12, height: 12 },
+        [],
+      ),
+    ).toEqual([5]);
   });
 
   it("builds traversal path along pipe body", () => {
@@ -116,6 +174,35 @@ describe("pipe mechanics", () => {
         [horizontalPipe],
       ),
     ).toBe(true);
+    expect(
+      getArrowPipeCrossings(
+        arrow,
+        [arrow],
+        [],
+        { width: 25, height: 25 },
+        [horizontalPipe],
+      ),
+    ).toEqual([]);
+  });
+
+  it("records pipe id when arrow traverses through pipe", () => {
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[10, 8], [11, 8]],
+      direction: 3,
+      colorId: 3,
+    };
+    const crossed = getArrowPipeCrossings(
+      arrow,
+      [arrow],
+      [],
+      { width: 25, height: 25 },
+      [horizontalPipe],
+    );
+    expect(crossed).toContain(horizontalPipe.instanceId);
   });
 
   it("bump reverses when arrow hits pipe wall", () => {

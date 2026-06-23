@@ -1,6 +1,6 @@
 import type { Direction, LevelData, RawItem, ValidationIssue, Vec2 } from "./types.ts";
 import { inBounds, vecKey } from "./types.ts";
-import { collectAllItems, isPolylineContinuous, isRectangular } from "./items.ts";
+import { collectAllItems, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, isPolylineContinuous, isRectangular } from "./items.ts";
 
 function push(
   issues: ValidationIssue[],
@@ -58,7 +58,28 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
   const curtainOrders = new Map<number, number>();
 
   walkItems(data.itemModels, (item, inZone) => {
+    if (!Array.isArray(item.occupiedPositions)) {
+      push(
+        issues,
+        "V16",
+        "error",
+        `物件 #${item.instanceId} 缺少 occupiedPositions`,
+        item.instanceId,
+      );
+      return;
+    }
+
     for (const pos of item.occupiedPositions) {
+      if (!Array.isArray(pos) || pos.length < 2) {
+        push(
+          issues,
+          "V16",
+          "error",
+          `物件 #${item.instanceId} occupiedPositions 格式无效`,
+          item.instanceId,
+        );
+        continue;
+      }
       if (!inBounds(pos, data.width, data.height)) {
         push(
           issues,
@@ -117,7 +138,17 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       } else {
         const posSet = new Set(item.occupiedPositions.map((p) => vecKey(p)));
         for (const pass of passes) {
-          if (!posSet.has(vecKey(pass.position))) {
+          if (!pass || !Array.isArray(pass.position) || pass.position.length < 2) {
+            push(
+              issues,
+              "V07",
+              "error",
+              `管道 #${item.instanceId} pass 格式无效（须含 position: [x,y]）`,
+              item.instanceId,
+            );
+            continue;
+          }
+          if (!posSet.has(vecKey(pass.position as Vec2))) {
             push(
               issues,
               "V07",
@@ -170,6 +201,33 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       }
       if (item.layer !== 2) {
         push(issues, "V-NEW-02", "warning", `翻转箭 #${item.instanceId} layer 应为 2`, item.instanceId);
+      }
+      if (item.occupiedPositions.length >= 2 && d1 != null) {
+        const tail = item.occupiedPositions.at(-2)!;
+        const head = item.occupiedPositions.at(-1)!;
+        const segDir = directionFromSegment(tail, head);
+        if (segDir !== d1) {
+          push(
+            issues,
+            "V11",
+            "error",
+            `翻转箭 #${item.instanceId} direction1 与末段不一致（箭头应顺箭身）`,
+            item.instanceId,
+          );
+        }
+        const rev = [...item.occupiedPositions].reverse();
+        const revTail = rev.at(-2)!;
+        const revHead = rev.at(-1)!;
+        const flipDir = directionFromSegment(revTail, revHead);
+        if (d2 != null && flipDir !== d2) {
+          push(
+            issues,
+            "V11",
+            "error",
+            `翻转箭 #${item.instanceId} direction2 与翻转后末段不一致`,
+            item.instanceId,
+          );
+        }
       }
     }
 
@@ -295,6 +353,26 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
     if (count > 1) {
       push(issues, "V13", "warning", `幕布 order ${order} 重复（${count} 个）`);
     }
+  }
+
+  for (const o of findPipeArrowCellOverlaps(data.itemModels)) {
+    push(
+      issues,
+      "V-PIPE-01",
+      "error",
+      `管道 #${o.pipeId} 与箭 #${o.arrowId} 共享格子 ${o.cell}`,
+      o.pipeId,
+    );
+  }
+
+  for (const o of findCornerArrowCellOverlaps(data.itemModels)) {
+    push(
+      issues,
+      "V-CORNER-01",
+      "error",
+      `反射角 #${o.cornerId} 与箭 #${o.arrowId} 共享格子 ${o.cell}（角块与箭身不可重叠）`,
+      o.cornerId,
+    );
   }
 
   for (const arrow of all) {

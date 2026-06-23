@@ -140,12 +140,18 @@ export class GameState {
     return this.curtainManager.getActiveCellKeys();
   }
 
-  getActiveArrows(): ArrowItem[] {
+  getBlockingArrows(): ArrowItem[] {
     return this.arrows.filter(
       (a) =>
         !this.curtainManager.isArrowHidden(a) &&
-        this.zoneManager.isArrowActive(a, this.arrows, this.corners) &&
-        !this.frozenManager.isHostFrozen(a.instanceId),
+        this.zoneManager.isArrowActive(a, this.arrows, this.corners),
+    );
+  }
+
+  /** 可操作的箭（冰冻中的宿主箭不可发射/消除） */
+  getActiveArrows(): ArrowItem[] {
+    return this.getBlockingArrows().filter(
+      (a) => !this.frozenManager.isHostFrozen(a.instanceId),
     );
   }
 
@@ -282,7 +288,7 @@ export class GameState {
   }
 
   rebuildCellMap(): void {
-    this.cellMap = CellMap.fromArrows(this.getActiveArrows());
+    this.cellMap = CellMap.fromArrows(this.getBlockingArrows());
   }
 
   snapshot(): GameSnapshot {
@@ -358,6 +364,7 @@ export class GameState {
 
     const memberIds = this.bundleManager.getMemberIds(instanceId);
     const activeArrows = this.getActiveArrows();
+    const blockingArrows = this.getBlockingArrows();
     const activeCorners = this.getActiveCorners();
     const group = this.bundleManager.getGroupForArrow(instanceId);
     const stripIds = group?.stripIds ?? [];
@@ -371,10 +378,11 @@ export class GameState {
           this.getActivePipes(),
           this.getCurtainCells(),
           this.getWallBlockerCells(),
+          blockingArrows,
         )
       : simulateCanExit(
           arrow,
-          activeArrows,
+          blockingArrows,
           activeCorners,
           this.level,
           this.getActivePipes(),
@@ -874,6 +882,7 @@ export class GameState {
   getLaunchableIds(): Set<number> {
     const ids = new Set<number>();
     const activeArrows = this.getActiveArrows();
+    const blockingArrows = this.getBlockingArrows();
     const activeCorners = this.getActiveCorners();
     const checkedGroups = new Set<number>();
 
@@ -891,6 +900,7 @@ export class GameState {
             this.getActivePipes(),
             this.getCurtainCells(),
             this.getWallBlockerCells(),
+            blockingArrows,
           )
         ) {
           for (const id of group.arrowIds) ids.add(id);
@@ -898,7 +908,7 @@ export class GameState {
       } else if (
         simulateCanExit(
           arrow,
-          activeArrows,
+          blockingArrows,
           activeCorners,
           this.level,
           this.getActivePipes(),

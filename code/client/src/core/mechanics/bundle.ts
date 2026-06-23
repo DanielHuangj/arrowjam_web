@@ -380,20 +380,21 @@ export class BundleManager {
 
   canLaunchGroup(
     group: BundleGroup,
-    activeArrows: ArrowItem[],
+    launchableArrows: ArrowItem[],
     corners: CornerItem[],
     board: BoardSize,
     pipes: PipeItem[] = [],
     curtainCells: Set<string> = new Set(),
     extraBlockerCells: Set<string> = new Set(),
+    blockingArrows: ArrowItem[] = launchableArrows,
   ): boolean {
     const members = group.arrowIds
-      .map((id) => activeArrows.find((a) => a.instanceId === id))
+      .map((id) => launchableArrows.find((a) => a.instanceId === id))
       .filter((a): a is ArrowItem => a != null);
     if (members.length !== group.arrowIds.length) return false;
     return simulateCanExitBundle(
       group.arrowIds,
-      activeArrows,
+      blockingArrows,
       corners,
       board,
       pipes,

@@ -96,6 +96,137 @@ describe("generation-constraints", () => {
     expect(issues.some((i) => i.id === "AI-OVERLAP")).toBe(true);
   });
 
+  it("rejects pipe overlapping arrow body cells", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 3,
+          instanceId: 1,
+          layer: 2,
+          health: 2,
+          healthViewPathIndex: 1,
+          occupiedPositions: [[5, 5], [6, 5]],
+          passes: [
+            { position: [5, 5], directions: [[0, 1], [0, -1]] },
+            { position: [6, 5], directions: [[0, 1], [0, -1]] },
+          ],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [[6, 5], [7, 5], [8, 5]],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 3],
+    });
+    expect(issues.some((i) => i.id === "AI-PIPE-OVERLAP")).toBe(true);
+  });
+
+  it("rejects corner overlapping arrow body cells", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 4,
+          instanceId: 1,
+          layer: 2,
+          direction1: [1, 0],
+          direction2: [0, 1],
+          occupiedPositions: [[6, 5]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [[5, 5], [6, 5], [7, 5]],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 4],
+    });
+    expect(issues.some((i) => i.id === "AI-CORNER-OVERLAP")).toBe(true);
+  });
+
+  it("rejects corner with no arrow reflecting through it", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 4,
+          instanceId: 1,
+          layer: 2,
+          direction1: [1, 0],
+          direction2: [0, -1],
+          occupiedPositions: [[10, 10]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 1,
+          colorId: 6,
+          occupiedPositions: [[5, 4], [5, 5]],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 4],
+    });
+    expect(issues.some((i) => i.id === "AI-CORNER-USELESS")).toBe(true);
+  });
+
+  it("rejects bomb bound to arrow head or tail", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[3, 5], [4, 5], [5, 5], [6, 5], [7, 5]],
+        },
+        {
+          kind: 5,
+          instanceId: 10,
+          layer: 3,
+          time: 12,
+          occupiedPositions: [[7, 5]],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 5],
+    });
+    expect(issues.some((i) => i.id === "AI-BOMB-ANCHOR")).toBe(true);
+  });
+
   it("accepts dense kind1 fixture for 12x12", () => {
     const data = {
       width: 12,
@@ -136,6 +267,72 @@ describe("generation-constraints", () => {
       fillMinAddedCells: 8,
     });
     expect(issues.some((i) => i.id === "AI-FILL-PROGRESS")).toBe(true);
+  });
+
+  it("requires each allowed kind to appear at least once", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+          ],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 3],
+    });
+    expect(issues.some((i) => i.id === "AI-KIND-MIN" && i.message.includes("kind 3"))).toBe(
+      true,
+    );
+  });
+
+  it("passes when all allowed kinds are present", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [[0, 0], [1, 0], [2, 0]],
+        },
+        {
+          kind: 3,
+          instanceId: 2,
+          layer: 2,
+          health: 1,
+          healthViewPathIndex: 0,
+          occupiedPositions: [[5, 5], [6, 5]],
+          passes: [
+            { position: [5, 5], directions: [[0, 1], [0, -1]] },
+            { position: [6, 5], directions: [[0, 1], [0, -1]] },
+          ],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 3],
+    });
+    expect(issues.some((i) => i.id === "AI-KIND-MIN")).toBe(false);
   });
 
   it("rejects too few arrows on large board", () => {

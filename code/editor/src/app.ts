@@ -52,6 +52,12 @@ import {
 import { renderPropsPanel } from "./ui/props-panel.ts";
 import { showAiGenerateDialog } from "./ui/ai-generate-dialog.ts";
 import {
+  hidePlayResultModal,
+  mountPlayHud,
+  showPlayResultModal,
+  updatePlayHud,
+} from "./ui/play-mode-ui.ts";
+import {
   extendPolylineToCell,
   buildArrowItem,
   buildBombItem,
@@ -65,7 +71,7 @@ import {
   buildPipeItem,
   buildZoneItem,
   createDrawState,
-  directionFromFirstSegment,
+  flipArrowDirection2,
   directionFromLastSegment,
   headMatchesDirection,
   isValidPolyline,
@@ -100,6 +106,7 @@ export class EditorApp {
   private clipboard: RawItem[] = [];
   private playMode = false;
   private autoPlayActive = false;
+  private playModalShown = false;
   private gameState: GameState | null = null;
   private playRenderer: BoardRenderer | null = null;
   private playInput: InputHandler | null = null;
@@ -131,7 +138,10 @@ export class EditorApp {
     props: document.getElementById("props-panel")!,
     status: document.getElementById("status-bar")!,
     fileInput: document.getElementById("file-input") as HTMLInputElement,
+    playToolbar: document.getElementById("play-toolbar")!,
     playControls: document.getElementById("play-controls")!,
+    playHud: document.getElementById("play-hud")!,
+    playResultOverlay: document.getElementById("play-result-overlay")!,
     modal: document.getElementById("modal-root")!,
   };
 
@@ -459,7 +469,6 @@ export class EditorApp {
 
   private bindEvents(): void {
     this.els.wrap.addEventListener("wheel", (e) => {
-      if (this.playMode) return;
       e.preventDefault();
       const tab = this.activeTab();
       tab.viewport = zoomAt(tab.viewport, e.deltaY, e.clientX, e.clientY, this.els.wrap);
@@ -516,7 +525,6 @@ export class EditorApp {
   }
 
   private onMouseDown(e: MouseEvent): void {
-    if (this.playMode) return;
     const tab = this.activeTab();
     if (shouldStartViewportPan(e, tab.viewport)) {
       e.preventDefault();
@@ -525,6 +533,7 @@ export class EditorApp {
       this.els.wrap.classList.remove("viewport-pan-ready");
       return;
     }
+    if (this.playMode) return;
     const cell = this.cellFromEvent(e);
     if (!cell) return;
 
@@ -589,7 +598,6 @@ export class EditorApp {
   }
 
   private onMouseMove(e: MouseEvent): void {
-    if (this.playMode) return;
     const tab = this.activeTab();
     if (this.panStart) {
       tab.viewport = {
@@ -601,6 +609,7 @@ export class EditorApp {
       applyViewportToCanvas(this.els.overlay, tab.viewport);
       return;
     }
+    if (this.playMode) return;
 
     const cell = this.cellFromEvent(e);
     this.hoverCell = cell;
@@ -799,7 +808,7 @@ export class EditorApp {
         return;
       }
       const d1 = directionFromLastSegment(pl);
-      const d2 = directionFromFirstSegment(pl);
+      const d2 = flipArrowDirection2(pl);
       this.tryCommitItem(
         buildFlipArrowItem(
           pl.map(([x, y]) => [x, y] as Vec2),
@@ -1077,13 +1086,17 @@ export class EditorApp {
       return;
     }
     this.playMode = !this.playMode;
-    this.els.playControls.classList.toggle("hidden", !this.playMode);
+    this.els.playToolbar.classList.toggle("hidden", !this.playMode);
     if (this.playMode) {
       const tab = this.activeTab();
       tab.viewport = resetViewport(this.els.wrap, tab.doc.meta);
       applyViewportToCanvas(this.els.canvas, tab.viewport);
       applyViewportToCanvas(this.els.overlay, tab.viewport);
       this.els.overlay.style.visibility = "hidden";
+      this.els.tooltip.classList.add("hidden");
+      this.playModalShown = false;
+      hidePlayResultModal(this.els.playResultOverlay);
+      mountPlayHud(this.els.playHud);
 
       const level = documentToGameLevel(tab.doc);
       this.gameState = new GameState(level);
@@ -1103,9 +1116,7 @@ export class EditorApp {
         this.syncAutoPlayButton();
       });
       this.els.playControls.querySelector("#play-reset")?.addEventListener("click", () => {
-        this.autoPlayActive = false;
-        this.gameState = new GameState(documentToGameLevel(tab.doc));
-        this.syncAutoPlayButton();
+        this.resetPlaySession();
       });
       this.els.playControls.querySelector("#play-exit")?.addEventListener("click", () =>
         this.togglePlayMode(),
@@ -1114,6 +1125,8 @@ export class EditorApp {
     } else {
       cancelAnimationFrame(this.rafId);
       this.autoPlayActive = false;
+      this.playModalShown = false;
+      hidePlayResultModal(this.els.playResultOverlay);
       this.playInput?.dispose();
       this.playInput = null;
       this.gameState = null;
@@ -1121,6 +1134,37 @@ export class EditorApp {
       this.els.overlay.style.visibility = "";
       this.refresh();
     }
+  }
+
+  private resetPlaySession(): void {
+    const tab = this.activeTab();
+    this.autoPlayActive = false;
+    this.playModalShown = false;
+    hidePlayResultModal(this.els.playResultOverlay);
+    this.gameState = new GameState(documentToGameLevel(tab.doc));
+    this.syncAutoPlayButton();
+  }
+
+  private checkPlayEndState(): void {
+    const gs = this.gameState;
+    if (!gs || !this.playMode || this.playModalShown) return;
+    if (gs.phase !== "won" && gs.phase !== "lost") return;
+
+    this.playModalShown = true;
+    this.autoPlayActive = false;
+    this.syncAutoPlayButton();
+
+    showPlayResultModal(this.els.playResultOverlay, gs, [
+      {
+        label: "重玩",
+        primary: true,
+        onClick: () => this.resetPlaySession(),
+      },
+      {
+        label: "退出试玩",
+        onClick: () => this.togglePlayMode(),
+      },
+    ]);
   }
 
   private syncAutoPlayButton(): void {
@@ -1179,6 +1223,8 @@ export class EditorApp {
         gs.getActiveCurtainsForRender(),
         {
           style: "game",
+          clearedTraces: gs.getClearedTraceCells(),
+          occupiedCells: gs.getOccupiedArrowCellKeys(),
           vanishProgressById,
           movingWalls: gs.getMovingWalls(),
           frozenOverlays: gs.getFrozenOverlays(),
@@ -1187,6 +1233,7 @@ export class EditorApp {
           urgentBombRemaining: gs.getUrgentBombRemaining(),
         },
       );
+      updatePlayHud(this.els.playHud, gs);
     };
 
     const tick = (now: number) => {
@@ -1227,6 +1274,7 @@ export class EditorApp {
 
       renderPlayFrame();
       this.syncAutoPlayButton();
+      this.checkPlayEndState();
       this.rafId = requestAnimationFrame(tick);
     };
 
@@ -1320,7 +1368,7 @@ export class EditorApp {
             : undefined,
         flipDirection2:
           tab.draw.tool === "flipArrow"
-            ? directionFromFirstSegment(tab.draw.polyline)
+            ? flipArrowDirection2(tab.draw.polyline)
             : undefined,
       },
     );

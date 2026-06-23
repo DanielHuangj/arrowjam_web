@@ -23,6 +23,24 @@ function launchUntilDone(gs: GameState, arrowId: number): void {
 }
 
 describe("frozen integration", () => {
+  it("blocks other arrows while host is frozen", () => {
+    const gs = new GameState(load9003());
+    expect(gs.getActiveArrows().some((a) => a.instanceId === 30)).toBe(false);
+    expect(gs.getBlockingArrows().some((a) => a.instanceId === 30)).toBe(true);
+
+    const attacker = gs.arrows.find((a) => a.instanceId === 32)!;
+    attacker.direction = 3;
+    attacker.occupiedPositions = [
+      [3, 5],
+      [4, 5],
+    ];
+    gs.rebuildCellMap();
+
+    expect(gs.getLaunchableIds().has(32)).toBe(false);
+    gs.tryLaunch(32);
+    expect(gs.animation?.mode).toBe("bump");
+  });
+
   it("reduces health when adjacent arrow exits board", () => {
     const gs = new GameState(load9003());
     expect(gs.getFrozenOverlays()[0]!.health).toBe(2);

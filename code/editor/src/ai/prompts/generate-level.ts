@@ -22,9 +22,10 @@ export function buildGenerateMessages(
 
 **硬性规则（违反则自动校验失败）：**
 1. itemModels 中每个物件的 kind **只能**是: ${allowedOnly}
-2. 禁止输出任何其他 kind（含 kind2 翻转箭，除非已在列表中）
-3. 不同 kind1/kind2 的 occupiedPositions **不得共享格子**
-4. 箭数量与棋盘占用须达到用户消息中「硬性量化下限」
+2. **每种勾选的 kind 至少 1 个**（例如勾选 K3 管道则须含 ≥1 个 kind3）
+3. 禁止输出任何其他 kind（含 kind2 翻转箭，除非已在列表中）
+4. 不同 kind1/kind2 的 occupiedPositions **不得共享格子**
+5. 箭数量与棋盘占用须达到用户消息中「硬性量化下限」
 
 只输出一个 LevelData JSON，不要解释。`,
     },

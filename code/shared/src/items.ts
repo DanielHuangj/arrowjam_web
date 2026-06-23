@@ -153,3 +153,98 @@ export function levelDataFromDocument(doc: {
   if (doc.meta.levelKind != null) data.levelKind = doc.meta.levelKind;
   return data;
 }
+
+const ARROW_BODY_KINDS = new Set([1, 2]);
+
+export interface PipeArrowOverlap {
+  cell: string;
+  pipeId: number;
+  arrowId: number;
+}
+
+/** kind3 管身格与 kind1/2 箭身格不可重叠 */
+export function findPipeArrowCellOverlaps(items: RawItem[]): PipeArrowOverlap[] {
+  const arrowCellToId = new Map<string, number>();
+  for (const item of collectAllItems(items)) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    for (const p of item.occupiedPositions) {
+      arrowCellToId.set(vecKey(p), item.instanceId);
+    }
+  }
+  const overlaps: PipeArrowOverlap[] = [];
+  for (const item of collectAllItems(items)) {
+    if (item.kind !== 3) continue;
+    for (const p of item.occupiedPositions) {
+      const key = vecKey(p);
+      const arrowId = arrowCellToId.get(key);
+      if (arrowId != null) {
+        overlaps.push({ cell: key, pipeId: item.instanceId, arrowId });
+      }
+    }
+  }
+  return overlaps;
+}
+
+export interface CornerArrowOverlap {
+  cell: string;
+  cornerId: number;
+  arrowId: number;
+}
+
+/** kind4 反射角格与 kind1/2 箭身格不可重叠 */
+export function findCornerArrowCellOverlaps(items: RawItem[]): CornerArrowOverlap[] {
+  const arrowCellToId = new Map<string, number>();
+  for (const item of collectAllItems(items)) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    for (const p of item.occupiedPositions) {
+      arrowCellToId.set(vecKey(p), item.instanceId);
+    }
+  }
+  const overlaps: CornerArrowOverlap[] = [];
+  for (const item of collectAllItems(items)) {
+    if (item.kind !== 4) continue;
+    for (const p of item.occupiedPositions) {
+      const key = vecKey(p);
+      const arrowId = arrowCellToId.get(key);
+      if (arrowId != null) {
+        overlaps.push({ cell: key, cornerId: item.instanceId, arrowId });
+      }
+    }
+  }
+  return overlaps;
+}
+
+/** 与编辑器手绘管道一致：血量 UI 锚在管身中段 */
+export function defaultPipeHealthViewPathIndex(pathLength: number): number {
+  return Math.floor(pathLength / 2);
+}
+
+const ARROW_HOST_KINDS = new Set([1, 2]);
+
+/** 炸弹绑定在宿主箭身的索引（尾→头，与手绘 buildBombItem 一致） */
+export function bombAnchorIndex(hostLength: number): number {
+  return Math.max(0, Math.floor(hostLength / 2));
+}
+
+export function bombAnchorCell(hostPositions: Vec2[]): Vec2 {
+  const idx = bombAnchorIndex(hostPositions.length);
+  return hostPositions[idx] ?? hostPositions[0]!;
+}
+
+export function findArrowHostingCell(items: RawItem[], cell: Vec2): RawItem | undefined {
+  const key = vecKey(cell);
+  return collectAllItems(items).find(
+    (o) =>
+      ARROW_HOST_KINDS.has(o.kind) &&
+      o.occupiedPositions.some((p) => vecKey(p) === key),
+  );
+}
+
+/** 炸弹须在宿主箭身中段（非头尾）；宿主箭至少 3 格 */
+export function isBombAnchoredOnMidBody(hostPositions: Vec2[], bombCell: Vec2): boolean {
+  if (hostPositions.length < 3) return false;
+  const anchor = bombAnchorCell(hostPositions);
+  const idx = hostPositions.findIndex((p) => p[0] === bombCell[0] && p[1] === bombCell[1]);
+  if (idx <= 0 || idx >= hostPositions.length - 1) return false;
+  return anchor[0] === bombCell[0] && anchor[1] === bombCell[1];
+}

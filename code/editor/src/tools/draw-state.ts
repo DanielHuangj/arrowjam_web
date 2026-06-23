@@ -1,5 +1,5 @@
 import type { Direction, RawItem, Vec2 } from "@arrowjaw/shared";
-import { DIR_VEC } from "@arrowjaw/shared";
+import { bombAnchorCell, DIR_VEC } from "@arrowjaw/shared";
 import { isPolylineContinuous } from "@arrowjaw/shared";
 
 export type EditorTool =
@@ -122,7 +122,7 @@ export function buildFlipArrowItem(
 }
 
 export function buildBombItem(hostPositions: Vec2[], time = 10): Omit<RawItem, "instanceId"> {
-  const cell = hostPositions[Math.floor(hostPositions.length / 2)] ?? hostPositions[0]!;
+  const cell = bombAnchorCell(hostPositions);
   return {
     kind: 5,
     layer: 3,
@@ -241,4 +241,9 @@ export function directionFromFirstSegment(polyline: Vec2[]): Direction {
   if (dx === 0 && dy === -1) return 2;
   if (dx === 1 && dy === 0) return 3;
   return 4;
+}
+
+/** 翻转后箭头朝向：折线反转后的末段方向 */
+export function flipArrowDirection2(polyline: Vec2[]): Direction {
+  return directionFromLastSegment([...polyline].reverse());
 }

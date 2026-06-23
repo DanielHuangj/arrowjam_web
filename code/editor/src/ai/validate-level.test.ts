@@ -64,4 +64,25 @@ describe("validateLevelJsonString", () => {
     const result = validateLevelJsonString(json, form);
     expect(result.ok, JSON.stringify(result.issues)).toBe(true);
   });
+
+  it("reports V07 instead of LOAD for malformed pipe passes", () => {
+    const json = JSON.stringify({
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 3,
+          instanceId: 1,
+          layer: 2,
+          health: 2,
+          healthViewPathIndex: 0,
+          occupiedPositions: [[5, 5], [6, 5]],
+          passes: [[5, 5], [6, 5]],
+        },
+      ],
+    });
+    const result = validateLevelJsonString(json);
+    expect(result.issues.some((i) => i.id === "LOAD")).toBe(false);
+    expect(result.issues.some((i) => i.id === "V07" || i.id === "V08")).toBe(true);
+  });
 });

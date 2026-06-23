@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { directionFromLastSegment, flipArrowDirection2 } from "../tools/draw-state.ts";
 import { sanitizeLevelJson, sanitizeLevelData } from "./level-sanitizer.ts";
 import { validateLevelJsonString } from "./validate-level.ts";
 import type { GenerationForm } from "./types.ts";
@@ -107,5 +108,292 @@ describe("level-sanitizer", () => {
       if (validateLevelJsonString(result.json, form20K1).ok) passCount++;
     }
     expect(passCount).toBeGreaterThanOrEqual(6);
+  });
+
+  it("fixes malformed pipe passes (bare coordinates) without LOAD crash", () => {
+    const data: LevelData = {
+      width: 16,
+      height: 16,
+      itemModels: [
+        {
+          kind: 3,
+          instanceId: 1,
+          layer: 2,
+          occupiedPositions: [[4, 8], [5, 8], [6, 8], [7, 8]],
+          passes: [[4, 8], [7, 8]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[0, 0], [1, 0], [2, 0]],
+        },
+      ],
+    };
+    const form: GenerationForm = { ...form20K1, width: 16, height: 16, allowedKinds: [1, 3] };
+    const result = sanitizeLevelData(data, form);
+    expect(result.changed).toBe(true);
+    expect(result.actions.some((a) => a.includes("pipe #1"))).toBe(true);
+
+    const parsed = JSON.parse(result.json);
+    const pipe = parsed.itemModels.find((i: { kind: number }) => i.kind === 3);
+    expect(pipe.passes).toHaveLength(2);
+    expect(pipe.passes[0]).toMatchObject({ position: [4, 8] });
+    expect(pipe.passes[0].directions).toHaveLength(2);
+    expect(pipe.health).toBeGreaterThan(0);
+
+    const validation = validateLevelJsonString(result.json, form);
+    expect(validation.issues.some((i) => i.id === "LOAD")).toBe(false);
+  });
+
+  it("snaps pass positions to path endpoints and sets mid healthViewPathIndex", () => {
+    const data: LevelData = {
+      width: 16,
+      height: 16,
+      itemModels: [
+        {
+          kind: 3,
+          instanceId: 1,
+          layer: 2,
+          health: 4,
+          healthViewPathIndex: 0,
+          occupiedPositions: [[4, 8], [5, 8], [6, 8], [7, 8]],
+          passes: [
+            { position: [6, 8], directions: [[-1, 0], [1, 0]] },
+            { position: [5, 8], directions: [[-1, 0], [1, 0]] },
+          ],
+        },
+      ],
+    };
+    const form: GenerationForm = { ...form20K1, width: 16, height: 16, allowedKinds: [1, 3] };
+    const result = sanitizeLevelData(data, form);
+    const pipe = JSON.parse(result.json).itemModels[0];
+    expect(pipe.passes[0].position).toEqual([4, 8]);
+    expect(pipe.passes[1].position).toEqual([7, 8]);
+    expect(pipe.healthViewPathIndex).toBe(2);
+  });
+
+  it("resolves pipe-arrow overlap by shifting or trimming pipe", () => {
+    const data: LevelData = {
+      width: 16,
+      height: 16,
+      itemModels: [
+        {
+          kind: 3,
+          instanceId: 1,
+          layer: 2,
+          health: 3,
+          healthViewPathIndex: 0,
+          occupiedPositions: [[5, 8], [6, 8], [7, 8]],
+          passes: [[5, 8], [7, 8]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[6, 8], [7, 8], [8, 8]],
+        },
+      ],
+    };
+    const form: GenerationForm = { ...form20K1, width: 16, height: 16, allowedKinds: [1, 3] };
+    const result = sanitizeLevelData(data, form);
+    const parsed = JSON.parse(result.json);
+    const pipeCells = new Set(
+      parsed.itemModels
+        .find((i: { kind: number }) => i.kind === 3)
+        .occupiedPositions.map((p: number[]) => `${p[0]},${p[1]}`),
+    );
+    const arrowCells = parsed.itemModels
+      .find((i: { kind: number }) => i.kind === 1)
+      .occupiedPositions.map((p: number[]) => `${p[0]},${p[1]}`);
+    for (const key of arrowCells) {
+      expect(pipeCells.has(key)).toBe(false);
+    }
+    expect(result.actions.some((a) => a.includes("AI-PIPE-OVERLAP"))).toBe(true);
+  });
+
+  it("resolves corner-arrow overlap by moving corner or adjusting arrow", () => {
+    const data: LevelData = {
+      width: 16,
+      height: 16,
+      itemModels: [
+        {
+          kind: 4,
+          instanceId: 1,
+          layer: 2,
+          direction1: [1, 0],
+          direction2: [0, 1],
+          occupiedPositions: [[6, 8]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[5, 8], [6, 8], [7, 8]],
+        },
+      ],
+    };
+    const form: GenerationForm = { ...form20K1, width: 16, height: 16, allowedKinds: [1, 4] };
+    const result = sanitizeLevelData(data, form);
+    const parsed = JSON.parse(result.json);
+    const corner = parsed.itemModels.find((i: { kind: number }) => i.kind === 4);
+    const arrow = parsed.itemModels.find((i: { kind: number }) => i.kind === 1);
+    expect(corner).toBeDefined();
+    const cornerKey = `${corner.occupiedPositions[0][0]},${corner.occupiedPositions[0][1]}`;
+    const arrowKeys = new Set(
+      arrow.occupiedPositions.map((p: number[]) => `${p[0]},${p[1]}`),
+    );
+    expect(arrowKeys.has(cornerKey)).toBe(false);
+    expect(result.actions.some((a) => a.includes("AI-CORNER-OVERLAP"))).toBe(true);
+  });
+
+  it("fixes flip arrow direction1/direction2 to match polyline segments", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 2,
+          instanceId: 1,
+          layer: 2,
+          direction1: 1,
+          direction2: 1,
+          colorId: 7,
+          occupiedPositions: [[5, 6], [6, 6], [7, 6]],
+        },
+      ],
+    };
+    const form: GenerationForm = { ...form20K1, width: 12, height: 12, allowedKinds: [2] };
+    const result = sanitizeLevelData(data, form, { frozenArrowIds: new Set([1]) });
+    const flip = JSON.parse(result.json).itemModels[0];
+    const pl = flip.occupiedPositions;
+    expect(flip.direction1).toBe(directionFromLastSegment(pl));
+    expect(flip.direction2).toBe(flipArrowDirection2(pl));
+    expect(flip.direction1).toBe(3);
+    expect(flip.direction2).toBe(4);
+    expect(result.actions.some((a) => a.includes("V11") && a.includes("#1"))).toBe(true);
+    expect(validateLevelJsonString(result.json, form).issues.some((i) => i.id === "V11")).toBe(
+      false,
+    );
+  });
+
+  it("resolves cross-arrow overlaps like bomb-level bottleneck conflicts", () => {
+    const data: LevelData = {
+      width: 16,
+      height: 16,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 4,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[4, 5], [5, 5], [6, 5], [7, 5], [8, 5]],
+        },
+        {
+          kind: 1,
+          instanceId: 5,
+          layer: 2,
+          direction: 1,
+          colorId: 7,
+          occupiedPositions: [[7, 3], [7, 4], [7, 5], [7, 6]],
+        },
+        {
+          kind: 1,
+          instanceId: 6,
+          layer: 2,
+          direction: 1,
+          colorId: 3,
+          occupiedPositions: [[8, 3], [8, 4], [8, 5], [8, 6]],
+        },
+        {
+          kind: 5,
+          instanceId: 20,
+          layer: 3,
+          time: 12,
+          occupiedPositions: [[7, 6]],
+        },
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[0, 5], [1, 5], [2, 5]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 7,
+          occupiedPositions: [[0, 7], [1, 7], [2, 7]],
+        },
+        {
+          kind: 1,
+          instanceId: 3,
+          layer: 2,
+          direction: 1,
+          colorId: 3,
+          occupiedPositions: [[9, 0], [9, 1], [9, 2]],
+        },
+      ],
+    };
+    const form: GenerationForm = {
+      ...form20K1,
+      width: 16,
+      height: 16,
+      allowedKinds: [1, 5],
+    };
+    const result = sanitizeLevelData(data, form);
+    const validated = validateLevelJsonString(result.json, form);
+    const overlapIssues = validated.issues.filter((i) => i.id === "AI-OVERLAP");
+    const v04Issues = validated.issues.filter((i) => i.id === "V04");
+    expect(overlapIssues.length).toBe(0);
+    expect(v04Issues.length).toBe(0);
+    expect(result.actions.some((a) => a.includes("AI-OVERLAP"))).toBe(true);
+  });
+
+  it("moves bomb from arrow head to mid-body segment", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 6,
+          occupiedPositions: [[3, 5], [4, 5], [5, 5], [6, 5], [7, 5]],
+        },
+        {
+          kind: 5,
+          instanceId: 10,
+          layer: 3,
+          time: 12,
+          occupiedPositions: [[7, 5]],
+        },
+      ],
+    };
+    const form: GenerationForm = {
+      ...form20K1,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 5],
+    };
+    const result = sanitizeLevelData(data, form, { frozenArrowIds: new Set([2]) });
+    const bomb = JSON.parse(result.json).itemModels.find((i: { kind: number }) => i.kind === 5);
+    expect(bomb.occupiedPositions[0]).toEqual([5, 5]);
+    expect(result.actions.some((a) => a.includes("AI-BOMB-ANCHOR"))).toBe(true);
+    expect(validateLevelJsonString(result.json, form).issues.some((i) => i.id === "AI-BOMB-ANCHOR")).toBe(
+      false,
+    );
   });
 });

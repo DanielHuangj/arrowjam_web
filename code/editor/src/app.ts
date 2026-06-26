@@ -13,6 +13,7 @@ import {
   validateLevelData,
 } from "@arrowjaw/shared";
 import { GameState } from "@arrowjaw/client/core/game/game-state.ts";
+import { tickGameAnimation } from "@arrowjaw/client/core/game/anim-timing.ts";
 import { BoardRenderer } from "@arrowjaw/client/render/board-renderer.ts";
 import { InputHandler } from "@arrowjaw/client/render/input-handler.ts";
 import { EditorBoardView, documentToGameLevel } from "./canvas/editor-board.ts";
@@ -27,16 +28,19 @@ import {
 } from "./canvas/viewport.ts";
 import {
   addItem,
+  applyDragDelta,
   copyItems,
   enterZone,
   exitZone,
   findItemAtCell,
   pasteItems,
   removeItems,
+  revertDragSnapshots,
   selectItem,
   selectItemsInRect,
   updateItem,
   updateMeta,
+  type DragPositionSnapshots,
 } from "./document/editor-ops.ts";
 import {
   arrowPlacementBlockMessage,
@@ -119,9 +123,8 @@ export class EditorApp {
   private playInput: InputHandler | null = null;
   private hoverCell: Vec2 | null = null;
   private panStart: { x: number; y: number; ox: number; oy: number } | null = null;
-  private dragId?: number;
   private dragOrigin?: Vec2;
-  private dragPositions?: Vec2[];
+  private dragSnapshots?: DragPositionSnapshots;
   private marqueeStart: Vec2 | null = null;
   private marqueeEnd: Vec2 | null = null;
   private marqueeActive = false;
@@ -590,10 +593,20 @@ export class EditorApp {
         this.marqueeActive = false;
         this.marqueeStart = null;
         this.marqueeEnd = null;
-        tab.doc = selectItem(tab.doc, hit.instanceId, e.ctrlKey);
-        this.dragId = hit.instanceId;
+        const alreadySelected = tab.doc.selectedInstanceIds.includes(hit.instanceId);
+        if (e.ctrlKey) {
+          tab.doc = selectItem(tab.doc, hit.instanceId, true);
+        } else if (!alreadySelected) {
+          tab.doc = selectItem(tab.doc, hit.instanceId, false);
+        }
         this.dragOrigin = cell;
-        this.dragPositions = [...hit.occupiedPositions];
+        this.dragSnapshots = new Map();
+        for (const id of tab.doc.selectedInstanceIds) {
+          const item = findItemById(tab.doc.itemModels, id);
+          if (item) {
+            this.dragSnapshots.set(id, item.occupiedPositions.map(([x, y]) => [x, y]));
+          }
+        }
         this.refresh();
         return;
       }
@@ -666,23 +679,11 @@ export class EditorApp {
       this.els.tooltip.classList.add("hidden");
     }
 
-    if (this.dragId != null && this.dragOrigin && cell) {
-      const dx = cell[0] - this.dragOrigin[0];
-      const dy = cell[1] - this.dragOrigin[1];
-      if (dx !== 0 || dy !== 0) {
-        if (this.dragPositions) {
-          const positions = this.dragPositions.map(
-            ([x, y]) => [x + dx, y + dy] as Vec2,
-          );
-          const item = findItemById(tab.doc.itemModels, this.dragId);
-          const canPlace =
-            item?.kind === 1 || item?.kind === 2
-              ? canPlaceArrowInEditContext(tab.doc, positions, this.dragId)
-              : canPlaceInEditContext(tab.doc, positions);
-          if (!canPlace) return;
-          tab.doc = updateItem(tab.doc, this.dragId, { occupiedPositions: positions });
-          this.refresh();
-        }
+    if (this.dragOrigin && this.dragSnapshots && cell) {
+      const next = applyDragDelta(tab.doc, this.dragSnapshots, this.dragOrigin, cell);
+      if (next) {
+        tab.doc = next;
+        this.refresh();
       }
     }
 
@@ -744,29 +745,27 @@ export class EditorApp {
       this.renderProps();
     }
 
-    if (this.dragId != null) {
-      if (this.dragPositions) {
-        const item = findItemById(tab.doc.itemModels, this.dragId);
-        if (item && this.dragPositions) {
-          const canPlace =
-            item.kind === 1 || item.kind === 2
-              ? canPlaceArrowInEditContext(
-                  tab.doc,
-                  item.occupiedPositions,
-                  this.dragId,
-                )
-              : canPlaceInEditContext(tab.doc, item.occupiedPositions);
-          if (!canPlace) {
-            tab.doc = updateItem(tab.doc, this.dragId, {
-              occupiedPositions: this.dragPositions,
-            });
-          }
+    if (this.dragSnapshots && this.dragOrigin) {
+      const movingIds = new Set(this.dragSnapshots.keys());
+      let valid = true;
+      for (const [id, orig] of this.dragSnapshots) {
+        const item = findItemById(tab.doc.itemModels, id);
+        if (!item) continue;
+        const canPlace =
+          item.kind === 1 || item.kind === 2
+            ? canPlaceArrowInEditContext(tab.doc, item.occupiedPositions, movingIds)
+            : canPlaceInEditContext(tab.doc, item.occupiedPositions);
+        if (!canPlace) {
+          valid = false;
+          break;
         }
       }
+      if (!valid) {
+        tab.doc = revertDragSnapshots(tab.doc, this.dragSnapshots);
+      }
       this.commit(tab.doc);
-      this.dragId = undefined;
       this.dragOrigin = undefined;
-      this.dragPositions = undefined;
+      this.dragSnapshots = undefined;
       return;
     }
 
@@ -1244,7 +1243,6 @@ export class EditorApp {
   }
 
   private startPlayLoop(): void {
-    const ANIM_INTERVAL_MS = 40;
     let lastTime = performance.now();
     let animAccum = 0;
 
@@ -1305,21 +1303,7 @@ export class EditorApp {
       gs.tick(dt);
 
       if (gs.phase === "animating") {
-        animAccum += dt * 1000;
-        let advanced = false;
-        while (animAccum >= ANIM_INTERVAL_MS) {
-          gs.advanceAnimation();
-          animAccum -= ANIM_INTERVAL_MS;
-          advanced = true;
-          if (gs.phase !== "animating") {
-            animAccum = 0;
-            break;
-          }
-        }
-        if (gs.phase === "animating" && !advanced) {
-          gs.advanceAnimation();
-        }
-        gs.recoverAnimationState();
+        animAccum = tickGameAnimation(gs, dt * 1000, animAccum);
       }
 
       if (this.autoPlayActive) {

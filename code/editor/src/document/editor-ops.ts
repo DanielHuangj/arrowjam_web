@@ -5,10 +5,67 @@ import {
   getEditableItems,
   nextInstanceId,
 } from "@arrowjaw/shared";
+import {
+  canPlaceArrowInEditContext,
+  canPlaceInEditContext,
+} from "./zone-bounds.ts";
 
 function positionsEqual(a: Vec2[], b: Vec2[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((p, i) => p[0] === b[i]![0] && p[1] === b[i]![1]);
+}
+
+function rigidTranslationDelta(old: Vec2[], next: Vec2[]): Vec2 | null {
+  if (old.length !== next.length || old.length === 0) return null;
+  const dx = next[0]![0] - old[0]![0];
+  const dy = next[0]![1] - old[0]![1];
+  for (let i = 1; i < old.length; i++) {
+    if (next[i]![0] - old[i]![0] !== dx || next[i]![1] - old[i]![1] !== dy) {
+      return null;
+    }
+  }
+  return [dx, dy];
+}
+
+function translateVec2List(list: Vec2[], dx: number, dy: number): Vec2[] {
+  return list.map(([x, y]) => [x + dx, y + dy] as Vec2);
+}
+
+function translatePipePasses(passes: unknown, dx: number, dy: number): unknown {
+  if (!Array.isArray(passes)) return passes;
+  return passes.map((entry) => {
+    if (entry && typeof entry === "object" && "position" in entry) {
+      const pass = entry as { position: Vec2; directions?: Vec2[] };
+      return {
+        ...pass,
+        position: [pass.position[0] + dx, pass.position[1] + dy] as Vec2,
+      };
+    }
+    if (Array.isArray(entry) && entry.length >= 2) {
+      return [entry[0] + dx, entry[1] + dy];
+    }
+    return entry;
+  });
+}
+
+function syncRigidItemTranslation(
+  item: RawItem,
+  oldPositions: Vec2[],
+  newPositions: Vec2[],
+  patch: Partial<RawItem>,
+): Partial<RawItem> {
+  const delta = rigidTranslationDelta(oldPositions, newPositions);
+  if (!delta) return patch;
+  const [dx, dy] = delta;
+  const next = { ...patch };
+
+  if (item.kind === 3 && patch.passes === undefined && item.passes != null) {
+    next.passes = translatePipePasses(item.passes, dx, dy);
+  }
+  if (item.kind === 7 && patch.movingPath === undefined && item.movingPath?.length) {
+    next.movingPath = translateVec2List(item.movingPath, dx, dy);
+  }
+  return next;
 }
 
 function setSiblingList(doc: EditorDocument, hostId: number, newList: RawItem[]): EditorDocument {
@@ -157,24 +214,87 @@ export function updateItem(
   id: number,
   patch: Partial<RawItem>,
 ): EditorDocument {
+  const oldItem = findItemById(doc.itemModels, id);
+  let effectivePatch = patch;
+  if (oldItem && patch.occupiedPositions) {
+    effectivePatch = syncRigidItemTranslation(
+      oldItem,
+      oldItem.occupiedPositions,
+      patch.occupiedPositions,
+      patch,
+    );
+  }
+
   function patchList(items: RawItem[]): RawItem[] {
     return items.map((item) => {
-      if (item.instanceId === id) return { ...item, ...patch };
+      if (item.instanceId === id) return { ...item, ...effectivePatch };
       if (item.items) return { ...item, items: patchList(item.items) };
       return item;
     });
   }
   let next = { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
-  if (patch.occupiedPositions) {
-    const oldItem = findItemById(doc.itemModels, id);
-    if (oldItem && (oldItem.kind === 1 || oldItem.kind === 2)) {
+  if (effectivePatch.occupiedPositions && oldItem) {
+    if (oldItem.kind === 1 || oldItem.kind === 2) {
       next = syncAttachmentsForHost(
         next,
         id,
-        patch.occupiedPositions,
+        effectivePatch.occupiedPositions,
         oldItem.occupiedPositions,
       );
     }
+  }
+  return next;
+}
+
+export type DragPositionSnapshots = Map<number, Vec2[]>;
+
+function canPlaceDraggedItem(
+  doc: EditorDocument,
+  item: RawItem,
+  positions: Vec2[],
+  movingIds: Set<number>,
+): boolean {
+  if (item.kind === 1 || item.kind === 2) {
+    return canPlaceArrowInEditContext(doc, positions, movingIds);
+  }
+  return canPlaceInEditContext(doc, positions);
+}
+
+/** 按拖拽起点与当前格，整体平移一组物件；无法放置时返回 null */
+export function applyDragDelta(
+  doc: EditorDocument,
+  snapshots: DragPositionSnapshots,
+  origin: Vec2,
+  currentCell: Vec2,
+): EditorDocument | null {
+  const dx = currentCell[0] - origin[0];
+  const dy = currentCell[1] - origin[1];
+  if (dx === 0 && dy === 0) return doc;
+
+  const movingIds = new Set(snapshots.keys());
+  for (const [id, orig] of snapshots) {
+    const item = findItemById(doc.itemModels, id);
+    if (!item) continue;
+    const positions = translateVec2List(orig, dx, dy);
+    if (!canPlaceDraggedItem(doc, item, positions, movingIds)) return null;
+  }
+
+  let next = doc;
+  for (const [id, orig] of snapshots) {
+    next = updateItem(next, id, {
+      occupiedPositions: translateVec2List(orig, dx, dy),
+    });
+  }
+  return next;
+}
+
+export function revertDragSnapshots(
+  doc: EditorDocument,
+  snapshots: DragPositionSnapshots,
+): EditorDocument {
+  let next = doc;
+  for (const [id, orig] of snapshots) {
+    next = updateItem(next, id, { occupiedPositions: orig });
   }
   return next;
 }

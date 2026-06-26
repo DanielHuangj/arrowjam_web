@@ -194,6 +194,51 @@
       "p2Playable": false,
       "p3Playable": false,
       "p4Playable": false
+    },
+    {
+      "id": 9016,
+      "file": "level-9016.json",
+      "name": "Level 9016",
+      "difficulty": 1,
+      "width": 50,
+      "height": 39,
+      "durationInSec": 210,
+      "kinds": [
+        1,
+        2,
+        8,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9017,
+      "file": "level-9017.json",
+      "name": "Level 9017",
+      "difficulty": 2,
+      "width": 32,
+      "height": 32,
+      "durationInSec": 280,
+      "kinds": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8,
+        11,
+        12,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
     }
   ],
   "levels": [

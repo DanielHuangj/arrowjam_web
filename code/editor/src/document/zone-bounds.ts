@@ -36,7 +36,7 @@ export type ArrowPlacementBlockReason = "zone" | "self" | "overlap";
 export function getArrowPlacementBlockReason(
   doc: EditorDocument,
   positions: Vec2[],
-  excludeInstanceId?: number,
+  excludeInstanceId?: number | Set<number>,
 ): ArrowPlacementBlockReason | null {
   if (!canPlaceInEditContext(doc, positions)) return "zone";
   if (arrowPathSelfOverlaps(positions)) return "self";
@@ -49,7 +49,7 @@ export function getArrowPlacementBlockReason(
 export function canPlaceArrowInEditContext(
   doc: EditorDocument,
   positions: Vec2[],
-  excludeInstanceId?: number,
+  excludeInstanceId?: number | Set<number>,
 ): boolean {
   return getArrowPlacementBlockReason(doc, positions, excludeInstanceId) == null;
 }

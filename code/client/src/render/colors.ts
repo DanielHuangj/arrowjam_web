@@ -33,6 +33,8 @@ export const R_BODY = 5.5;
 export const R_HEAD = 7;
 export const R_CORNER = 6;
 export const CORNER_COLOR = "#fd7e14";
+/** 反射角弹簧标识（与镜面线区分） */
+export const CORNER_SPRING_COLOR = "#63e6be";
 export const ZONE_STROKE = "#7c6fef";
 export const ZONE_FILL = "rgba(124, 111, 239, 0.12)";
 export const BUNDLE_COLORS = ["#ff922b", "#f03e3e", "#ae3ec9"];

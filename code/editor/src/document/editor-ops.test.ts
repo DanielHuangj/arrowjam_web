@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyDocument } from "@arrowjaw/shared";
-import { addItem, removeItems, syncAttachmentsForHost, updateItem } from "./editor-ops.ts";
+import { createEmptyDocument, findItemById } from "@arrowjaw/shared";
+import {
+  addItem,
+  applyDragDelta,
+  removeItems,
+  syncAttachmentsForHost,
+  updateItem,
+} from "./editor-ops.ts";
 
 describe("editor-ops attachments", () => {
   it("syncs frozen overlay when host arrow moves", () => {
@@ -90,6 +96,75 @@ describe("editor-ops attachments", () => {
     );
     const bomb = doc.itemModels.find((i) => i.kind === 5);
     expect(bomb?.occupiedPositions[0]).toEqual([6, 5]);
+  });
+
+  it("translates pipe passes when pipe body moves", () => {
+    let doc = createEmptyDocument();
+    doc = addItem(doc, {
+      kind: 3,
+      layer: 2,
+      health: 2,
+      occupiedPositions: [
+        [4, 5],
+        [5, 5],
+        [6, 5],
+      ],
+      passes: [
+        { position: [4, 5], directions: [[-1, 0], [1, 0]] },
+        { position: [6, 5], directions: [[-1, 0], [1, 0]] },
+      ],
+      healthViewPathIndex: 1,
+    });
+    const pipeId = doc.selectedInstanceIds[0]!;
+    doc = updateItem(doc, pipeId, {
+      occupiedPositions: [
+        [5, 6],
+        [6, 6],
+        [7, 6],
+      ],
+    });
+    const pipe = doc.itemModels.find((i) => i.instanceId === pipeId)!;
+    expect(pipe.passes).toEqual([
+      { position: [5, 6], directions: [[-1, 0], [1, 0]] },
+      { position: [7, 6], directions: [[-1, 0], [1, 0]] },
+    ]);
+  });
+
+  it("moves multiple selected items together", () => {
+    let doc = createEmptyDocument();
+    doc = addItem(doc, {
+      kind: 4,
+      layer: 2,
+      direction1: [1, 0],
+      direction2: [0, -1],
+      occupiedPositions: [[2, 2]],
+    });
+    const cornerId = doc.selectedInstanceIds[0]!;
+    doc = addItem(doc, {
+      kind: 1,
+      layer: 2,
+      direction: 3,
+      colorId: 1,
+      occupiedPositions: [
+        [4, 2],
+        [5, 2],
+      ],
+    });
+    const arrowId = doc.selectedInstanceIds[0]!;
+    doc = { ...doc, selectedInstanceIds: [cornerId, arrowId] };
+
+    const snapshots = new Map<number, [number, number][]>([
+      [cornerId, [[2, 2]]],
+      [arrowId, [[4, 2], [5, 2]]],
+    ]);
+    const moved = applyDragDelta(doc, snapshots, [2, 2], [3, 2]);
+    expect(moved).not.toBeNull();
+    expect(findItemById(moved!.itemModels, cornerId)?.occupiedPositions[0]).toEqual([
+      3, 2,
+    ]);
+    expect(findItemById(moved!.itemModels, arrowId)?.occupiedPositions[0]).toEqual([
+      5, 2,
+    ]);
   });
 
   it("does not remove top-level bomb when deleting zone arrow on shared cell", () => {

@@ -10,7 +10,7 @@ import type {
 } from "../types.ts";
 import { vecKey } from "../types.ts";
 import { snakeStepArrow } from "../board/cell-map.ts";
-import { getCornerAt, isValidCornerEntry } from "./corner.ts";
+import { getCornerAt } from "./corner.ts";
 import {
   isHeadBlockedByPipe,
   tryStartPipeTransit,
@@ -241,7 +241,7 @@ export function advanceBundleStep(
     }
 
     const corner = getCornerAt(nextHead, corners);
-    if (corner && isValidCornerEntry(dir, corner)) {
+    if (corner) {
       return { arrows: stepped, blocked: true };
     }
 

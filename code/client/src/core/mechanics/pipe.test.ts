@@ -15,6 +15,7 @@ import {
   simulateCanExitWithPipes,
   tryStartPipeTransit,
 } from "./pipe.ts";
+import { isValidCornerEntry } from "./corner.ts";
 import type { ArrowItem, CornerItem, PipeItem } from "../types.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,39 @@ describe("pipe mechanics", () => {
     expect(step.dir).toBe(3);
     expect(step.cornerReflectedId).toBe(99);
     expect(step.arrow.occupiedPositions.at(-1)).toEqual([13, 7]);
+  });
+
+  it("blocks entry into corner from non-reflection face", () => {
+    const corner: CornerItem = {
+      kind: 4,
+      instanceId: 99,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[13, 7]],
+      direction1: [1, 0],
+      direction2: [0, -1],
+    };
+    const arrow: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[12, 7]],
+      direction: 3,
+      colorId: 3,
+    };
+    const step = advanceArrowStep(arrow, 3, null, [corner], []);
+    expect(step.blocked).toBe(true);
+    expect(isValidCornerEntry(3, corner)).toBe(false);
+    expect(
+      simulateCanExitWithPipes(
+        arrow,
+        [arrow],
+        [corner],
+        { width: 12, height: 12 },
+        [],
+      ),
+    ).toBe(false);
   });
 
   it("tracks corner crossings during full flight simulation", () => {

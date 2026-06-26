@@ -210,16 +210,20 @@ export function arrowPathSelfOverlaps(positions: Vec2[]): boolean {
   return false;
 }
 
-/** 候选格是否与同作用域内已有折线箭（可排除正在编辑的一条）占用同一格 */
+/** 候选格是否与同作用域内已有折线箭（可排除正在编辑的一条或多条）占用同一格 */
 export function arrowPositionsOverlapExisting(
   scopeItems: RawItem[],
   positions: Vec2[],
-  excludeInstanceId?: number,
+  excludeInstanceId?: number | Set<number>,
 ): boolean {
+  const exclude = new Set<number>();
+  if (typeof excludeInstanceId === "number") exclude.add(excludeInstanceId);
+  else if (excludeInstanceId) for (const id of excludeInstanceId) exclude.add(id);
+
   const occupied = new Set<string>();
   for (const item of scopeItems) {
     if (!ARROW_BODY_KINDS.has(item.kind)) continue;
-    if (item.instanceId === excludeInstanceId) continue;
+    if (exclude.has(item.instanceId)) continue;
     for (const p of item.occupiedPositions) {
       occupied.add(vecKey(p));
     }

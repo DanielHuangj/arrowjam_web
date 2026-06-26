@@ -256,7 +256,17 @@ export function advanceArrowStep(
 
   const corner = getCornerAt(nextHead, corners);
   let cornerReflectedId: number | null = null;
-  if (corner && isValidCornerEntry(newDir, corner)) {
+  if (corner) {
+    if (!isValidCornerEntry(newDir, corner)) {
+      return {
+        arrow: next,
+        dir: newDir,
+        transit: null,
+        blocked: true,
+        pipeExitedId: null,
+        cornerReflectedId: null,
+      };
+    }
     newDir = getReflectedDirection(newDir, corner);
     next.direction = newDir;
     cornerReflectedId = corner.instanceId;

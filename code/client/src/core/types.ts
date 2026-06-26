@@ -91,6 +91,8 @@ export interface LaunchAnimation {
   reversing: boolean;
   currentDirectionById: Record<number, Direction>;
   stepCount: number;
+  /** 已完成的前向飞行格数，用于加速计时 */
+  flightStepCount: number;
   pipeTransitById: Record<number, PipeTransitState | null>;
   pipesCrossedById: Record<number, number[]>;
 }

@@ -37,6 +37,9 @@ import { flipUncoveredArrows } from "../mechanics/flip.ts";
 import { BombManager, BOMB_EXPLOSION_DURATION } from "../mechanics/bomb.ts";
 import { MovingWallManager, wouldStepIntoWall } from "../mechanics/moving-wall.ts";
 import { FrozenManager } from "../mechanics/frozen.ts";
+import {
+  getAnimStepIntervalMs as computeAnimStepIntervalMs,
+} from "./anim-timing.ts";
 
 export const VANISH_ANIM_STEPS = 12;
 export const RANDOM_VANISH_COUNT = 3;
@@ -412,6 +415,7 @@ export class GameState {
       reversing: false,
       currentDirectionById: snapshotDirections(this.arrows, memberIds),
       stepCount: 0,
+      flightStepCount: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
     };
@@ -549,6 +553,24 @@ export class GameState {
     return this.advanceBumpAnimation();
   }
 
+  getAnimStepIntervalMs(): number {
+    const anim = this.animation;
+    if (!anim) return computeAnimStepIntervalMs(0, "exit", false);
+    return computeAnimStepIntervalMs(
+      anim.flightStepCount,
+      anim.mode,
+      anim.reversing,
+    );
+  }
+
+  private recordFlightStep(): void {
+    const anim = this.animation;
+    if (!anim) return;
+    if (anim.mode === "exit" || (anim.mode === "bump" && !anim.reversing)) {
+      anim.flightStepCount += 1;
+    }
+  }
+
   private getAnimMembers(): ArrowItem[] {
     const ids = this.animation!.memberIds;
     return ids
@@ -634,6 +656,7 @@ export class GameState {
       (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
         this.allMembersOffBoard(anim.memberIds))
     ) {
+      this.recordFlightStep();
       this.completeLaunchAnimation();
       return true;
     }
@@ -641,6 +664,7 @@ export class GameState {
     for (const arrow of stepped) {
       this.cellMap.addArrow(arrow);
     }
+    if (stepped.length > 0) this.recordFlightStep();
     return false;
   }
 
@@ -810,6 +834,7 @@ export class GameState {
       (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
         this.allMembersOffBoard(anim.memberIds))
     ) {
+      this.recordFlightStep();
       this.completeLaunchAnimation();
       return true;
     }
@@ -837,6 +862,8 @@ export class GameState {
     if (blocked) {
       this.clearPipeAnimState(anim);
       anim.reversing = true;
+    } else if (stepped.length > 0) {
+      this.recordFlightStep();
     }
     return false;
   }
@@ -1069,6 +1096,7 @@ export class GameState {
       reversing: false,
       currentDirectionById: snapshotDirections(this.arrows, memberIds),
       stepCount: 0,
+      flightStepCount: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
     };

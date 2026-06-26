@@ -12,8 +12,7 @@ import {
 } from "./ui/screens.ts";
 import { loadLevel, loadManifest } from "./core/level/loader.ts";
 import type { LevelManifestEntry } from "./core/types.ts";
-
-const ANIM_INTERVAL_MS = 40;
+import { tickGameAnimation } from "./core/game/anim-timing.ts";
 
 export class App {
   private root: HTMLElement;
@@ -146,22 +145,11 @@ export class App {
         this.state.tick(dt);
 
         if (this.state.phase === "animating") {
-          this.animAccum += dt * 1000;
-          let advanced = false;
-          while (this.animAccum >= ANIM_INTERVAL_MS) {
-            this.state.advanceAnimation();
-            this.animAccum -= ANIM_INTERVAL_MS;
-            advanced = true;
-            if (this.state.phase !== "animating") {
-              this.animAccum = 0;
-              break;
-            }
-          }
-          // 保证每帧至少推进一步，避免 animAccum 阈值导致动画卡死
-          if (this.state.phase === "animating" && !advanced) {
-            this.state.advanceAnimation();
-          }
-          this.state.recoverAnimationState();
+          this.animAccum = tickGameAnimation(
+            this.state,
+            dt * 1000,
+            this.animAccum,
+          );
         }
 
         this.renderFrame();

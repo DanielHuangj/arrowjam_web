@@ -1,11 +1,12 @@
 import type { GameState } from "../core/game/game-state.ts";
-import type { BoardRenderer } from "./board-renderer.ts";
+import { pointerToCell, type ViewportState } from "./viewport.ts";
 
 export class InputHandler {
   constructor(
     private canvas: HTMLCanvasElement,
     private getState: () => GameState | null,
-    private renderer: BoardRenderer,
+    private getViewport: () => ViewportState,
+    private consumePanClick: () => boolean = () => false,
     private isTargetVanishMode: () => boolean = () => false,
     private onTargetVanishHover?: (invalid: boolean) => void,
   ) {
@@ -21,6 +22,18 @@ export class InputHandler {
     this.onTargetVanishHover?.(false);
   }
 
+  private cellAt(clientX: number, clientY: number): [number, number] | null {
+    const state = this.getState();
+    if (!state) return null;
+    return pointerToCell(
+      clientX,
+      clientY,
+      this.canvas,
+      state.level,
+      this.getViewport(),
+    );
+  }
+
   private onMouseMove = (e: MouseEvent): void => {
     if (!this.isTargetVanishMode()) {
       this.onTargetVanishHover?.(false);
@@ -32,11 +45,7 @@ export class InputHandler {
       return;
     }
 
-    const cell = this.renderer.canvasToCell(
-      state.level,
-      e.clientX,
-      e.clientY,
-    );
+    const cell = this.cellAt(e.clientX, e.clientY);
     if (!cell) {
       this.onTargetVanishHover?.(false);
       return;
@@ -51,17 +60,15 @@ export class InputHandler {
   };
 
   private onClick = (e: MouseEvent): void => {
+    if (this.consumePanClick() || e.ctrlKey || e.metaKey) return;
+
     const state = this.getState();
     if (!state) return;
 
     state.recoverAnimationState();
     if (state.phase !== "playing") return;
 
-    const cell = this.renderer.canvasToCell(
-      state.level,
-      e.clientX,
-      e.clientY,
-    );
+    const cell = this.cellAt(e.clientX, e.clientY);
     if (!cell) return;
 
     if (this.isTargetVanishMode()) {

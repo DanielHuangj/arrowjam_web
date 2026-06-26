@@ -7,7 +7,7 @@ import { parseLevelData } from "../level/parser.ts";
 
 const levelPath = join(
   dirname(fileURLToPath(import.meta.url)),
-  "../../../public/levels/level-9003.json",
+  "../../../test-fixtures/levels/level-9003.json",
 );
 
 function load9003() {

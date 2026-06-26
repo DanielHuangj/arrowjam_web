@@ -156,6 +156,77 @@ export function levelDataFromDocument(doc: {
 
 const ARROW_BODY_KINDS = new Set([1, 2]);
 
+export interface ArrowCellOverlap {
+  cell: string;
+  ids: number[];
+}
+
+/** kind1/kind2 折线箭身格不可与同作用域内其他折线箭共享（顶层与各子区域分别检测） */
+function findArrowCellOverlapsInScope(arrows: RawItem[]): ArrowCellOverlap[] {
+  const cellToIds = new Map<string, Set<number>>();
+  for (const item of arrows) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    for (const p of item.occupiedPositions) {
+      const key = vecKey(p);
+      if (!cellToIds.has(key)) cellToIds.set(key, new Set());
+      cellToIds.get(key)!.add(item.instanceId);
+    }
+  }
+  const overlaps: ArrowCellOverlap[] = [];
+  for (const [cell, ids] of cellToIds) {
+    if (ids.size > 1) overlaps.push({ cell, ids: [...ids] });
+  }
+  return overlaps;
+}
+
+function arrowScopes(items: RawItem[]): RawItem[][] {
+  const scopes: RawItem[][] = [];
+  const topArrows = items.filter((i) => ARROW_BODY_KINDS.has(i.kind));
+  if (topArrows.length > 0) scopes.push(topArrows);
+  for (const item of items) {
+    if (item.kind === 12 && item.items?.length) {
+      const inner = item.items.filter((i) => ARROW_BODY_KINDS.has(i.kind));
+      if (inner.length > 0) scopes.push(inner);
+    }
+  }
+  return scopes;
+}
+
+export function findArrowCellOverlaps(items: RawItem[]): ArrowCellOverlap[] {
+  const overlaps: ArrowCellOverlap[] = [];
+  for (const scope of arrowScopes(items)) {
+    overlaps.push(...findArrowCellOverlapsInScope(scope));
+  }
+  return overlaps;
+}
+
+export function arrowPathSelfOverlaps(positions: Vec2[]): boolean {
+  const seen = new Set<string>();
+  for (const p of positions) {
+    const key = vecKey(p);
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
+/** 候选格是否与同作用域内已有折线箭（可排除正在编辑的一条）占用同一格 */
+export function arrowPositionsOverlapExisting(
+  scopeItems: RawItem[],
+  positions: Vec2[],
+  excludeInstanceId?: number,
+): boolean {
+  const occupied = new Set<string>();
+  for (const item of scopeItems) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    if (item.instanceId === excludeInstanceId) continue;
+    for (const p of item.occupiedPositions) {
+      occupied.add(vecKey(p));
+    }
+  }
+  return positions.some((p) => occupied.has(vecKey(p)));
+}
+
 export interface PipeArrowOverlap {
   cell: string;
   pipeId: number;
@@ -231,12 +302,41 @@ export function bombAnchorCell(hostPositions: Vec2[]): Vec2 {
   return hostPositions[idx] ?? hostPositions[0]!;
 }
 
-export function findArrowHostingCell(items: RawItem[], cell: Vec2): RawItem | undefined {
+export function getItemSiblingList(items: RawItem[], itemId: number): RawItem[] | null {
+  return findItemParentList(items, itemId)?.list ?? null;
+}
+
+export function findArrowHostingCell(
+  items: RawItem[],
+  cell: Vec2,
+  scopeItemId?: number,
+): RawItem | undefined {
   const key = vecKey(cell);
-  return collectAllItems(items).find(
+  const pool =
+    scopeItemId != null
+      ? (getItemSiblingList(items, scopeItemId) ?? [])
+      : collectAllItems(items);
+  return pool.find(
     (o) =>
       ARROW_HOST_KINDS.has(o.kind) &&
       o.occupiedPositions.some((p) => vecKey(p) === key),
+  );
+}
+
+/** 冻结 overlay 等同路径宿主箭，仅在 scopeItemId 所在层级查找 */
+export function findArrowHostingPositions(
+  items: RawItem[],
+  positions: Vec2[],
+  scopeItemId: number,
+): RawItem | undefined {
+  const siblings = getItemSiblingList(items, scopeItemId) ?? [];
+  return siblings.find(
+    (o) =>
+      ARROW_HOST_KINDS.has(o.kind) &&
+      o.occupiedPositions.length === positions.length &&
+      o.occupiedPositions.every(
+        (p, i) => p[0] === positions[i]![0] && p[1] === positions[i]![1],
+      ),
   );
 }
 

@@ -42,7 +42,7 @@ V-EDIT-01 同箭不可同时绑定钥匙/炸弹/冻结
 AI-KIND 出现未勾选 kind
 AI-KIND-MIN 勾选的 kind 未出现（每种至少 1 个）
 AI-COUNT 折线箭数量不足
-AI-DENSITY 箭身占用格过少
+AI-DENSITY 箭身占用格过少（硬下限棋盘 60%）
 AI-OVERLAP 多条折线箭共享格子
 AI-PIPE-OVERLAP 管道与箭身格重叠
 AI-CORNER-OVERLAP 反射角与箭身格重叠

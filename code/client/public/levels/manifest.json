@@ -1,93 +1,196 @@
 {
   "devTests": [
     {
-      "id": 9001,
-      "file": "level-9001.json",
-      "name": "[测] 翻转箭",
-      "difficulty": 1,
-      "width": 12,
-      "height": 12,
+      "id": 9006,
+      "file": "level-9006.json",
+      "name": "Level 9006",
+      "difficulty": 2,
+      "width": 20,
+      "height": 32,
       "durationInSec": 120,
       "kinds": [
         1,
-        2
+        2,
+        3,
+        4
       ],
       "pureKind1": false,
-      "p1Playable": true,
+      "p1Playable": false,
       "p2Playable": false,
       "p3Playable": false,
       "p4Playable": false
     },
     {
-      "id": 9002,
-      "file": "level-9002.json",
-      "name": "[测] 移动墙-往复",
-      "difficulty": 1,
-      "width": 14,
-      "height": 14,
-      "durationInSec": 120,
-      "kinds": [
-        1,
-        7
-      ],
-      "pureKind1": false,
-      "p1Playable": true,
-      "p2Playable": false,
-      "p3Playable": false,
-      "p4Playable": false
-    },
-    {
-      "id": 9003,
-      "file": "level-9003.json",
-      "name": "[测] 冻结解冻",
-      "difficulty": 1,
-      "width": 12,
-      "height": 12,
-      "durationInSec": 120,
-      "kinds": [
-        1,
-        13
-      ],
-      "pureKind1": false,
-      "p1Playable": true,
-      "p2Playable": false,
-      "p3Playable": false,
-      "p4Playable": false
-    },
-    {
-      "id": 9004,
-      "file": "level-9004.json",
-      "name": "[测] 定时炸弹",
-      "difficulty": 1,
-      "width": 12,
-      "height": 12,
-      "durationInSec": 300,
+      "id": 9007,
+      "file": "level-9007.json",
+      "name": "arrow_1_zy",
+      "difficulty": 2,
+      "width": 31,
+      "height": 36,
+      "durationInSec": 150,
       "kinds": [
         1,
         5,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9008,
+      "file": "level-9008.json",
+      "name": "arrow_2_zy",
+      "difficulty": 1,
+      "width": 20,
+      "height": 24,
+      "durationInSec": 150,
+      "kinds": [
+        1,
+        2,
+        7
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9009,
+      "file": "level-9009.json",
+      "name": "arrow_3_zy",
+      "difficulty": 2,
+      "width": 31,
+      "height": 36,
+      "durationInSec": 190,
+      "kinds": [
+        1,
+        7,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9010,
+      "file": "level-9010.json",
+      "name": "Level 9010",
+      "difficulty": 1,
+      "width": 26,
+      "height": 32,
+      "durationInSec": 120,
+      "kinds": [
+        1,
+        5,
+        7
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9011,
+      "file": "level-9011.json",
+      "name": "Level 9011",
+      "difficulty": 1,
+      "width": 22,
+      "height": 28,
+      "durationInSec": 120,
+      "kinds": [
+        1,
+        2,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9012,
+      "file": "level-9012.json",
+      "name": "Level 9012",
+      "difficulty": 1,
+      "width": 25,
+      "height": 33,
+      "durationInSec": 240,
+      "kinds": [
+        1,
+        5,
+        7,
+        12
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9013,
+      "file": "level-9013.json",
+      "name": "Level 9013",
+      "difficulty": 1,
+      "width": 20,
+      "height": 32,
+      "durationInSec": 170,
+      "kinds": [
+        1,
+        3,
+        12
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": true,
+      "p4Playable": false
+    },
+    {
+      "id": 9014,
+      "file": "level-9014.json",
+      "name": "Level 9014",
+      "difficulty": 1,
+      "width": 32,
+      "height": 32,
+      "durationInSec": 135,
+      "kinds": [
+        1,
+        2,
         6,
+        8,
         11
       ],
       "pureKind1": false,
       "p1Playable": false,
       "p2Playable": false,
       "p3Playable": false,
-      "p4Playable": true
+      "p4Playable": false
     },
     {
-      "id": 9005,
-      "file": "level-9005.json",
-      "name": "[测] 移动墙-环绕",
+      "id": 9015,
+      "file": "level-9015.json",
+      "name": "Level 9015",
       "difficulty": 1,
-      "width": 14,
-      "height": 14,
-      "durationInSec": 120,
+      "width": 20,
+      "height": 32,
+      "durationInSec": 130,
       "kinds": [
         1,
-        7
+        5,
+        7,
+        13
       ],
       "pureKind1": false,
-      "p1Playable": true,
+      "p1Playable": false,
       "p2Playable": false,
       "p3Playable": false,
       "p4Playable": false

@@ -3,8 +3,10 @@ import { parseLevelData } from "../level/parser.ts";
 import { GameState } from "../game/game-state.ts";
 import {
   BundleManager,
+  advanceBundleStep,
   buildBundleGroups,
   hasConsistentDirections,
+  simulateCanExitBundle,
 } from "./bundle.ts";
 import type { ArrowItem, BundleItem } from "../types.ts";
 import { snakeStepArrow } from "../board/cell-map.ts";
@@ -178,6 +180,74 @@ describe("GameState bundle exit", () => {
     while (gs.phase === "animating") gs.advanceAnimation();
     expect(gs.phase).toBe("won");
     expect(gs.arrows.length).toBe(0);
+  });
+
+  it("does not exit when only one bundled arrow can traverse a pipe", () => {
+    const arrows: ArrowItem[] = [
+      {
+        kind: 1,
+        instanceId: 1,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[0, 1], [1, 1], [2, 1]],
+        direction: 3,
+        colorId: 3,
+      },
+      {
+        kind: 1,
+        instanceId: 2,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[0, 3], [1, 3], [2, 3]],
+        direction: 3,
+        colorId: 3,
+      },
+    ];
+    const strip: BundleItem = {
+      kind: 8,
+      instanceId: 10,
+      layer: 3,
+      zoneId: null,
+      occupiedPositions: [[1, 1], [1, 3]],
+    };
+    const pipe = {
+      kind: 3 as const,
+      instanceId: 20,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[3, 1], [4, 1], [5, 1]] as [number, number][],
+      health: 2,
+      passes: [
+        { position: [3, 1] as [number, number], directions: [[-1, 0], [1, 0]] as [number, number][] },
+        { position: [5, 1] as [number, number], directions: [[-1, 0], [1, 0]] as [number, number][] },
+      ],
+      healthViewPathIndex: 1,
+    };
+    const board = { width: 8, height: 5 };
+    expect(
+      simulateCanExitBundle([1, 2], arrows, [], board, [pipe], new Set(), new Set()),
+    ).toBe(false);
+
+    const gs = new GameState({
+      id: 0,
+      width: board.width,
+      height: board.height,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      arrows,
+      corners: [],
+      zones: [],
+      bundles: [strip],
+      pipes: [pipe],
+      curtains: [],
+      keys: [],
+    });
+    gs.tryLaunch(1);
+    expect(gs.animation?.mode).toBe("bump");
+    while (gs.phase === "animating") gs.advanceAnimation();
+    expect(gs.phase).toBe("playing");
+    expect(gs.arrows).toHaveLength(2);
   });
 
   it("recovers when animating with missing members", () => {

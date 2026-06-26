@@ -1,6 +1,10 @@
 import type { GenerationForm } from "../types.ts";
 import { AI_KIND_OPTIONS } from "../types.ts";
-import referenceLevel9001 from "../../../../client/public/levels/level-9001.json?raw";
+import referenceLevel9001 from "../../../../client/test-fixtures/levels/level-9001.json?raw";
+import {
+  buildDenseKind1_12x12,
+  buildDenseKind1_16x16,
+} from "../fixtures/dense-kind1-12x12.ts";
 
 const ALL_KINDS = [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13] as const;
 
@@ -40,53 +44,21 @@ export interface DifficultyTargets {
   occupancyCellTarget: number;
 }
 
+/** 箭身占用棋盘格比例：硬下限 60%，建议略高 */
+export const OCCUPANCY_RATE_MIN = 0.6;
+export const OCCUPANCY_RATE_TARGET = 0.65;
+
 const BASE_RANGES: Record<1 | 2 | 3, { min: number; max: number; edge: number }> = {
   1: { min: 6, max: 14, edge: 2 },
   2: { min: 12, max: 22, edge: 3 },
   3: { min: 20, max: 38, edge: 4 },
 };
 
-/** 纯 kind1 参考关（无翻转箭），避免用户只勾 K1 时模型照搬 kind2 */
-const KIND1_REFERENCE_LEVEL = `{
-  "width": 12,
-  "height": 12,
-  "name": "参考-纯折线箭",
-  "durationInSec": 120,
-  "difficulty": 1,
-  "itemModels": [
-    {"kind": 1, "instanceId": 1, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 5], [1, 5], [2, 5]]},
-    {"kind": 1, "instanceId": 2, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 7], [1, 7], [2, 7]]},
-    {"kind": 1, "instanceId": 3, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[5, 0], [5, 1], [5, 2]]},
-    {"kind": 1, "instanceId": 4, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[9, 5], [9, 6], [9, 7]]},
-    {"kind": 1, "instanceId": 5, "layer": 2, "direction": 3, "colorId": 3, "occupiedPositions": [[3, 9], [4, 9], [5, 9]]},
-    {"kind": 1, "instanceId": 6, "layer": 2, "direction": 3, "colorId": 3, "occupiedPositions": [[7, 3], [8, 3], [9, 3], [10, 3]]},
-    {"kind": 1, "instanceId": 7, "layer": 2, "direction": 1, "colorId": 6, "occupiedPositions": [[2, 10], [2, 11]]},
-    {"kind": 1, "instanceId": 8, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[10, 8], [11, 8], [11, 9]]}
-  ]
-}`;
+/** 纯 kind1 参考关（无翻转箭），密度 ≥60% */
+const KIND1_REFERENCE_LEVEL = JSON.stringify(buildDenseKind1_12x12(), null, 2);
 
-/** 16×16 / 12 箭参考，供 20×20 及以上大盘复制密度与无重叠布局 */
-const KIND1_REFERENCE_LEVEL_16 = `{
-  "width": 16,
-  "height": 16,
-  "name": "参考-纯折线箭-16",
-  "durationInSec": 150,
-  "difficulty": 1,
-  "itemModels": [
-    {"kind": 1, "instanceId": 1, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 4], [1, 4], [2, 4], [3, 4]]},
-    {"kind": 1, "instanceId": 2, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[0, 7], [1, 7], [2, 7], [3, 7]]},
-    {"kind": 1, "instanceId": 3, "layer": 2, "direction": 3, "colorId": 7, "occupiedPositions": [[0, 10], [1, 10], [2, 10]]},
-    {"kind": 1, "instanceId": 4, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[5, 0], [5, 1], [5, 2], [5, 3]]},
-    {"kind": 1, "instanceId": 5, "layer": 2, "direction": 1, "colorId": 3, "occupiedPositions": [[9, 0], [9, 1], [9, 2]]},
-    {"kind": 1, "instanceId": 6, "layer": 2, "direction": 1, "colorId": 3, "occupiedPositions": [[13, 5], [13, 6], [13, 7], [13, 8]]},
-    {"kind": 1, "instanceId": 7, "layer": 2, "direction": 3, "colorId": 6, "occupiedPositions": [[3, 12], [4, 12], [5, 12], [6, 12]]},
-    {"kind": 1, "instanceId": 8, "layer": 2, "direction": 3, "colorId": 7, "occupiedPositions": [[7, 3], [8, 3], [9, 3], [10, 3], [11, 3]]},
-    {"kind": 1, "instanceId": 9, "layer": 2, "direction": 2, "colorId": 3, "occupiedPositions": [[14, 10], [14, 9], [14, 8]]},
-    {"kind": 1, "instanceId": 10, "layer": 2, "direction": 4, "colorId": 6, "occupiedPositions": [[12, 14], [11, 14], [10, 14]]},
-    {"kind": 1, "instanceId": 11, "layer": 2, "direction": 1, "colorId": 7, "occupiedPositions": [[2, 14], [2, 15]]},
-    {"kind": 1, "instanceId": 12, "layer": 2, "direction": 1, "colorId": 3, "occupiedPositions": [[15, 12], [15, 13], [15, 14], [15, 15]]}
-  ]
-}`;
+/** 16×16 参考，供 20×20 及以上大盘复制密度与无重叠布局 */
+const KIND1_REFERENCE_LEVEL_16 = JSON.stringify(buildDenseKind1_16x16(), null, 2);
 
 /** kind1 + 弯管示例：health=2，2 条箭可穿行穿出 */
 const KIND1_PIPE_REFERENCE = `{
@@ -130,9 +102,12 @@ export function getDifficultyTargets(form: GenerationForm): DifficultyTargets {
   const mechanismKindCount = form.allowedKinds.filter((k) => k !== 1 && k !== 2).length;
   const hasZone = form.allowedKinds.includes(12);
   const hasFlipOrWall = form.allowedKinds.some((k) => k === 2 || k === 7);
-  const largeBoard = cells >= 400;
-  const occupancyCellMin = Math.ceil(cells * (largeBoard ? 0.3 : 0.15));
-  const occupancyCellTarget = Math.ceil(cells * (largeBoard ? 0.4 : 0.22));
+  const occupancyCellMin = Math.ceil(cells * OCCUPANCY_RATE_MIN);
+  const occupancyCellTarget = Math.ceil(cells * OCCUPANCY_RATE_TARGET);
+
+  const arrowsForDensity = Math.max(4, Math.ceil(occupancyCellMin / 6));
+  arrowCountMin = Math.max(arrowCountMin, Math.ceil(arrowsForDensity * 0.75));
+  arrowCountMax = Math.max(arrowCountMax, arrowsForDensity);
 
   const suggestedDurationMin = Math.ceil(
     arrowCountMax * 5 +
@@ -162,7 +137,7 @@ export const PLAYABILITY_RULES = `## 可玩性硬性要求（生成前必须在�
 
 ### 密度与规模
 - kind1+kind2 箭数量须达到「目标箭数区间」下限
-- 箭身占用格子数须达到 occupancy **硬下限**；并尽量接近 **建议目标**（大盘约 30–35%）
+- **箭身占用棋盘格须 ≥60%（硬下限）**；建议 ≥65%；禁止稀疏布局、中心大片空白
 - **禁止**箭全部贴边、中心留 5×5 以上连片空白；须有多条箭穿过棋盘内部
 - 单条折线 2–8 格；colorId ≤ 4 种
 
@@ -199,7 +174,7 @@ export function buildTargetsBlock(form: GenerationForm): string {
 ## 本关量化目标
 - 棋盘: ${form.width}×${form.height}（${cellsLabel(form)} 格）
 - kind1+kind2 箭数量: **${t.arrowCountMin}–${t.arrowCountMax}** 条（**必须 ≥${t.arrowCountMin}**）
-- 箭身占用格子: **≥${t.occupancyCellMin}** 格（硬下限），**建议 ≥${t.occupancyCellTarget}** 格（约 ${Math.round((t.occupancyCellTarget / cellsLabel(form)) * 100)}%）
+- 箭身占用格子: **≥${t.occupancyCellMin}** 格（**硬下限 = 棋盘 60%**），建议 ≥${t.occupancyCellTarget} 格（约 ${Math.round(OCCUPANCY_RATE_TARGET * 100)}%）
 - 外圈边箭: ≥ **${t.edgeArrowMin}** 条
 - durationInSec: ${form.durationInSec} ${durationHint}`;
 }
@@ -248,7 +223,7 @@ export function buildOptimizeOutputSpec(form: GenerationForm): string {
   return `optimized_prompt 必须包含：
 ### 允许 kind 白名单（仅 ${kinds}）
 ### 勾选 kind 必现（每种至少 1 个实例，含管道/角块/机制等）
-### 目标箭数与 occupancy（硬下限 ≥${t.occupancyCellMin} 格，建议 ≥${t.occupancyCellTarget} 格；箭须分布到棋盘内部）
+### 目标箭数与 occupancy（硬下限 ≥${t.occupancyCellMin} 格 = 棋盘 60%，建议 ≥${t.occupancyCellTarget} 格；箭须分布到棋盘内部）
 ### dependency_notes（无环）
 ### 推荐首步与预估步数
 ### 格位不重叠约束
@@ -258,6 +233,19 @@ ${form.allowedKinds.includes(4) ? "### 反射角（kind4）：占 1 格，不与
 ${form.allowedKinds.includes(5) ? "### 炸弹（kind5）：绑在宿主箭身中段（≥3 格箭），勿绑头/尾" : ""}
 
 design_notes 须含：瓶颈箭、边箭、重叠检查说明${form.allowedKinds.includes(3) ? "、每条管道穿行箭数与 health" : ""}${form.allowedKinds.includes(4) ? "、反射角与箭身格位分离" : ""}${form.allowedKinds.includes(5) ? "、炸弹绑箭身中段" : ""}。`;
+}
+
+/** Phase 2 生成时附带用户表单原文，避免 Phase 1 优化后偏离原意 */
+export function buildUserKeywordsBlock(form: GenerationForm): string {
+  const raw = form.keywords.trim();
+  if (!raw) {
+    return `## 用户原始生成关键词
+（未填写；按 Phase 1 设计指令与量化目标设计即可）`;
+  }
+  return `## 用户原始生成关键词（表单原文，须保留原意）
+${raw}
+
+**说明**：以上为 Phase 1 优化前的用户原文。生成关卡时主题、教学意图、机制侧重须以此为准；若与下方 Phase 1 设计指令表述不一致，**以本段关键词为准**。`;
 }
 
 export function buildGenerateChecklist(form: GenerationForm): string {
@@ -278,7 +266,7 @@ export function buildGenerateChecklist(form: GenerationForm): string {
 - [ ] 仅含 kind: ${form.allowedKinds.join(", ")}
 - [ ] 每种勾选 kind 至少 1 个（${form.allowedKinds.map((k) => `kind${k}≥1`).join("、")}）
 - [ ] kind1+kind2 箭数 ≥ ${t.arrowCountMin}
-- [ ] 箭身格子数 ≥ ${t.occupancyCellMin}（硬下限），尽量 ≥ ${t.occupancyCellTarget}；中心无大片空白
+- [ ] 箭身格子数 ≥ ${t.occupancyCellMin}（**硬下限 60%**），尽量 ≥ ${t.occupancyCellTarget}；中心无大片空白
 - [ ] 任意两箭无共享格子
 - [ ] 依赖无环；durationInSec = ${form.durationInSec}${pipeLine}${flipLine}${cornerLine}${bombLine}`;
 }

@@ -91,4 +91,57 @@ describe("editor-ops attachments", () => {
     const bomb = doc.itemModels.find((i) => i.kind === 5);
     expect(bomb?.occupiedPositions[0]).toEqual([6, 5]);
   });
+
+  it("does not remove top-level bomb when deleting zone arrow on shared cell", () => {
+    let doc = createEmptyDocument();
+    doc = {
+      ...doc,
+      itemModels: [
+        {
+          kind: 12,
+          instanceId: 100,
+          layer: 1,
+          occupiedPositions: [
+            [5, 5],
+            [6, 5],
+          ],
+          items: [
+            {
+              kind: 1,
+              instanceId: 20,
+              layer: 2,
+              direction: 3,
+              colorId: 2,
+              occupiedPositions: [
+                [5, 5],
+                [6, 5],
+              ],
+            },
+          ],
+        },
+        {
+          kind: 1,
+          instanceId: 10,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [5, 5],
+            [6, 5],
+            [7, 5],
+          ],
+        },
+        {
+          kind: 5,
+          instanceId: 21,
+          layer: 3,
+          time: 10,
+          occupiedPositions: [[6, 5]],
+        },
+      ],
+    };
+    doc = removeItems(doc, [20]);
+    expect(doc.itemModels.some((i) => i.instanceId === 21)).toBe(true);
+    expect(doc.itemModels.some((i) => i.instanceId === 10)).toBe(true);
+  });
 });

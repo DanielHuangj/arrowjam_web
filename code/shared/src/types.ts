@@ -133,7 +133,17 @@ export interface RawItem {
   instanceId: number;
   layer: number;
   direction?: Direction;
+  direction1?: Direction | Vec2;
+  direction2?: Direction | Vec2;
   colorId?: number;
+  health?: number;
+  order?: number;
+  time?: number;
+  passes?: unknown;
+  healthViewPathIndex?: number;
+  movingPath?: Vec2[];
+  movingDistance?: number;
+  movingType?: 1 | 2;
   items?: RawItem[];
   [key: string]: unknown;
 }

@@ -52,10 +52,10 @@ export class BombManager {
     }
   }
 
-  updateActivation(isHostCovered: (hostArrowId: number) => boolean): void {
+  updateActivation(isBombCovered: (bomb: BombItem) => boolean): void {
     for (const r of this.runtime) {
       if (r.activated) continue;
-      if (!isHostCovered(r.bomb.hostArrowId)) {
+      if (!isBombCovered(r.bomb)) {
         r.activated = true;
       }
     }

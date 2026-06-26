@@ -47,7 +47,7 @@ export function buildOptimizeMessages(
 你必须只输出 JSON：
 {"optimized_prompt":"...","design_notes":"...","target_arrow_count":10,"target_occupancy":88}
 
-target_arrow_count / target_occupancy 为可选建议值；Phase 2 以 getDifficultyTargets 硬下限为准。
+target_arrow_count / target_occupancy 为可选建议值；Phase 2 **硬下限**为箭身占用 ≥ 棋盘 60%（见 getDifficultyTargets）。
 
 ${buildOptimizeOutputSpec(form)}
 
@@ -75,7 +75,8 @@ ${context.aiGuide}
 ## 关卡 JSON 结构
 ${schemaSummary}
 
-请基于以上文档，优化用户关键词为 Phase 2 使用的 optimized_prompt。`,
+请基于以上文档，将用户关键词展开为 Phase 2 使用的 optimized_prompt。
+**不得改写或替换用户关键词的核心含义**；optimized_prompt 只做机制、密度与 dependency 的细化，创意主题须与用户关键词一致。`,
     },
   ];
 }

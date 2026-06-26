@@ -10,6 +10,7 @@ import { LEVEL_SCHEMA_SUMMARY } from "./schema-summary.ts";
 import {
   buildGenerateChecklist,
   buildTargetsBlock,
+  buildUserKeywordsBlock,
 } from "./playability-rules.ts";
 
 const FILL_OUTPUT_SCHEMA = `只输出 JSON（无 markdown、无注释）：
@@ -75,7 +76,9 @@ export function buildFillLevelMessages(
     },
     {
       role: "user",
-      content: `## 填充设计指令
+      content: `${buildUserKeywordsBlock(form)}
+
+## 填充设计指令
 ${optimizedPrompt}
 
 ## 空格与目标

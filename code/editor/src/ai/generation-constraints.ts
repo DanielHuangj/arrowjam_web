@@ -1,6 +1,7 @@
 import type { LevelData, RawItem, ValidationIssue } from "@arrowjaw/shared";
 import {
   collectAllItems,
+  findArrowCellOverlaps,
   findArrowHostingCell,
   findCornerArrowCellOverlaps,
   findPipeArrowCellOverlaps,
@@ -31,27 +32,6 @@ function countArrowBodyCells(items: RawItem[]): number {
   }
   return cells.size;
 }
-
-function findArrowCellOverlaps(items: RawItem[]): { cell: string; ids: number[] }[] {
-  const cellToIds = new Map<string, Set<number>>();
-  for (const item of collectAllItems(items)) {
-    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
-    for (const p of item.occupiedPositions) {
-      const key = vecKey(p);
-      if (!cellToIds.has(key)) cellToIds.set(key, new Set());
-      cellToIds.get(key)!.add(item.instanceId);
-    }
-  }
-  const overlaps: { cell: string; ids: number[] }[] = [];
-  for (const [cell, ids] of cellToIds) {
-    if (ids.size > 1) {
-      overlaps.push({ cell, ids: [...ids] });
-    }
-  }
-  return overlaps;
-}
-
-const ARROW_BODY_KINDS = new Set([1, 2]);
 
 function kindLabel(kind: number): string {
   return AI_KIND_OPTIONS.find((o) => o.kind === kind)?.label ?? `kind${kind}`;
@@ -85,7 +65,7 @@ function validateBombAnchors(data: LevelData): ValidationIssue[] {
     if (bomb.kind !== 5) continue;
     const cell = bomb.occupiedPositions[0];
     if (!cell) continue;
-    const host = findArrowHostingCell(data.itemModels, cell);
+    const host = findArrowHostingCell(data.itemModels, cell, bomb.instanceId);
     if (!host) continue;
     if (host.occupiedPositions.length < 3) {
       issues.push({
@@ -151,7 +131,7 @@ export function validateGenerationConstraints(
     issues.push({
       id: "AI-DENSITY",
       severity: "error",
-      message: `箭身占用格子过少：当前 ${bodyCells} 格，要求至少 ${occupancyMin} 格（约棋盘 ${Math.round((occupancyMin / cells) * 100)}%）`,
+      message: `箭身占用格子过少：当前 ${bodyCells} 格，要求至少 ${occupancyMin} 格（硬下限棋盘 60%）`,
     });
   }
 

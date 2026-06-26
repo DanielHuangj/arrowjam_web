@@ -4,6 +4,7 @@ import {
   bombAnchorCell,
   collectAllItems,
   defaultPipeHealthViewPathIndex,
+  findArrowCellOverlaps,
   findArrowHostingCell,
   findCornerArrowCellOverlaps,
   findPipeArrowCellOverlaps,
@@ -240,23 +241,6 @@ function countArrowBodyCells(items: RawItem[]): number {
 
 function hasArrowOverlaps(items: RawItem[]): boolean {
   return findArrowCellOverlaps(items).length > 0;
-}
-
-function findArrowCellOverlaps(items: RawItem[]): { cell: string; ids: number[] }[] {
-  const cellToIds = new Map<string, Set<number>>();
-  for (const item of collectAllItems(items)) {
-    if (!ARROW_KINDS.has(item.kind)) continue;
-    for (const p of item.occupiedPositions) {
-      const key = vecKey(p);
-      if (!cellToIds.has(key)) cellToIds.set(key, new Set());
-      cellToIds.get(key)!.add(item.instanceId);
-    }
-  }
-  const overlaps: { cell: string; ids: number[] }[] = [];
-  for (const [cell, ids] of cellToIds) {
-    if (ids.size > 1) overlaps.push({ cell, ids: [...ids] });
-  }
-  return overlaps;
 }
 
 function buildArrowOccupied(items: RawItem[], excludeId?: number): Set<string> {
@@ -536,7 +520,7 @@ function fixBombAnchors(data: LevelData, actions: string[]): void {
     if (bomb.kind !== 5) continue;
     const cell = bomb.occupiedPositions[0];
     if (!cell) continue;
-    const host = findArrowHostingCell(data.itemModels, cell);
+    const host = findArrowHostingCell(data.itemModels, cell, bomb.instanceId);
     if (!host || host.occupiedPositions.length < 2) continue;
     const anchor = bombAnchorCell(host.occupiedPositions);
     if (cell[0] === anchor[0] && cell[1] === anchor[1]) continue;
@@ -868,8 +852,7 @@ function interiorScore(cell: Vec2, width: number, height: number): number {
 
 function occupancyFillGoal(form: GenerationForm, opts?: SanitizeOptions): number {
   const t = getDifficultyTargets(form);
-  const mechanismHeavy = form.allowedKinds.some((k) => k !== 1 && k !== 2);
-  const global = mechanismHeavy ? t.occupancyCellMin : t.occupancyCellTarget;
+  const global = t.occupancyCellTarget;
   if (
     opts?.fillMode &&
     opts.baseOccupiedCells != null &&

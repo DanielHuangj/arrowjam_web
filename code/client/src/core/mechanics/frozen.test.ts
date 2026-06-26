@@ -54,4 +54,23 @@ describe("FrozenManager", () => {
     expect(mgr.getOverlays().length).toBe(0);
     expect(mgr.isHostFrozen(30)).toBe(false);
   });
+
+  it("skips damage when overlay filter returns false", () => {
+    const mgr = new FrozenManager([{ ...overlay(2), zoneId: 100 }]);
+    mgr.onAdjacentElimination(
+      [
+        {
+          kind: 1,
+          instanceId: 32,
+          layer: 2,
+          direction: 4,
+          colorId: 3,
+          zoneId: null,
+          occupiedPositions: [[4, 5], [3, 5]],
+        },
+      ],
+      () => false,
+    );
+    expect(mgr.getOverlays()[0]!.health).toBe(2);
+  });
 });

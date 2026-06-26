@@ -70,7 +70,183 @@ describe("shared parser", () => {
   });
 });
 
+describe("shared parser zone mechanics", () => {
+  it("binds zone bomb to zone arrow when top-level arrow shares the cell", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      name: "zone bomb overlap",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+        },
+        {
+          kind: 12,
+          instanceId: 10,
+          layer: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+          items: [
+            {
+              kind: 1,
+              instanceId: 2,
+              layer: 2,
+              direction: 3,
+              colorId: 2,
+              occupiedPositions: [
+                [2, 2],
+                [3, 2],
+              ],
+            },
+            {
+              kind: 5,
+              instanceId: 3,
+              layer: 3,
+              time: 10,
+              occupiedPositions: [[3, 2]],
+            },
+          ],
+        },
+      ],
+    };
+    const level = parseLevelData(1, data);
+    const bomb = level.bombs.find((b) => b.instanceId === 3)!;
+    expect(bomb.zoneId).toBe(10);
+    expect(bomb.hostArrowId).toBe(2);
+  });
+
+  it("binds top-level bomb to overlay arrow when zone arrow shares the cell", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      name: "top bomb overlap",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 12,
+          instanceId: 10,
+          layer: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+          items: [
+            {
+              kind: 1,
+              instanceId: 2,
+              layer: 2,
+              direction: 3,
+              colorId: 2,
+              occupiedPositions: [
+                [2, 2],
+                [3, 2],
+              ],
+            },
+          ],
+        },
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+        },
+        {
+          kind: 5,
+          instanceId: 3,
+          layer: 3,
+          time: 10,
+          occupiedPositions: [[3, 2]],
+        },
+      ],
+    };
+    const level = parseLevelData(1, data);
+    const bomb = level.bombs.find((b) => b.instanceId === 3)!;
+    expect(bomb.zoneId).toBeNull();
+    expect(bomb.hostArrowId).toBe(1);
+  });
+});
+
 describe("shared validator", () => {
+  it("allows bombs on same cell in top level and zone scope", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      name: "scoped bombs",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 12,
+          instanceId: 10,
+          layer: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+          items: [
+            {
+              kind: 1,
+              instanceId: 2,
+              layer: 2,
+              direction: 3,
+              colorId: 2,
+              occupiedPositions: [
+                [2, 2],
+                [3, 2],
+              ],
+            },
+            {
+              kind: 5,
+              instanceId: 3,
+              layer: 3,
+              time: 10,
+              occupiedPositions: [[3, 2]],
+            },
+          ],
+        },
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+        },
+        {
+          kind: 5,
+          instanceId: 4,
+          layer: 3,
+          time: 10,
+          occupiedPositions: [[3, 2]],
+        },
+      ],
+    };
+    const issues = validateLevelData(data);
+    expect(issues.filter((i) => i.id === "V-EDIT-01")).toEqual([]);
+    expect(hasBlockingErrors(issues)).toBe(false);
+  });
+
   it("level 30 has no blocking errors", () => {
     const issues = validateLevelData(loadJsonLevel(30));
     expect(hasBlockingErrors(issues)).toBe(false);

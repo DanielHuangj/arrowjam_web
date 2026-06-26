@@ -182,14 +182,6 @@ body,
   background: #141517;
 }
 
-.canvas-wrap.viewport-pan-ready {
-  cursor: grab;
-}
-
-.canvas-wrap.viewport-panning {
-  cursor: grabbing;
-}
-
 #board-canvas {
   display: block;
   transform-origin: 0 0;

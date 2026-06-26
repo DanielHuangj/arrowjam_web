@@ -39,7 +39,7 @@ function roundTrip(id: number) {
 }
 
 describe("serializeLevelData round-trip", () => {
-  for (const id of [9001, 9002, 9003, 9004, 9005]) {
+  for (const id of [9006, 9007, 9008, 9009, 9010]) {
     it(`preserves mechanics fields for level ${id}`, () => {
       const { original, serialized, reparsed } = roundTrip(id);
 

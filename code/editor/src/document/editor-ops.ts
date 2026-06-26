@@ -1,6 +1,7 @@
 import type { EditorDocument, RawItem, Vec2 } from "@arrowjaw/shared";
 import {
   findItemById,
+  findItemParentList,
   getEditableItems,
   nextInstanceId,
 } from "@arrowjaw/shared";
@@ -10,42 +11,29 @@ function positionsEqual(a: Vec2[], b: Vec2[]): boolean {
   return a.every((p, i) => p[0] === b[i]![0] && p[1] === b[i]![1]);
 }
 
-function collectAllItems(items: RawItem[]): RawItem[] {
-  const out: RawItem[] = [];
-  function walk(list: RawItem[]): void {
-    for (const item of list) {
-      out.push(item);
-      if (item.items) walk(item.items);
-    }
+function setSiblingList(doc: EditorDocument, hostId: number, newList: RawItem[]): EditorDocument {
+  function replace(items: RawItem[]): RawItem[] {
+    if (items.some((i) => i.instanceId === hostId)) return newList;
+    return items.map((item) =>
+      item.items?.length ? { ...item, items: replace(item.items) } : item,
+    );
   }
-  walk(items);
-  return out;
+  return { ...doc, itemModels: replace(doc.itemModels), dirty: true };
 }
 
-function patchAllItems(
-  doc: EditorDocument,
-  patcher: (item: RawItem) => RawItem,
-): EditorDocument {
-  function patchList(items: RawItem[]): RawItem[] {
-    return items.map((item) => {
-      const next = patcher(item);
-      if (next.items) return { ...next, items: patchList(next.items) };
-      return next;
-    });
-  }
-  return { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
-}
-
-/** 宿主箭移动/改坐标后，同步 kind5/kind13 绑定坐标 */
+/** 宿主箭移动/改坐标后，同步同层 kind5/kind13 绑定坐标 */
 export function syncAttachmentsForHost(
   doc: EditorDocument,
   hostId: number,
   hostPositions: Vec2[],
   previousPositions?: Vec2[],
 ): EditorDocument {
+  const parent = findItemParentList(doc.itemModels, hostId);
+  if (!parent) return doc;
   const ref = previousPositions ?? hostPositions;
 
-  return patchAllItems(doc, (item) => {
+  const newList = parent.list.map((item) => {
+    if (item.instanceId === hostId) return item;
     if (item.kind === 13) {
       if (positionsEqual(item.occupiedPositions, ref)) {
         return {
@@ -65,11 +53,19 @@ export function syncAttachmentsForHost(
     }
     return item;
   });
+
+  return setSiblingList(doc, hostId, newList);
 }
 
-function attachmentIdsToRemove(items: RawItem[], removedHost: RawItem): number[] {
+function attachmentIdsToRemove(items: RawItem[], removedHostId: number): number[] {
+  const parent = findItemParentList(items, removedHostId);
+  if (!parent) return [];
+  const removedHost = parent.list[parent.index];
+  if (!removedHost || (removedHost.kind !== 1 && removedHost.kind !== 2)) return [];
+
   const ids: number[] = [];
-  for (const item of items) {
+  for (const item of parent.list) {
+    if (item.instanceId === removedHostId) continue;
     if (item.kind === 13 && positionsEqual(item.occupiedPositions, removedHost.occupiedPositions)) {
       ids.push(item.instanceId);
     }
@@ -130,7 +126,7 @@ export function removeItems(doc: EditorDocument, ids: number[]): EditorDocument 
   for (const id of ids) {
     const item = findItemById(doc.itemModels, id);
     if (item && (item.kind === 1 || item.kind === 2)) {
-      for (const attachId of attachmentIdsToRemove(collectAllItems(doc.itemModels), item)) {
+      for (const attachId of attachmentIdsToRemove(doc.itemModels, id)) {
         extra.add(attachId);
       }
     }

@@ -1,8 +1,10 @@
 import type {
   ArrowItem,
+  BombItem,
   BundleItem,
   CornerItem,
   Direction,
+  FrozenOverlayItem,
   GameLevel,
   GamePhase,
   GameSnapshot,
@@ -15,7 +17,7 @@ import type {
 import { vecKey } from "../types.ts";
 import { CellMap, arrowFullyOffBoard } from "../board/cell-map.ts";
 import { simulateCanExit } from "../board/path-check.ts";
-import { BundleManager } from "../mechanics/bundle.ts";
+import { BundleManager, advanceBundleStep } from "../mechanics/bundle.ts";
 import { CurtainManager } from "../mechanics/curtain.ts";
 import {
   arrowHasKey,
@@ -133,7 +135,7 @@ export class GameState {
     this.frozenManager = new FrozenManager(level.frozenOverlays ?? []);
     this.keyCells = buildKeyCellSet(this.keys);
     this.rebuildCellMap();
-    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
+    this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
   }
 
   private getCurtainCells(): Set<string> {
@@ -164,9 +166,11 @@ export class GameState {
     return false;
   }
 
-  private isHostCoveredForBomb(hostArrowId: number): boolean {
-    const host = this.arrows.find((a) => a.instanceId === hostArrowId);
+  private isBombCoveredForActivation(bomb: BombItem): boolean {
+    if (!this.isMechanicDrawable(bomb.zoneId)) return true;
+    const host = this.arrows.find((a) => a.instanceId === bomb.hostArrowId);
     if (!host) return true;
+    if (bomb.zoneId !== host.zoneId) return true;
     return this.isArrowCoveredForMechanics(host);
   }
 
@@ -184,7 +188,9 @@ export class GameState {
       const orig = originalPositionsById?.[arrow.instanceId];
       return orig ? { ...arrow, occupiedPositions: orig } : arrow;
     });
-    this.frozenManager.onAdjacentElimination(forFrozen);
+    this.frozenManager.onAdjacentElimination(forFrozen, (overlay) =>
+      this.canFrozenOverlayTakeAdjacentDamage(overlay),
+    );
     this.arrows = flipUncoveredArrows(this.arrows, (a) =>
       this.isArrowCoveredForMechanics(a),
     );
@@ -192,7 +198,7 @@ export class GameState {
 
     const hostIds = new Set(removedArrows.map((a) => a.instanceId));
     this.bombManager.removeForHosts(hostIds);
-    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
+    this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
   }
 
   getActiveCorners(): CornerItem[] {
@@ -332,7 +338,7 @@ export class GameState {
         }
       }
     }
-    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
+    this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
     const explodedCells = this.bombManager.tick(dt);
     if (
       explodedCells.length > 0 &&
@@ -488,7 +494,7 @@ export class GameState {
     this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
     this.finishAnimation();
     this.rebuildCellMap();
-    this.bombManager.updateActivation((id) => this.isHostCoveredForBomb(id));
+    this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
     this.phase = this.arrows.length === 0 ? "won" : "playing";
   }
 
@@ -567,25 +573,46 @@ export class GameState {
     const activeCorners = this.getActiveCorners();
     const curtainCells = this.getCurtainCells();
     const wallCells = this.getWallBlockerCells();
-    for (const arrow of members) {
-      const dir = anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
-      const transit = anim.pipeTransitById[arrow.instanceId] ?? null;
-      const result = advanceArrowStep(
-        arrow,
+    const memberSet = new Set(anim.memberIds);
+
+    if (anim.stripIds.length > 0) {
+      const dir =
+        anim.currentDirectionById[members[0]!.instanceId] ?? members[0]!.direction;
+      const result = advanceBundleStep(
+        anim.memberIds,
+        members,
+        (id) => this.arrows.find((a) => a.instanceId === id)!.occupiedPositions,
         dir,
-        transit,
+        this.level,
         activeCorners,
         activePipes,
         curtainCells,
         wallCells,
+        this.getBlockingArrows(),
+        memberSet,
       );
-      anim.currentDirectionById[arrow.instanceId] = result.dir;
-      anim.pipeTransitById[arrow.instanceId] = result.transit;
-      if (result.pipeExitedId != null) {
-        anim.pipesCrossedById[arrow.instanceId] ??= [];
-        anim.pipesCrossedById[arrow.instanceId]!.push(result.pipeExitedId);
+      if (!result.blocked) stepped.push(...result.arrows);
+    } else {
+      for (const arrow of members) {
+        const dir = anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
+        const transit = anim.pipeTransitById[arrow.instanceId] ?? null;
+        const result = advanceArrowStep(
+          arrow,
+          dir,
+          transit,
+          activeCorners,
+          activePipes,
+          curtainCells,
+          wallCells,
+        );
+        anim.currentDirectionById[arrow.instanceId] = result.dir;
+        anim.pipeTransitById[arrow.instanceId] = result.transit;
+        if (result.pipeExitedId != null) {
+          anim.pipesCrossedById[arrow.instanceId] ??= [];
+          anim.pipesCrossedById[arrow.instanceId]!.push(result.pipeExitedId);
+        }
+        stepped.push(result.arrow);
       }
-      stepped.push(result.arrow);
     }
 
     for (const arrow of stepped) {
@@ -603,8 +630,9 @@ export class GameState {
     }
 
     if (
-      stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
-      this.allMembersOffBoard(anim.memberIds)
+      stepped.length > 0 &&
+      (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
+        this.allMembersOffBoard(anim.memberIds))
     ) {
       this.completeLaunchAnimation();
       return true;
@@ -701,30 +729,63 @@ export class GameState {
     const curtainCells = this.getCurtainCells();
     const wallCells = this.getWallBlockerCells();
     let hitWall = false;
-    for (const arrow of members) {
-      anim.bumpHistoryById[arrow.instanceId] ??= [];
-      anim.bumpHistoryById[arrow.instanceId]!.push(
-        clonePositions(arrow.occupiedPositions),
-      );
-      const dir = anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
-      const transit = anim.pipeTransitById[arrow.instanceId] ?? null;
-      const result = advanceArrowStep(
-        arrow,
+
+    if (anim.stripIds.length > 0) {
+      for (const arrow of members) {
+        anim.bumpHistoryById[arrow.instanceId] ??= [];
+        anim.bumpHistoryById[arrow.instanceId]!.push(
+          clonePositions(arrow.occupiedPositions),
+        );
+      }
+      const dir =
+        anim.currentDirectionById[members[0]!.instanceId] ?? members[0]!.direction;
+      const result = advanceBundleStep(
+        anim.memberIds,
+        members,
+        (id) => this.arrows.find((a) => a.instanceId === id)!.occupiedPositions,
         dir,
-        transit,
+        this.level,
         activeCorners,
         activePipes,
         curtainCells,
         wallCells,
+        this.getBlockingArrows(),
+        memberSet,
       );
-      if (result.blocked) hitWall = true;
-      anim.currentDirectionById[arrow.instanceId] = result.dir;
-      anim.pipeTransitById[arrow.instanceId] = result.transit;
-      if (result.pipeExitedId != null) {
-        anim.pipesCrossedById[arrow.instanceId] ??= [];
-        anim.pipesCrossedById[arrow.instanceId]!.push(result.pipeExitedId);
+      if (result.blocked) {
+        hitWall = true;
+        for (const arrow of members) {
+          this.cellMap.addArrow(arrow);
+        }
+      } else {
+        stepped.push(...result.arrows);
       }
-      stepped.push(result.arrow);
+    } else {
+      for (const arrow of members) {
+        anim.bumpHistoryById[arrow.instanceId] ??= [];
+        anim.bumpHistoryById[arrow.instanceId]!.push(
+          clonePositions(arrow.occupiedPositions),
+        );
+        const dir = anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
+        const transit = anim.pipeTransitById[arrow.instanceId] ?? null;
+        const result = advanceArrowStep(
+          arrow,
+          dir,
+          transit,
+          activeCorners,
+          activePipes,
+          curtainCells,
+          wallCells,
+        );
+        if (result.blocked) hitWall = true;
+        anim.currentDirectionById[arrow.instanceId] = result.dir;
+        anim.pipeTransitById[arrow.instanceId] = result.transit;
+        if (result.pipeExitedId != null) {
+          anim.pipesCrossedById[arrow.instanceId] ??= [];
+          anim.pipesCrossedById[arrow.instanceId]!.push(result.pipeExitedId);
+        }
+        stepped.push(result.arrow);
+      }
     }
 
     for (const arrow of stepped) {
@@ -745,30 +806,34 @@ export class GameState {
     }
 
     if (
-      stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
-      this.allMembersOffBoard(anim.memberIds)
+      stepped.length > 0 &&
+      (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
+        this.allMembersOffBoard(anim.memberIds))
     ) {
       this.completeLaunchAnimation();
       return true;
     }
 
-    const blocked = hitWall || stepped.some((arrow, idx) => {
-      const memberId = members[idx]!.instanceId;
-      if (anim.pipeTransitById[memberId]) return false;
-      const dir =
-        anim.currentDirectionById[memberId] ?? members[idx]!.direction;
-      const head = arrow.occupiedPositions.at(-1);
-      if (head && curtainCells.has(vecKey(head))) {
-        return true;
-      }
-      if (
-        head &&
-        isHeadBlockedByPipe(head, dir, this.getActivePipes())
-      ) {
-        return true;
-      }
-      return this.isBundleHeadOnBlocker(arrow, memberSet);
-    });
+    const blocked =
+      hitWall ||
+      (anim.stripIds.length === 0 &&
+        stepped.some((arrow, idx) => {
+          const memberId = members[idx]!.instanceId;
+          if (anim.pipeTransitById[memberId]) return false;
+          const dir =
+            anim.currentDirectionById[memberId] ?? members[idx]!.direction;
+          const head = arrow.occupiedPositions.at(-1);
+          if (head && curtainCells.has(vecKey(head))) {
+            return true;
+          }
+          if (
+            head &&
+            isHeadBlockedByPipe(head, dir, this.getActivePipes())
+          ) {
+            return true;
+          }
+          return this.isBundleHeadOnBlocker(arrow, memberSet);
+        }));
     if (blocked) {
       this.clearPipeAnimState(anim);
       anim.reversing = true;
@@ -1119,17 +1184,40 @@ export class GameState {
   }
 
   getFrozenOverlays() {
-    return this.frozenManager.getOverlays();
+    return this.frozenManager
+      .getOverlays()
+      .filter((overlay) => this.canFrozenOverlayTakeAdjacentDamage(overlay));
+  }
+
+  /** 子区域已揭开且不在幕布下时，冰冻才参与相邻消除扣血与绘制 */
+  private canFrozenOverlayTakeAdjacentDamage(overlay: FrozenOverlayItem): boolean {
+    if (!this.isMechanicDrawable(overlay.zoneId)) return false;
+    const host = this.arrows.find((a) => a.instanceId === overlay.hostArrowId);
+    if (host && this.curtainManager.isArrowHidden(host)) return false;
+    return true;
+  }
+
+  private isMechanicDrawable(zoneId: number | null): boolean {
+    if (zoneId == null) return true;
+    return this.zoneManager.isZoneContentRevealed(
+      zoneId,
+      this.arrows,
+      this.corners,
+    );
   }
 
   getBombs() {
     this.bombManager.syncWithArrows(this.arrows);
-    return this.bombManager.getDrawableBombs();
+    return this.bombManager
+      .getDrawableBombs()
+      .filter((bomb) => this.isMechanicDrawable(bomb.zoneId));
   }
 
   getBombDrawStates() {
     this.bombManager.syncWithArrows(this.arrows);
-    return this.bombManager.getDrawableStates();
+    return this.bombManager
+      .getDrawableStates()
+      .filter((state) => this.isMechanicDrawable(state.bomb.zoneId));
   }
 
   getBombExplosion(): { cells: Vec2[]; progress: number } | null {

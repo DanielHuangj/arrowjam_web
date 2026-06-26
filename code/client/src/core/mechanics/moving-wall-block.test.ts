@@ -8,7 +8,7 @@ import { parseLevelData } from "../level/parser.ts";
 
 const levelPath = join(
   dirname(fileURLToPath(import.meta.url)),
-  "../../../public/levels/level-9002.json",
+  "../../../test-fixtures/levels/level-9002.json",
 );
 
 describe("moving wall blocking", () => {

@@ -82,23 +82,7 @@ const baseForm: GenerationForm = {
   keywords: "flip arrow tutorial",
 };
 
-const denseKind1Level = JSON.stringify({
-  width: 12,
-  height: 12,
-  name: "test-dense",
-  durationInSec: 120,
-  difficulty: 1,
-  itemModels: [
-    { kind: 1, instanceId: 1, layer: 2, direction: 3, colorId: 6, occupiedPositions: [[0, 5], [1, 5], [2, 5]] },
-    { kind: 1, instanceId: 2, layer: 2, direction: 3, colorId: 6, occupiedPositions: [[0, 7], [1, 7], [2, 7]] },
-    { kind: 1, instanceId: 3, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[5, 0], [5, 1], [5, 2]] },
-    { kind: 1, instanceId: 4, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[9, 5], [9, 6], [9, 7]] },
-    { kind: 1, instanceId: 5, layer: 2, direction: 3, colorId: 3, occupiedPositions: [[3, 9], [4, 9], [5, 9]] },
-    { kind: 1, instanceId: 6, layer: 2, direction: 3, colorId: 3, occupiedPositions: [[7, 3], [8, 3], [9, 3], [10, 3]] },
-    { kind: 1, instanceId: 7, layer: 2, direction: 1, colorId: 6, occupiedPositions: [[2, 10], [2, 11]] },
-    { kind: 1, instanceId: 8, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[10, 8], [11, 8], [11, 9]] },
-  ],
-});
+import { denseKind1LevelJson } from "./fixtures/dense-kind1-12x12.ts";
 
 const formK1Only: GenerationForm = {
   ...baseForm,
@@ -116,11 +100,11 @@ describe("runGenerationPipeline", () => {
   });
 
   it("writes checked json when generation and validation pass", async () => {
-    expect(validateLevelJsonString(denseKind1Level, formK1Only).ok).toBe(true);
+    expect(validateLevelJsonString(denseKind1LevelJson, formK1Only).ok).toBe(true);
 
     vi.mocked(chatCompletion)
       .mockResolvedValueOnce('{"optimized_prompt":"dense kind1","design_notes":"note"}')
-      .mockResolvedValueOnce(denseKind1Level);
+      .mockResolvedValueOnce(denseKind1LevelJson);
 
     const dir = createMockDir();
     const result = await runGenerationPipeline(formK1Only, dir, config, {

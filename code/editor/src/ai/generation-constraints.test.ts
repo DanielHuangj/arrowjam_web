@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateGenerationConstraints } from "./generation-constraints.ts";
 import { buildBaseLevelContext } from "./level-base-edit.ts";
+import { denseKind1_12x12 } from "./fixtures/dense-kind1-12x12.ts";
 import {
   getForbiddenKinds,
 } from "./prompts/playability-rules.ts";
@@ -228,20 +229,6 @@ describe("generation-constraints", () => {
   });
 
   it("accepts dense kind1 fixture for 12x12", () => {
-    const data = {
-      width: 12,
-      height: 12,
-      itemModels: [
-        { kind: 1, instanceId: 1, layer: 2, direction: 3, colorId: 6, occupiedPositions: [[0, 5], [1, 5], [2, 5]] },
-        { kind: 1, instanceId: 2, layer: 2, direction: 3, colorId: 6, occupiedPositions: [[0, 7], [1, 7], [2, 7]] },
-        { kind: 1, instanceId: 3, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[5, 0], [5, 1], [5, 2]] },
-        { kind: 1, instanceId: 4, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[9, 5], [9, 6], [9, 7]] },
-        { kind: 1, instanceId: 5, layer: 2, direction: 3, colorId: 3, occupiedPositions: [[3, 9], [4, 9], [5, 9]] },
-        { kind: 1, instanceId: 6, layer: 2, direction: 3, colorId: 3, occupiedPositions: [[7, 3], [8, 3], [9, 3], [10, 3]] },
-        { kind: 1, instanceId: 7, layer: 2, direction: 1, colorId: 6, occupiedPositions: [[2, 10], [2, 11]] },
-        { kind: 1, instanceId: 8, layer: 2, direction: 1, colorId: 7, occupiedPositions: [[10, 8], [11, 8], [11, 9]] },
-      ],
-    };
     const form: GenerationForm = {
       prefix: "t",
       width: 12,
@@ -253,7 +240,7 @@ describe("generation-constraints", () => {
       allowedKinds: [1],
       keywords: "",
     };
-    const issues = validateGenerationConstraints(data, form);
+    const issues = validateGenerationConstraints(denseKind1_12x12, form);
     expect(issues).toEqual([]);
   });
 

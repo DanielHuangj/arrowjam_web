@@ -30,7 +30,10 @@ export class FrozenManager {
     return this.overlays.find((o) => o.hostArrowId === hostArrowId) ?? null;
   }
 
-  onAdjacentElimination(removedArrows: ArrowItem[]): void {
+  onAdjacentElimination(
+    removedArrows: ArrowItem[],
+    canDamageOverlay: (overlay: FrozenOverlayItem) => boolean = () => true,
+  ): void {
     if (removedArrows.length === 0 || this.overlays.length === 0) return;
 
     const removedCells: Vec2[] = [];
@@ -42,6 +45,10 @@ export class FrozenManager {
 
     const next: FrozenOverlayItem[] = [];
     for (const overlay of this.overlays) {
+      if (!canDamageOverlay(overlay)) {
+        next.push(overlay);
+        continue;
+      }
       let damage = 0;
       for (const removed of removedCells) {
         for (const frozenCell of overlay.occupiedPositions) {

@@ -49,7 +49,8 @@ netstat -ano | findstr :5173
 | `npm run dev:lan` | 开发服务器（0.0.0.0，局域网可访问） |
 | `npm run build` | 生产构建 |
 | `npm test` | 单元测试 |
-| `npm run copy-levels` | 从 `docs/crackdata/关卡提取/` 拷贝关卡到 `public/levels/` |
+| `npm run import-levels` | 从 `levels-inbox/` 导入新关卡到 `public/levels/`（见 `levels-inbox/README.md`） |
+| `npm run copy-levels` | 同 `import-levels`（兼容旧命令名） |
 
 ## 当前功能（P1）
 

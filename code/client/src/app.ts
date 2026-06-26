@@ -1,5 +1,6 @@
 import type { GameState } from "./core/game/game-state.ts";
 import type { BoardRenderer } from "./render/board-renderer.ts";
+import { attachBoardViewport, type BoardViewportHandle } from "./render/board-viewport.ts";
 import { InputHandler } from "./render/input-handler.ts";
 import {
   hideModal,
@@ -31,6 +32,7 @@ export class App {
   private targetVanishMode = false;
   private targetVanishHoverInvalid = false;
   private boardWrapEl: HTMLElement | null = null;
+  private boardViewport: BoardViewportHandle | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -70,6 +72,11 @@ export class App {
       this.canvas = shell.canvas;
       this.boardWrapEl = shell.boardWrap;
       this.targetVanishMode = false;
+      this.boardViewport?.dispose();
+      this.boardViewport = attachBoardViewport(shell.boardWrap, this.canvas);
+      requestAnimationFrame(() => {
+        this.boardViewport?.reset(level);
+      });
       this.renderer = new (
         await import("./render/board-renderer.ts")
       ).BoardRenderer(this.canvas, "game");
@@ -97,7 +104,8 @@ export class App {
       this.input = new InputHandler(
         this.canvas,
         () => this.state,
-        this.renderer,
+        () => this.boardViewport!.getState(),
+        () => this.boardViewport!.consumePanClick(),
         () => this.targetVanishMode,
         (invalid) => {
           this.targetVanishHoverInvalid = invalid;
@@ -362,6 +370,8 @@ export class App {
     this.overlayEl = null;
     this.canvas = null;
     this.boardWrapEl = null;
+    this.boardViewport?.dispose();
+    this.boardViewport = null;
     this.targetVanishMode = false;
     this.targetVanishHoverInvalid = false;
     this.modalShown = false;

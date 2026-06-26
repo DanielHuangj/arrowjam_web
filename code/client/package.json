@@ -8,12 +8,13 @@
     "dev:lan": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "pretest": "node scripts/copy-levels.mjs",
+    "pretest": "node scripts/import-levels.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "copy-levels": "node scripts/copy-levels.mjs",
-    "predev": "node scripts/copy-levels.mjs",
-    "prebuild": "node scripts/copy-levels.mjs"
+    "import-levels": "node scripts/import-levels.mjs",
+    "copy-levels": "node scripts/import-levels.mjs",
+    "predev": "node scripts/import-levels.mjs",
+    "prebuild": "node scripts/import-levels.mjs"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

@@ -49,8 +49,8 @@ export function renderLevelSelect(
     prefetchLevelThumbnails(levels);
   };
 
-  addSection("主线关卡", manifest.levels);
   addSection("机制测试", manifest.devTests ?? []);
+  addSection("主线关卡", manifest.levels);
 }
 
 export function renderGameShell(root: HTMLElement): {

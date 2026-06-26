@@ -131,6 +131,9 @@ body {
   flex-direction: column;
   padding: 16px;
   gap: 12px;
+  height: 100vh;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .hud {
@@ -266,12 +269,17 @@ body {
 }
 
 .board-wrap {
+  flex: 1;
+  min-height: 0;
   background: #24283b;
-  padding: 16px;
   border-radius: 12px;
-  overflow: auto;
-  max-height: calc(100vh - 100px);
-  align-self: flex-start;
+  overflow: hidden;
+  position: relative;
+}
+
+#board {
+  display: block;
+  transform-origin: 0 0;
 }
 
 .overlay {

@@ -6,11 +6,16 @@ import type {
   CornerItem,
   Direction,
   PipeItem,
-  PipeTransitState,
   Vec2,
 } from "../types.ts";
 import { vecKey } from "../types.ts";
-import { advanceArrowStep } from "./pipe.ts";
+import { snakeStepArrow } from "../board/cell-map.ts";
+import { getCornerAt, isValidCornerEntry } from "./corner.ts";
+import {
+  isHeadBlockedByPipe,
+  tryStartPipeTransit,
+} from "./pipe.ts";
+import { wouldStepIntoWall } from "./moving-wall.ts";
 
 function positionsFullyOffBoard(positions: Vec2[], board: BoardSize): boolean {
   return positions.every(
@@ -177,6 +182,95 @@ function activePipes(pipes: PipeItem[]): PipeItem[] {
   return pipes.filter((p) => p.health > 0);
 }
 
+function isHeadBlockedByOtherArrows(
+  head: Vec2,
+  board: BoardSize,
+  memberSet: Set<number>,
+  allArrows: ArrowItem[],
+  extraBlockerCells: Set<string>,
+): boolean {
+  if (
+    head[0] < 0 ||
+    head[0] >= board.width ||
+    head[1] < 0 ||
+    head[1] >= board.height
+  ) {
+    return false;
+  }
+  if (extraBlockerCells.has(vecKey(head))) return true;
+  for (const other of allArrows) {
+    if (memberSet.has(other.instanceId)) continue;
+    for (const p of other.occupiedPositions) {
+      if (p[0] === head[0] && p[1] === head[1]) return true;
+    }
+  }
+  return false;
+}
+
+/** 捆绑箭整体前进一步：共用方向、不可进管道/反射角，碰到则 blocked */
+export function advanceBundleStep(
+  memberIds: number[],
+  members: ArrowItem[],
+  getPositions: (id: number) => Vec2[],
+  dir: Direction,
+  board: BoardSize,
+  corners: CornerItem[],
+  pipes: PipeItem[],
+  curtainCells: Set<string>,
+  extraBlockerCells: Set<string>,
+  allArrows: ArrowItem[],
+  memberSet: Set<number>,
+): { arrows: ArrowItem[]; blocked: boolean } {
+  const stepped: ArrowItem[] = [];
+
+  for (const id of memberIds) {
+    const member = members.find((a) => a.instanceId === id)!;
+    const current = getPositions(id);
+    const arrow: ArrowItem = { ...member, occupiedPositions: current, direction: dir };
+    const head = current.at(-1)!;
+
+    if (extraBlockerCells.size > 0 && wouldStepIntoWall(head, dir, extraBlockerCells)) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    const next = snakeStepArrow(arrow, dir);
+    const nextHead = next.occupiedPositions.at(-1)!;
+
+    if (curtainCells.has(vecKey(nextHead))) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    const corner = getCornerAt(nextHead, corners);
+    if (corner && isValidCornerEntry(dir, corner)) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    if (isHeadBlockedByPipe(nextHead, dir, pipes)) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    if (tryStartPipeTransit(nextHead, dir, pipes)) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    if (
+      isHeadBlockedByOtherArrows(
+        nextHead,
+        board,
+        memberSet,
+        allArrows,
+        extraBlockerCells,
+      )
+    ) {
+      return { arrows: stepped, blocked: true };
+    }
+
+    stepped.push(next);
+  }
+
+  return { arrows: stepped, blocked: false };
+}
+
 export function simulateCanExitBundle(
   memberIds: number[],
   allArrows: ArrowItem[],
@@ -194,73 +288,34 @@ export function simulateCanExitBundle(
 
   const memberSet = new Set(memberIds);
   const positions = new Map<number, Vec2[]>();
-  const dirs = new Map<number, Direction>();
+  const dir = members[0]!.direction;
   for (const arrow of members) {
-    positions.set(
-      arrow.instanceId,
-      clonePositions(arrow.occupiedPositions),
-    );
-    dirs.set(arrow.instanceId, arrow.direction);
+    positions.set(arrow.instanceId, clonePositions(arrow.occupiedPositions));
   }
 
-  const simPipes = pipes.map((p) => ({
-    ...p,
-    occupiedPositions: p.occupiedPositions.map(([x, y]) => [x, y] as Vec2),
-    passes: p.passes.map((pass) => ({
-      position: [pass.position[0], pass.position[1]] as Vec2,
-      directions: pass.directions.map(([x, y]) => [x, y] as Vec2),
-    })),
-    health: p.health,
-  }));
-
-  const transitById = new Map<number, PipeTransitState | null>(
-    memberIds.map((id) => [id, null]),
-  );
+  const simPipes = activePipes(pipes);
 
   const maxLen = Math.max(...members.map((a) => a.occupiedPositions.length), 1);
   const maxSteps = (board.width + board.height) * maxLen * 8;
 
   for (let step = 0; step < maxSteps; step++) {
-    for (const id of memberIds) {
-      const member = members.find((a) => a.instanceId === id)!;
-      const fakeArrow: ArrowItem = {
-        ...member,
-        occupiedPositions: positions.get(id)!,
-        direction: dirs.get(id)!,
-      };
-      const result = advanceArrowStep(
-        fakeArrow,
-        dirs.get(id)!,
-        transitById.get(id) ?? null,
-        corners,
-        activePipes(simPipes),
-        curtainCells,
-        extraBlockerCells,
-      );
+    const result = advanceBundleStep(
+      memberIds,
+      members,
+      (id) => positions.get(id)!,
+      dir,
+      board,
+      corners,
+      simPipes,
+      curtainCells,
+      extraBlockerCells,
+      allArrows,
+      memberSet,
+    );
+    if (result.blocked) return false;
 
-      if (result.blocked) return false;
-
-      positions.set(id, result.arrow.occupiedPositions);
-      dirs.set(id, result.dir);
-      transitById.set(id, result.transit);
-
-      if (!result.transit) {
-        const head = result.arrow.occupiedPositions.at(-1)!;
-        if (
-          head[0] >= 0 &&
-          head[0] < board.width &&
-          head[1] >= 0 &&
-          head[1] < board.height
-        ) {
-          if (extraBlockerCells.has(vecKey(head))) return false;
-          for (const other of allArrows) {
-            if (memberSet.has(other.instanceId)) continue;
-            for (const p of other.occupiedPositions) {
-              if (p[0] === head[0] && p[1] === head[1]) return false;
-            }
-          }
-        }
-      }
+    for (const arrow of result.arrows) {
+      positions.set(arrow.instanceId, clonePositions(arrow.occupiedPositions));
     }
 
     if (

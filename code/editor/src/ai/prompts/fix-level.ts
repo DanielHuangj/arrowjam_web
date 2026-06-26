@@ -149,7 +149,7 @@ ${getValidatorSummary()}
 - AI-KIND: 出现未勾选 kind → 删除
 - AI-KIND-MIN: 勾选 kind 未出现 → 至少添加 1 个该 kind
 - AI-COUNT: 箭太少 → 增加 kind1 折线箭
-- AI-DENSITY: 占用格太少 → 增加箭长/箭数
+- AI-DENSITY: 占用格太少（须 ≥ 棋盘 60%）→ 增加箭长/箭数，铺满盘面
 - AI-OVERLAP: 两箭共享格子 → 移动折线使格位互不重叠
 - AI-UNSOLVABLE: 死锁/不可解 → 调整折线使箭可依次飞出
 - V11: direction/direction1 与末段不一致 → 修正方向字段（翻转箭 direction1=末段、direction2=首段）

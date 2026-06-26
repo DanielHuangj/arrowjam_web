@@ -4,6 +4,7 @@ import {
   createDocumentFromJson,
   createEmptyDocument,
   findItemById,
+  findItemParentList,
   hasBlockingErrors,
   levelDataFromDocument,
   parseLevelIdFromFilename,
@@ -37,7 +38,13 @@ import {
   updateItem,
   updateMeta,
 } from "./document/editor-ops.ts";
-import { canPlaceInEditContext } from "./document/zone-bounds.ts";
+import {
+  arrowPlacementBlockMessage,
+  canPlaceArrowInEditContext,
+  canPlaceInEditContext,
+  getArrowPlacementBlockReason,
+  type ArrowPlacementBlockReason,
+} from "./document/zone-bounds.ts";
 import { createHistory, pushHistory, redo, undo } from "./document/history.ts";
 import {
   exportDownload,
@@ -285,8 +292,8 @@ export class EditorApp {
     this.commit(enterZone(this.activeTab().doc, zoneId));
   }
 
-  private placeBlocked(): void {
-    this.statusHint = "物件超出子区域范围";
+  private placeBlocked(reason: ArrowPlacementBlockReason = "zone"): void {
+    this.statusHint = arrowPlacementBlockMessage(reason);
     window.clearTimeout(this.statusHintTimer);
     this.statusHintTimer = window.setTimeout(() => {
       this.statusHint = null;
@@ -297,12 +304,50 @@ export class EditorApp {
 
   private tryCommitItem(item: Omit<RawItem, "instanceId">): boolean {
     const tab = this.activeTab();
-    if (!canPlaceInEditContext(tab.doc, item.occupiedPositions)) {
-      this.placeBlocked();
+    if (item.kind === 1 || item.kind === 2) {
+      const reason = getArrowPlacementBlockReason(tab.doc, item.occupiedPositions);
+      if (reason) {
+        this.placeBlocked(reason);
+        return false;
+      }
+    } else if (!canPlaceInEditContext(tab.doc, item.occupiedPositions)) {
+      this.placeBlocked("zone");
       return false;
     }
     this.commit(addItem(tab.doc, item));
     return true;
+  }
+
+  private canPlacePolyline(
+    doc: EditorDocument,
+    positions: Vec2[],
+    tool: string,
+    excludeInstanceId?: number,
+  ): boolean {
+    if (tool === "arrow" || tool === "flipArrow") {
+      return canPlaceArrowInEditContext(doc, positions, excludeInstanceId);
+    }
+    return canPlaceInEditContext(doc, positions);
+  }
+
+  private polylinePlacementBlocked(
+    doc: EditorDocument,
+    positions: Vec2[],
+    tool: string,
+  ): boolean {
+    if (tool === "arrow" || tool === "flipArrow") {
+      const reason = getArrowPlacementBlockReason(doc, positions);
+      if (reason) {
+        this.placeBlocked(reason);
+        return true;
+      }
+      return false;
+    }
+    if (!canPlaceInEditContext(doc, positions)) {
+      this.placeBlocked("zone");
+      return true;
+    }
+    return false;
   }
 
   private findSelectedHostArrow(): RawItem | null {
@@ -315,10 +360,12 @@ export class EditorApp {
   }
 
   private hostHasAttachmentConflict(host: RawItem, excludeKind?: number): boolean {
-    const all = this.collectAllRawItems();
+    const parent = findItemParentList(this.activeTab().doc.itemModels, host.instanceId);
+    if (!parent) return false;
     const cells = new Set(host.occupiedPositions.map(([x, y]) => `${x},${y}`));
     let count = 0;
-    for (const item of all) {
+    for (const item of parent.list) {
+      if (item.instanceId === host.instanceId) continue;
       if (item.kind === 13 && excludeKind !== 13) {
         if (
           item.occupiedPositions.length === host.occupiedPositions.length &&
@@ -487,11 +534,12 @@ export class EditorApp {
       if (e.code === "Space") {
         const tab = this.activeTab();
         tab.viewport = { ...tab.viewport, spaceHeld: false };
-        this.els.wrap.classList.remove("viewport-pan-ready", "viewport-panning");
       }
-      if (e.key === "Control") {
-        this.els.wrap.classList.remove("viewport-pan-ready", "viewport-panning");
-      }
+    });
+
+    window.addEventListener("blur", () => {
+      const tab = this.activeTab();
+      tab.viewport = { ...tab.viewport, spaceHeld: false };
     });
 
     this.els.fileInput.addEventListener("change", async () => {
@@ -529,8 +577,6 @@ export class EditorApp {
     if (shouldStartViewportPan(e, tab.viewport)) {
       e.preventDefault();
       this.panStart = { x: e.clientX, y: e.clientY, ox: tab.viewport.offsetX, oy: tab.viewport.offsetY };
-      this.els.wrap.classList.add("viewport-panning");
-      this.els.wrap.classList.remove("viewport-pan-ready");
       return;
     }
     if (this.playMode) return;
@@ -560,10 +606,7 @@ export class EditorApp {
 
     if (tool === "arrow" || tool === "pipe" || tool === "flipArrow") {
       const next = extendPolylineToCell(tab.draw.polyline, cell);
-      if (!canPlaceInEditContext(tab.doc, next)) {
-        this.placeBlocked();
-        return;
-      }
+      if (this.polylinePlacementBlocked(tab.doc, next, tool)) return;
       this.polylineDragging = true;
       tab.draw.polyline = next;
       this.refresh();
@@ -631,7 +674,12 @@ export class EditorApp {
           const positions = this.dragPositions.map(
             ([x, y]) => [x + dx, y + dy] as Vec2,
           );
-          if (!canPlaceInEditContext(tab.doc, positions)) return;
+          const item = findItemById(tab.doc.itemModels, this.dragId);
+          const canPlace =
+            item?.kind === 1 || item?.kind === 2
+              ? canPlaceArrowInEditContext(tab.doc, positions, this.dragId)
+              : canPlaceInEditContext(tab.doc, positions);
+          if (!canPlace) return;
           tab.doc = updateItem(tab.doc, this.dragId, { occupiedPositions: positions });
           this.refresh();
         }
@@ -652,7 +700,7 @@ export class EditorApp {
     ) {
       const next = extendPolylineToCell(tab.draw.polyline, cell);
       if (next.length !== tab.draw.polyline.length) {
-        if (!canPlaceInEditContext(tab.doc, next)) return;
+        if (!this.canPlacePolyline(tab.doc, next, tab.draw.tool)) return;
         tab.draw.polyline = next;
         this.renderCanvas();
       }
@@ -685,10 +733,6 @@ export class EditorApp {
     const tab = this.activeTab();
     if (this.panStart) {
       this.panStart = null;
-      this.els.wrap.classList.remove("viewport-panning");
-      if (tab.viewport.spaceHeld || e.ctrlKey) {
-        this.els.wrap.classList.add("viewport-pan-ready");
-      }
       return;
     }
 
@@ -703,13 +747,20 @@ export class EditorApp {
     if (this.dragId != null) {
       if (this.dragPositions) {
         const item = findItemById(tab.doc.itemModels, this.dragId);
-        if (
-          item &&
-          !canPlaceInEditContext(tab.doc, item.occupiedPositions)
-        ) {
-          tab.doc = updateItem(tab.doc, this.dragId, {
-            occupiedPositions: this.dragPositions,
-          });
+        if (item && this.dragPositions) {
+          const canPlace =
+            item.kind === 1 || item.kind === 2
+              ? canPlaceArrowInEditContext(
+                  tab.doc,
+                  item.occupiedPositions,
+                  this.dragId,
+                )
+              : canPlaceInEditContext(tab.doc, item.occupiedPositions);
+          if (!canPlace) {
+            tab.doc = updateItem(tab.doc, this.dragId, {
+              occupiedPositions: this.dragPositions,
+            });
+          }
         }
       }
       this.commit(tab.doc);
@@ -803,10 +854,7 @@ export class EditorApp {
 
     if (kind === "flipArrow") {
       if (pl.length < 2) return;
-      if (!canPlaceInEditContext(tab.doc, pl)) {
-        this.placeBlocked();
-        return;
-      }
+      if (this.polylinePlacementBlocked(tab.doc, pl, "flipArrow")) return;
       const d1 = directionFromLastSegment(pl);
       const d2 = flipArrowDirection2(pl);
       this.tryCommitItem(
@@ -835,14 +883,11 @@ export class EditorApp {
         alert("头部方向与末段不一致");
         return;
       }
-      if (!canPlaceInEditContext(tab.doc, pl)) {
-        this.placeBlocked();
-        return;
-      }
+      if (this.polylinePlacementBlocked(tab.doc, pl, "arrow")) return;
       this.tryCommitItem(buildArrowItem(pl, tab.draw.colorId, dir));
     } else {
       if (!canPlaceInEditContext(tab.doc, pl)) {
-        this.placeBlocked();
+        this.placeBlocked("zone");
         return;
       }
       this.tryCommitItem(buildPipeItem(pl));
@@ -856,11 +901,7 @@ export class EditorApp {
     const tab = this.activeTab();
     if (e.code === "Space") {
       tab.viewport = { ...tab.viewport, spaceHeld: true };
-      this.els.wrap.classList.add("viewport-pan-ready");
       e.preventDefault();
-    }
-    if (e.key === "Control") {
-      this.els.wrap.classList.add("viewport-pan-ready");
     }
     if (e.key === "Escape") {
       if (this.playMode) this.togglePlayMode();
@@ -908,9 +949,23 @@ export class EditorApp {
         const positions = src.occupiedPositions.map(
           ([x, y]) => [x + offset[0], y + offset[1]] as Vec2,
         );
+        if (src.kind === 1 || src.kind === 2) {
+          return !canPlaceArrowInEditContext(tab.doc, positions);
+        }
         return !canPlaceInEditContext(tab.doc, positions);
       });
-      if (blocked) this.placeBlocked();
+      if (blocked) {
+        const arrowItem = this.clipboard.find((s) => s.kind === 1 || s.kind === 2);
+        if (arrowItem) {
+          const positions = arrowItem.occupiedPositions.map(
+            ([x, y]) => [x + offset[0], y + offset[1]] as Vec2,
+          );
+          const reason = getArrowPlacementBlockReason(tab.doc, positions);
+          this.placeBlocked(reason ?? "zone");
+        } else {
+          this.placeBlocked("zone");
+        }
+      }
       else this.commit(pasteItems(tab.doc, this.clipboard));
     }
     if (e.key === "Enter") {
@@ -1102,7 +1157,11 @@ export class EditorApp {
       this.gameState = new GameState(level);
       this.playRenderer = new BoardRenderer(this.els.canvas);
       this.playInput?.dispose();
-      this.playInput = new InputHandler(this.els.canvas, () => this.gameState, this.playRenderer);
+      this.playInput = new InputHandler(
+        this.els.canvas,
+        () => this.gameState,
+        () => tab.viewport,
+      );
       this.els.playControls.innerHTML = `
         <button type="button" id="play-auto" class="play-auto-btn" title="自动依次点击当前无阻挡、可立即出界的箭">一键试玩</button>
         <button type="button" id="play-reset">重置</button>

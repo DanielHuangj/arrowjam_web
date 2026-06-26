@@ -21,19 +21,24 @@ export interface CornerPreview {
   d2: Vec2;
 }
 
-function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
-  const inZone = doc.editContext.zoneInstanceId != null;
-  if (inZone) {
-    return {
-      movingWalls: [] as GameLevel["movingWalls"],
-      frozenOverlays: [] as GameLevel["frozenOverlays"],
-      bombStates: [] as { bomb: GameLevel["bombs"][number]; remaining: number | null }[],
-    };
+function zoneMechanicsVisible<T extends { zoneId: number | null }>(
+  items: T[],
+  activeZone: number | null,
+): T[] {
+  if (activeZone == null) {
+    return items.filter((i) => i.zoneId == null);
   }
+  return items.filter((i) => i.zoneId === activeZone);
+}
+
+function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
+  const activeZone = doc.editContext.zoneInstanceId;
+  const bombs = zoneMechanicsVisible(level.bombs, activeZone);
+  const frozenOverlays = zoneMechanicsVisible(level.frozenOverlays, activeZone);
   return {
-    movingWalls: level.movingWalls,
-    frozenOverlays: level.frozenOverlays,
-    bombStates: level.bombs.map((bomb) => ({ bomb, remaining: null as number | null })),
+    movingWalls: activeZone == null ? level.movingWalls : [],
+    frozenOverlays,
+    bombStates: bombs.map((bomb) => ({ bomb, remaining: null as number | null })),
   };
 }
 
@@ -318,3 +323,5 @@ export class EditorBoardView {
     ctx.restore();
   }
 }
+
+export { zoneMechanicsVisible, collectMechanicsDrawOptions };

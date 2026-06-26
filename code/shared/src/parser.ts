@@ -35,6 +35,10 @@ function findArrowOnCell(arrows: ArrowItem[], cell: Vec2): ArrowItem | null {
   return null;
 }
 
+function topLevelArrows(arrows: ArrowItem[]): ArrowItem[] {
+  return arrows.filter((a) => a.zoneId == null);
+}
+
 function findArrowByPositions(
   arrows: ArrowItem[],
   positions: Vec2[],
@@ -207,9 +211,12 @@ interface CollectCtx {
 }
 
 function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectCtx): void {
+  const scopeArrows: ArrowItem[] = [];
   for (const item of items) {
     if (item.kind === 1 || item.kind === 2) {
-      ctx.arrows.push(parseArrow(item, zoneId));
+      const arrow = parseArrow(item, zoneId);
+      scopeArrows.push(arrow);
+      ctx.arrows.push(arrow);
     } else if (item.kind === 4) {
       ctx.corners.push(parseCorner(item, zoneId));
     } else if (item.kind === 8) {
@@ -225,7 +232,7 @@ function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectC
       if (!cell) {
         throw new Error(`Bomb #${item.instanceId} missing occupiedPositions`);
       }
-      const host = findArrowOnCell(ctx.arrows, cell);
+      const host = findArrowOnCell(scopeArrows, cell);
       if (!host) {
         throw new Error(`Bomb #${item.instanceId} has no host arrow on cell`);
       }
@@ -244,7 +251,7 @@ function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectC
         throw new Error(`Frozen #${item.instanceId} missing health`);
       }
       const positions = clonePositions(item.occupiedPositions);
-      const host = findArrowByPositions(ctx.arrows, positions);
+      const host = findArrowByPositions(scopeArrows, positions);
       if (!host) {
         throw new Error(`Frozen #${item.instanceId} has no matching host arrow`);
       }
@@ -332,7 +339,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
       if (!cell) {
         throw new Error(`Bomb #${item.instanceId} missing occupiedPositions`);
       }
-      const host = findArrowOnCell(arrows, cell);
+      const host = findArrowOnCell(topLevelArrows(arrows), cell);
       if (!host) {
         throw new Error(`Bomb #${item.instanceId} has no host arrow on cell`);
       }
@@ -351,7 +358,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
         throw new Error(`Frozen #${item.instanceId} missing health`);
       }
       const positions = clonePositions(item.occupiedPositions);
-      const host = findArrowByPositions(arrows, positions);
+      const host = findArrowByPositions(topLevelArrows(arrows), positions);
       if (!host) {
         throw new Error(`Frozen #${item.instanceId} has no matching host arrow`);
       }

@@ -1,6 +1,6 @@
 import type { Direction, LevelData, RawItem, ValidationIssue, Vec2 } from "./types.ts";
 import { inBounds, vecKey } from "./types.ts";
-import { collectAllItems, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, isPolylineContinuous, isRectangular } from "./items.ts";
+import { collectAllItems, findArrowCellOverlaps, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, findArrowHostingCell, findArrowHostingPositions, findItemParentList, isPolylineContinuous, isRectangular } from "./items.ts";
 
 function push(
   issues: ValidationIssue[],
@@ -243,11 +243,7 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       }
       const cell = item.occupiedPositions[0];
       if (cell) {
-        const hasHost = all.some(
-          (o) =>
-            (o.kind === 1 || o.kind === 2) &&
-            o.occupiedPositions.some((p) => vecKey(p) === vecKey(cell)),
-        );
+        const hasHost = findArrowHostingCell(data.itemModels, cell, item.instanceId) != null;
         if (!hasHost) {
           push(issues, "V-NEW-05", "error", `炸弹 #${item.instanceId} 未绑定箭`, item.instanceId);
         }
@@ -297,15 +293,10 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       if (item.layer !== 8) {
         push(issues, "V-NEW-13", "error", `冻结 #${item.instanceId} layer 须为 8`, item.instanceId);
       }
-      const host = all.find(
-        (o) =>
-          (o.kind === 1 || o.kind === 2) &&
-          o.occupiedPositions.length === item.occupiedPositions.length &&
-          o.occupiedPositions.every(
-            (p, i) =>
-              p[0] === item.occupiedPositions[i]![0] &&
-              p[1] === item.occupiedPositions[i]![1],
-          ),
+      const host = findArrowHostingPositions(
+        data.itemModels,
+        item.occupiedPositions,
+        item.instanceId,
       );
       if (!host) {
         push(issues, "V-NEW-13", "error", `冻结 #${item.instanceId} 未绑定同格箭`, item.instanceId);
@@ -333,11 +324,7 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
     if (item.kind === 11) {
       const keyPos = item.occupiedPositions[0];
       if (keyPos) {
-        const hasArrow = all.some(
-          (o) =>
-            (o.kind === 1 || o.kind === 2) &&
-            o.occupiedPositions.some((p) => vecKey(p) === vecKey(keyPos)),
-        );
+        const hasArrow = findArrowHostingCell(data.itemModels, keyPos, item.instanceId) != null;
         if (!hasArrow) {
           push(issues, "V14", "warning", `钥匙 #${item.instanceId} 未绑定同格箭`, item.instanceId);
         }
@@ -375,12 +362,23 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
     );
   }
 
+  for (const o of findArrowCellOverlaps(data.itemModels)) {
+    push(
+      issues,
+      "V-ARROW-01",
+      "error",
+      `折线箭 #${o.ids.join(" 与 #")} 共享格子 ${o.cell}`,
+      o.ids[0],
+    );
+  }
+
   for (const arrow of all) {
     if (arrow.kind !== 1 && arrow.kind !== 2) continue;
+    const siblings = findItemParentList(data.itemModels, arrow.instanceId)?.list ?? [];
     let attachments = 0;
     const arrowCells = new Set(arrow.occupiedPositions.map((p) => vecKey(p)));
 
-    for (const other of all) {
+    for (const other of siblings) {
       if (other.instanceId === arrow.instanceId) continue;
       if (other.kind === 13) {
         if (

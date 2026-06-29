@@ -1257,9 +1257,10 @@ export class EditorApp {
         arrows.filter((a) => !hidden.has(a.instanceId));
 
       const vanishProgressById = new Map<number, number>();
-      if (gs.animation?.mode === "vanish") {
-        const progress = gs.getVanishAnimProgress();
-        for (const id of gs.animation.memberIds) {
+      for (const anim of gs.animations) {
+        if (anim.mode !== "vanish") continue;
+        const progress = gs.getVanishAnimProgress(anim);
+        for (const id of anim.memberIds) {
           vanishProgressById.set(id, progress);
         }
       }

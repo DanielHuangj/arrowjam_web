@@ -165,6 +165,52 @@ describe("generation-constraints", () => {
     expect(issues.some((i) => i.id === "AI-CORNER-OVERLAP")).toBe(true);
   });
 
+  it("allows zone corner sharing cell with top-level arrow", () => {
+    const data = {
+      width: 12,
+      height: 12,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+        },
+        {
+          kind: 12,
+          instanceId: 10,
+          layer: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+          items: [
+            {
+              kind: 4,
+              instanceId: 20,
+              layer: 2,
+              direction1: [1, 0],
+              direction2: [0, 1],
+              occupiedPositions: [[3, 2]],
+            },
+          ],
+        },
+      ],
+    };
+    const issues = validateGenerationConstraints(data, {
+      ...formK1Only,
+      width: 12,
+      height: 12,
+      allowedKinds: [1, 4, 12],
+    });
+    expect(issues.some((i) => i.id === "AI-CORNER-OVERLAP")).toBe(false);
+  });
+
   it("rejects corner with no arrow reflecting through it", () => {
     const data = {
       width: 12,

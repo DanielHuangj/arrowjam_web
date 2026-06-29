@@ -66,7 +66,7 @@ export class InputHandler {
     if (!state) return;
 
     state.recoverAnimationState();
-    if (state.phase !== "playing") return;
+    if (!state.canAcceptLaunchClick()) return;
 
     const cell = this.cellAt(e.clientX, e.clientY);
     if (!cell) return;

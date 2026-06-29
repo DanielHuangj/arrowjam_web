@@ -247,6 +247,85 @@ describe("shared validator", () => {
     expect(hasBlockingErrors(issues)).toBe(false);
   });
 
+  it("allows zone corner sharing cell with top-level arrow", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      name: "zone corner overlay",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 1,
+          instanceId: 1,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+        },
+        {
+          kind: 12,
+          instanceId: 10,
+          layer: 1,
+          occupiedPositions: [
+            [2, 2],
+            [3, 2],
+          ],
+          items: [
+            {
+              kind: 4,
+              instanceId: 20,
+              layer: 2,
+              direction1: [1, 0],
+              direction2: [0, 1],
+              occupiedPositions: [[3, 2]],
+            },
+          ],
+        },
+      ],
+    };
+    const issues = validateLevelData(data);
+    expect(issues.some((i) => i.id === "V-CORNER-01")).toBe(false);
+    expect(hasBlockingErrors(issues)).toBe(false);
+  });
+
+  it("rejects corner overlapping arrow in same scope", () => {
+    const data: LevelData = {
+      width: 12,
+      height: 12,
+      name: "same scope corner overlap",
+      durationInSec: 60,
+      difficulty: 1,
+      itemModels: [
+        {
+          kind: 4,
+          instanceId: 1,
+          layer: 2,
+          direction1: [1, 0],
+          direction2: [0, 1],
+          occupiedPositions: [[6, 5]],
+        },
+        {
+          kind: 1,
+          instanceId: 2,
+          layer: 2,
+          direction: 3,
+          colorId: 1,
+          occupiedPositions: [
+            [5, 5],
+            [6, 5],
+            [7, 5],
+          ],
+        },
+      ],
+    };
+    const issues = validateLevelData(data);
+    expect(issues.some((i) => i.id === "V-CORNER-01")).toBe(true);
+  });
+
   it("level 30 has no blocking errors", () => {
     const issues = validateLevelData(loadJsonLevel(30));
     expect(hasBlockingErrors(issues)).toBe(false);

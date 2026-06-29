@@ -239,6 +239,110 @@
       "p2Playable": false,
       "p3Playable": false,
       "p4Playable": false
+    },
+    {
+      "id": 9018,
+      "file": "level-9018.json",
+      "name": "Level 9018",
+      "difficulty": 1,
+      "width": 32,
+      "height": 32,
+      "durationInSec": 150,
+      "kinds": [
+        1,
+        2,
+        3,
+        7,
+        8
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9019,
+      "file": "level-9019.json",
+      "name": "Level 9019",
+      "difficulty": 1,
+      "width": 24,
+      "height": 32,
+      "durationInSec": 180,
+      "kinds": [
+        1,
+        2,
+        3,
+        8,
+        12
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9020,
+      "file": "level-9020.json",
+      "name": "Level 9020",
+      "difficulty": 1,
+      "width": 46,
+      "height": 35,
+      "durationInSec": 210,
+      "kinds": [
+        1,
+        3,
+        4
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": true,
+      "p4Playable": false
+    },
+    {
+      "id": 9021,
+      "file": "level-9021.json",
+      "name": "Level 9021",
+      "difficulty": 1,
+      "width": 20,
+      "height": 32,
+      "durationInSec": 100,
+      "kinds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
+    },
+    {
+      "id": 9022,
+      "file": "level-9022.json",
+      "name": "Level 9022",
+      "difficulty": 1,
+      "width": 30,
+      "height": 40,
+      "durationInSec": 170,
+      "kinds": [
+        1,
+        2,
+        3,
+        4,
+        7,
+        8,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
     }
   ],
   "levels": [

@@ -192,6 +192,63 @@ function arrowScopes(items: RawItem[]): RawItem[][] {
   return scopes;
 }
 
+/** 顶层 itemModels + 各子区域 items（与折线箭同作用域划分） */
+function placementScopes(items: RawItem[]): RawItem[][] {
+  const scopes: RawItem[][] = [];
+  const top = items.filter((i) => i.kind !== 12);
+  if (top.length > 0) scopes.push(top);
+  for (const item of items) {
+    if (item.kind === 12 && item.items?.length) {
+      scopes.push(item.items);
+    }
+  }
+  return scopes;
+}
+
+function findPipeArrowCellOverlapsInScope(scope: RawItem[]): PipeArrowOverlap[] {
+  const arrowCellToId = new Map<string, number>();
+  for (const item of scope) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    for (const p of item.occupiedPositions) {
+      arrowCellToId.set(vecKey(p), item.instanceId);
+    }
+  }
+  const overlaps: PipeArrowOverlap[] = [];
+  for (const item of scope) {
+    if (item.kind !== 3) continue;
+    for (const p of item.occupiedPositions) {
+      const key = vecKey(p);
+      const arrowId = arrowCellToId.get(key);
+      if (arrowId != null) {
+        overlaps.push({ cell: key, pipeId: item.instanceId, arrowId });
+      }
+    }
+  }
+  return overlaps;
+}
+
+function findCornerArrowCellOverlapsInScope(scope: RawItem[]): CornerArrowOverlap[] {
+  const arrowCellToId = new Map<string, number>();
+  for (const item of scope) {
+    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
+    for (const p of item.occupiedPositions) {
+      arrowCellToId.set(vecKey(p), item.instanceId);
+    }
+  }
+  const overlaps: CornerArrowOverlap[] = [];
+  for (const item of scope) {
+    if (item.kind !== 4) continue;
+    for (const p of item.occupiedPositions) {
+      const key = vecKey(p);
+      const arrowId = arrowCellToId.get(key);
+      if (arrowId != null) {
+        overlaps.push({ cell: key, cornerId: item.instanceId, arrowId });
+      }
+    }
+  }
+  return overlaps;
+}
+
 export function findArrowCellOverlaps(items: RawItem[]): ArrowCellOverlap[] {
   const overlaps: ArrowCellOverlap[] = [];
   for (const scope of arrowScopes(items)) {
@@ -237,25 +294,11 @@ export interface PipeArrowOverlap {
   arrowId: number;
 }
 
-/** kind3 管身格与 kind1/2 箭身格不可重叠 */
+/** kind3 管身格与 kind1/2 箭身格不可重叠（顶层与各子区域分别检测） */
 export function findPipeArrowCellOverlaps(items: RawItem[]): PipeArrowOverlap[] {
-  const arrowCellToId = new Map<string, number>();
-  for (const item of collectAllItems(items)) {
-    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
-    for (const p of item.occupiedPositions) {
-      arrowCellToId.set(vecKey(p), item.instanceId);
-    }
-  }
   const overlaps: PipeArrowOverlap[] = [];
-  for (const item of collectAllItems(items)) {
-    if (item.kind !== 3) continue;
-    for (const p of item.occupiedPositions) {
-      const key = vecKey(p);
-      const arrowId = arrowCellToId.get(key);
-      if (arrowId != null) {
-        overlaps.push({ cell: key, pipeId: item.instanceId, arrowId });
-      }
-    }
+  for (const scope of placementScopes(items)) {
+    overlaps.push(...findPipeArrowCellOverlapsInScope(scope));
   }
   return overlaps;
 }
@@ -266,25 +309,11 @@ export interface CornerArrowOverlap {
   arrowId: number;
 }
 
-/** kind4 反射角格与 kind1/2 箭身格不可重叠 */
+/** kind4 反射角格与 kind1/2 箭身格不可重叠（顶层与各子区域分别检测） */
 export function findCornerArrowCellOverlaps(items: RawItem[]): CornerArrowOverlap[] {
-  const arrowCellToId = new Map<string, number>();
-  for (const item of collectAllItems(items)) {
-    if (!ARROW_BODY_KINDS.has(item.kind)) continue;
-    for (const p of item.occupiedPositions) {
-      arrowCellToId.set(vecKey(p), item.instanceId);
-    }
-  }
   const overlaps: CornerArrowOverlap[] = [];
-  for (const item of collectAllItems(items)) {
-    if (item.kind !== 4) continue;
-    for (const p of item.occupiedPositions) {
-      const key = vecKey(p);
-      const arrowId = arrowCellToId.get(key);
-      if (arrowId != null) {
-        overlaps.push({ cell: key, cornerId: item.instanceId, arrowId });
-      }
-    }
+  for (const scope of placementScopes(items)) {
+    overlaps.push(...findCornerArrowCellOverlapsInScope(scope));
   }
   return overlaps;
 }

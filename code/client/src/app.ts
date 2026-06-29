@@ -219,9 +219,10 @@ export class App {
       arrows.filter((a) => !hidden.has(a.instanceId));
 
     const vanishProgressById = new Map<number, number>();
-    if (this.state.animation?.mode === "vanish") {
-      const progress = this.state.getVanishAnimProgress();
-      for (const id of this.state.animation.memberIds) {
+    for (const anim of this.state.animations) {
+      if (anim.mode !== "vanish") continue;
+      const progress = this.state.getVanishAnimProgress(anim);
+      for (const id of anim.memberIds) {
         vanishProgressById.set(id, progress);
       }
     }

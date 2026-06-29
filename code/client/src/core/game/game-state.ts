@@ -43,6 +43,8 @@ import {
 
 export const VANISH_ANIM_STEPS = 12;
 export const RANDOM_VANISH_COUNT = 3;
+/** 前一次发射后，允许再次点击发射的最短间隔（毫秒） */
+export const LAUNCH_CLICK_COOLDOWN_MS = 200;
 
 function shuffle<T>(items: T[]): T[] {
   const arr = [...items];
@@ -98,9 +100,69 @@ export class GameState {
   private keyCells: Set<string>;
   private clearedTraceCells = new Set<string>();
   mistakeCount = 0;
-  animation: LaunchAnimation | null = null;
+  animations: LaunchAnimation[] = [];
+  private lastLaunchTimeMs = 0;
   lostReason: LostReason | null = null;
   private bombExplosion: { cells: Vec2[]; elapsed: number } | null = null;
+
+  /** 兼容单动画测试与快照：返回首个活跃动画 */
+  get animation(): LaunchAnimation | null {
+    return this.animations[0] ?? null;
+  }
+
+  getAnimatingMemberIds(): Set<number> {
+    const ids = new Set<number>();
+    for (const anim of this.animations) {
+      for (const id of anim.memberIds) ids.add(id);
+    }
+    return ids;
+  }
+
+  /** 正在飞出（exit 动画）的箭：不阻挡后续箭沿同路径发射 */
+  getExitingMemberIds(): Set<number> {
+    const ids = new Set<number>();
+    for (const anim of this.animations) {
+      if (anim.mode !== "exit") continue;
+      for (const id of anim.memberIds) ids.add(id);
+    }
+    return ids;
+  }
+
+  getBlockingArrowsForPathCheck(): ArrowItem[] {
+    const exiting = this.getExitingMemberIds();
+    return this.getBlockingArrows().filter((a) => !exiting.has(a.instanceId));
+  }
+
+  hasVanishAnimation(): boolean {
+    return this.animations.some((a) => a.mode === "vanish");
+  }
+
+  canAcceptLaunchClick(now = performance.now()): boolean {
+    if (this.phase === "won" || this.phase === "lost" || this.phase === "exploding") {
+      return false;
+    }
+    if (this.hasVanishAnimation()) return false;
+    const launchAnims = this.animations.filter((a) => a.mode !== "vanish");
+    if (launchAnims.length === 0) return true;
+    return now - this.lastLaunchTimeMs >= LAUNCH_CLICK_COOLDOWN_MS;
+  }
+
+  private syncPhaseAfterAnimations(): void {
+    if (this.animations.length === 0) {
+      if (this.phase === "animating") {
+        this.phase = this.arrows.length === 0 ? "won" : "playing";
+      }
+      return;
+    }
+    if (this.phase === "playing" || this.phase === "animating") {
+      this.phase = "animating";
+    }
+  }
+
+  private removeAnimation(anim: LaunchAnimation): void {
+    this.animations = this.animations.filter((a) => a !== anim);
+    this.syncPhaseAfterAnimations();
+  }
 
   constructor(level: GameLevel) {
     this.level = level;
@@ -287,11 +349,11 @@ export class GameState {
 
   /** 正在管道内穿行的箭头（渲染时隐藏，位于管道层下） */
   getPipeHiddenArrowIds(): Set<number> {
-    const anim = this.animation;
-    if (!anim) return new Set();
     const hidden = new Set<number>();
-    for (const id of anim.memberIds) {
-      if (anim.pipeTransitById[id]) hidden.add(id);
+    for (const anim of this.animations) {
+      for (const id of anim.memberIds) {
+        if (anim.pipeTransitById[id]) hidden.add(id);
+      }
     }
     return hidden;
   }
@@ -361,8 +423,16 @@ export class GameState {
     this.phase = "exploding";
   }
 
-  tryLaunch(instanceId: number): boolean {
-    if (this.phase !== "playing") return false;
+  tryLaunch(instanceId: number, now = performance.now()): boolean {
+    if (!this.canAcceptLaunchClick(now)) return false;
+    if (this.phase === "won" || this.phase === "lost" || this.phase === "exploding") {
+      return false;
+    }
+
+    const animatingIds = this.getAnimatingMemberIds();
+    const memberIds = this.bundleManager.getMemberIds(instanceId);
+    if (memberIds.some((id) => animatingIds.has(id))) return false;
+
     const arrow = this.arrows.find((a) => a.instanceId === instanceId);
     if (
       !arrow ||
@@ -371,9 +441,8 @@ export class GameState {
       return false;
     }
 
-    const memberIds = this.bundleManager.getMemberIds(instanceId);
     const activeArrows = this.getActiveArrows();
-    const blockingArrows = this.getBlockingArrows();
+    const blockingArrows = this.getBlockingArrowsForPathCheck();
     const activeCorners = this.getActiveCorners();
     const group = this.bundleManager.getGroupForArrow(instanceId);
     const stripIds = group?.stripIds ?? [];
@@ -400,8 +469,7 @@ export class GameState {
         );
     if (!canExit) this.mistakeCount++;
 
-    this.phase = "animating";
-    this.animation = {
+    this.animations.push({
       instanceId,
       memberIds,
       stripIds,
@@ -418,34 +486,39 @@ export class GameState {
       flightStepCount: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
-    };
+    });
+    this.lastLaunchTimeMs = now;
+    this.phase = "animating";
     return true;
   }
 
   /** 修复 animating 阶段卡死（animation 丢失或成员已清空） */
   recoverAnimationState(): void {
-    if (this.phase === "animating" && !this.animation) {
+    if (this.phase === "animating" && this.animations.length === 0) {
       this.phase = "playing";
       this.rebuildCellMap();
       return;
     }
-    if (this.phase !== "animating" || !this.animation) return;
+    if (this.animations.length === 0) return;
 
-    const anim = this.animation;
-    const remaining = anim.memberIds.filter((id) =>
-      this.arrows.some((a) => a.instanceId === id),
-    );
-    if (remaining.length === 0) {
-      if (anim.mode === "exit") {
-        this.completeLaunchAnimation();
-      } else {
-        this.finishAnimationOrPlaying();
+    for (const anim of [...this.animations]) {
+      const remaining = anim.memberIds.filter((id) =>
+        this.arrows.some((a) => a.instanceId === id),
+      );
+      if (remaining.length === 0) {
+        if (anim.mode === "exit") {
+          this.completeLaunchAnimation(anim);
+        } else if (anim.mode !== "vanish") {
+          this.finishAnimationOrPlaying(anim);
+        } else {
+          this.removeAnimation(anim);
+        }
       }
     }
   }
 
-  private maxAnimationSteps(): number {
-    if (this.animation?.mode === "vanish") return VANISH_ANIM_STEPS;
+  private maxAnimationSteps(anim: LaunchAnimation): number {
+    if (anim.mode === "vanish") return VANISH_ANIM_STEPS;
     const len = Math.max(
       ...this.arrows.map((a) => a.occupiedPositions.length),
       1,
@@ -464,14 +537,7 @@ export class GameState {
     });
   }
 
-  private completeLaunchAnimation(): void {
-    const anim = this.animation;
-    if (!anim) {
-      this.phase = "playing";
-      this.rebuildCellMap();
-      return;
-    }
-
+  private completeLaunchAnimation(anim: LaunchAnimation): void {
     const removeIds = new Set(anim.memberIds);
     const group = this.bundleManager.getGroupForArrow(anim.instanceId);
     const removedArrows = this.arrows.filter((a) => removeIds.has(a.instanceId));
@@ -496,10 +562,12 @@ export class GameState {
 
     this.applyPipeCrossingDamage(anim);
     this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
-    this.finishAnimation();
+    this.removeAnimation(anim);
     this.rebuildCellMap();
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
-    this.phase = this.arrows.length === 0 ? "won" : "playing";
+    if (this.animations.length === 0) {
+      this.phase = this.arrows.length === 0 ? "won" : "playing";
+    }
   }
 
   private restoreBumpDirections(anim: LaunchAnimation | null): void {
@@ -514,75 +582,82 @@ export class GameState {
     }
   }
 
-  private finishAnimationOrPlaying(): void {
-    const anim = this.animation;
-    if (anim?.stripIds.length) {
+  private finishAnimationOrPlaying(anim: LaunchAnimation): void {
+    if (anim.stripIds.length) {
       this.bundleManager.resetGroupStrips(anim.stripIds, this.bundles);
     }
     this.restoreBumpDirections(anim);
-    this.finishAnimation();
-    this.phase = "playing";
+    this.removeAnimation(anim);
+    if (this.animations.length === 0) {
+      this.phase = "playing";
+    }
     this.rebuildCellMap();
   }
 
   advanceAnimation(): boolean {
-    if (this.phase === "animating" && !this.animation) {
+    if (this.phase === "animating" && this.animations.length === 0) {
       this.phase = "playing";
       this.rebuildCellMap();
       return true;
     }
-    if (!this.animation || this.phase !== "animating") return true;
+    if (this.animations.length === 0) return true;
+    if (this.phase !== "animating" && this.phase !== "playing") return true;
 
-    this.animation.stepCount += 1;
-    if (this.animation.stepCount > this.maxAnimationSteps()) {
-      if (this.animation.mode === "exit" || this.animation.mode === "vanish") {
-        this.completeLaunchAnimation();
-      } else {
-        this.finishAnimationOrPlaying();
+    for (const anim of [...this.animations]) {
+      if (!this.animations.includes(anim)) continue;
+
+      anim.stepCount += 1;
+      if (anim.stepCount > this.maxAnimationSteps(anim)) {
+        if (anim.mode === "exit" || anim.mode === "vanish") {
+          this.completeLaunchAnimation(anim);
+        } else {
+          this.finishAnimationOrPlaying(anim);
+        }
+        continue;
       }
-      return true;
-    }
 
-    if (this.animation.mode === "vanish") {
-      return true;
-    }
+      if (anim.mode === "vanish") continue;
 
-    if (this.animation.mode === "exit") {
-      return this.advanceExitAnimation();
+      if (anim.mode === "exit") {
+        this.advanceExitAnimation(anim);
+      } else {
+        this.advanceBumpAnimation(anim);
+      }
     }
-    return this.advanceBumpAnimation();
+    return false;
   }
 
   getAnimStepIntervalMs(): number {
-    const anim = this.animation;
-    if (!anim) return computeAnimStepIntervalMs(0, "exit", false);
-    return computeAnimStepIntervalMs(
-      anim.flightStepCount,
-      anim.mode,
-      anim.reversing,
+    const launchAnims = this.animations.filter((a) => a.mode !== "vanish");
+    if (launchAnims.length === 0) {
+      if (this.animations.some((a) => a.mode === "vanish")) {
+        return computeAnimStepIntervalMs(0, "vanish", false);
+      }
+      return computeAnimStepIntervalMs(0, "exit", false);
+    }
+    return Math.min(
+      ...launchAnims.map((anim) =>
+        computeAnimStepIntervalMs(anim.flightStepCount, anim.mode, anim.reversing),
+      ),
     );
   }
 
-  private recordFlightStep(): void {
-    const anim = this.animation;
-    if (!anim) return;
+  private recordFlightStep(anim: LaunchAnimation): void {
     if (anim.mode === "exit" || (anim.mode === "bump" && !anim.reversing)) {
       anim.flightStepCount += 1;
     }
   }
 
-  private getAnimMembers(): ArrowItem[] {
-    const ids = this.animation!.memberIds;
-    return ids
+  private getAnimMembers(anim: LaunchAnimation): ArrowItem[] {
+    return anim.memberIds
       .map((id) => this.arrows.find((a) => a.instanceId === id))
       .filter((a): a is ArrowItem => a != null);
   }
 
-  private advanceExitAnimation(): boolean {
-    const anim = this.animation!;
-    const members = this.getAnimMembers();
+  private advanceExitAnimation(anim: LaunchAnimation): boolean {
+    const members = this.getAnimMembers(anim);
     if (members.length === 0 || this.allMembersOffBoard(anim.memberIds)) {
-      this.completeLaunchAnimation();
+      this.completeLaunchAnimation(anim);
       return true;
     }
 
@@ -610,7 +685,7 @@ export class GameState {
         activePipes,
         curtainCells,
         wallCells,
-        this.getBlockingArrows(),
+        this.getBlockingArrowsForPathCheck(),
         memberSet,
       );
       if (!result.blocked) stepped.push(...result.arrows);
@@ -656,27 +731,26 @@ export class GameState {
       (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
         this.allMembersOffBoard(anim.memberIds))
     ) {
-      this.recordFlightStep();
-      this.completeLaunchAnimation();
+      this.recordFlightStep(anim);
+      this.completeLaunchAnimation(anim);
       return true;
     }
 
     for (const arrow of stepped) {
       this.cellMap.addArrow(arrow);
     }
-    if (stepped.length > 0) this.recordFlightStep();
+    if (stepped.length > 0) this.recordFlightStep(anim);
     return false;
   }
 
-  private advanceBumpAnimation(): boolean {
-    const anim = this.animation!;
+  private advanceBumpAnimation(anim: LaunchAnimation): boolean {
     const memberSet = new Set(anim.memberIds);
-    const members = this.getAnimMembers();
+    const members = this.getAnimMembers(anim);
     if (members.length === 0 || this.allMembersOffBoard(anim.memberIds)) {
       if (this.allMembersOffBoard(anim.memberIds)) {
-        this.completeLaunchAnimation();
+        this.completeLaunchAnimation(anim);
       } else {
-        this.finishAnimationOrPlaying();
+        this.finishAnimationOrPlaying(anim);
       }
       return true;
     }
@@ -726,8 +800,7 @@ export class GameState {
       if (allDone) {
         this.bundleManager.resetGroupStrips(anim.stripIds, this.bundles);
         this.restoreBumpDirections(anim);
-        this.finishAnimation();
-        this.phase = "playing";
+        this.finishAnimationOrPlaying(anim);
         return true;
       }
       return false;
@@ -773,7 +846,7 @@ export class GameState {
         activePipes,
         curtainCells,
         wallCells,
-        this.getBlockingArrows(),
+        this.getBlockingArrowsForPathCheck(),
         memberSet,
       );
       if (result.blocked) {
@@ -834,8 +907,8 @@ export class GameState {
       (stepped.every((a) => arrowFullyOffBoard(a, this.level)) ||
         this.allMembersOffBoard(anim.memberIds))
     ) {
-      this.recordFlightStep();
-      this.completeLaunchAnimation();
+      this.recordFlightStep(anim);
+      this.completeLaunchAnimation(anim);
       return true;
     }
 
@@ -857,13 +930,13 @@ export class GameState {
           ) {
             return true;
           }
-          return this.isBundleHeadOnBlocker(arrow, memberSet);
+          return this.isBundleHeadOnBlocker(arrow, memberSet, anim);
         }));
     if (blocked) {
       this.clearPipeAnimState(anim);
       anim.reversing = true;
     } else if (stepped.length > 0) {
-      this.recordFlightStep();
+      this.recordFlightStep(anim);
     }
     return false;
   }
@@ -871,23 +944,27 @@ export class GameState {
   private isBundleHeadOnBlocker(
     arrow: ArrowItem,
     memberIds: Set<number>,
+    anim: LaunchAnimation,
   ): boolean {
     const wallCells = this.getWallBlockerCells();
     const head = arrow.occupiedPositions.at(-1);
     if (!head) return false;
     const dir =
-      this.animation?.currentDirectionById[arrow.instanceId] ?? arrow.direction;
+      anim.currentDirectionById[arrow.instanceId] ?? arrow.direction;
     if (wallCells.size > 0 && wouldStepIntoWall(head, dir, wallCells)) {
       return true;
     }
-    if (this.cellMap.isBlockedExcept(head, memberIds)) return true;
+    const passThrough = new Set(memberIds);
+    for (const id of this.getExitingMemberIds()) passThrough.add(id);
+    if (this.cellMap.isBlockedExcept(head, passThrough)) return true;
     if (this.getCurtainCells().has(vecKey(head))) return true;
     if (isHeadBlockedByPipe(head, dir, this.getActivePipes())) return true;
     return getCornerAt(head, this.getActiveCorners()) != null;
   }
 
   private finishAnimation(): void {
-    this.animation = null;
+    this.animations = [];
+    this.syncPhaseAfterAnimations();
   }
 
   getTopLevelArrows(): ArrowItem[] {
@@ -973,8 +1050,11 @@ export class GameState {
 
   getLaunchableIds(): Set<number> {
     const ids = new Set<number>();
-    const activeArrows = this.getActiveArrows();
-    const blockingArrows = this.getBlockingArrows();
+    const animating = this.getAnimatingMemberIds();
+    const activeArrows = this.getActiveArrows().filter(
+      (a) => !animating.has(a.instanceId),
+    );
+    const blockingArrows = this.getBlockingArrowsForPathCheck();
     const activeCorners = this.getActiveCorners();
     const checkedGroups = new Set<number>();
 
@@ -1017,7 +1097,7 @@ export class GameState {
   /** 自动消除：选取一条当前可立即出界的箭并发射（与手动点击等效） */
   tryAutoLaunch(): boolean {
     this.recoverAnimationState();
-    if (this.phase !== "playing") return false;
+    if (!this.canAcceptLaunchClick()) return false;
 
     const launchable = [...this.getLaunchableIds()];
     if (launchable.length === 0) return false;
@@ -1083,7 +1163,7 @@ export class GameState {
   private startVanishAnimation(memberIds: number[]): boolean {
     if (memberIds.length === 0) return false;
     this.phase = "animating";
-    this.animation = {
+    this.animations.push({
       instanceId: memberIds[0]!,
       memberIds,
       stripIds: [],
@@ -1099,13 +1179,15 @@ export class GameState {
       flightStepCount: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
-    };
+    });
     return true;
   }
 
-  getVanishAnimProgress(): number {
-    if (this.animation?.mode !== "vanish") return 0;
-    return Math.min(1, this.animation.stepCount / VANISH_ANIM_STEPS);
+  getVanishAnimProgress(anim?: LaunchAnimation): number {
+    const target =
+      anim ?? this.animations.find((a) => a.mode === "vanish") ?? null;
+    if (!target || target.mode !== "vanish") return 0;
+    return Math.min(1, target.stepCount / VANISH_ANIM_STEPS);
   }
 
   /** 随机消除最多 3 条可见、非捆绑箭（无视阻挡） */
@@ -1144,9 +1226,11 @@ export class GameState {
 
   findOperableArrowAtCell(pos: Vec2): ArrowItem | null {
     if (this.curtainManager.isCellCovered(pos)) return null;
+    const animating = this.getAnimatingMemberIds();
     const active = this.getActiveArrows();
     for (let i = active.length - 1; i >= 0; i--) {
       const arrow = active[i]!;
+      if (animating.has(arrow.instanceId)) continue;
       for (const p of arrow.occupiedPositions) {
         if (p[0] === pos[0] && p[1] === pos[1]) return arrow;
       }

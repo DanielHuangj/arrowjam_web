@@ -93,6 +93,8 @@ export interface LaunchAnimation {
   stepCount: number;
   /** 已完成的前向飞行格数，用于加速计时 */
   flightStepCount: number;
+  /** 本箭动画步进时间累积（毫秒），用于多箭并发时独立加速 */
+  stepAccumMs: number;
   pipeTransitById: Record<number, PipeTransitState | null>;
   pipesCrossedById: Record<number, number[]>;
 }

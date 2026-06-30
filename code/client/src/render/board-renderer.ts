@@ -162,6 +162,15 @@ export class BoardRenderer {
       this.drawBundle(strip);
     }
 
+    // 顶层箭先于管道绘制，穿行管身格时由管道遮挡（避免穿模）
+    for (const arrow of topArrows) {
+      this.drawArrow(
+        arrow,
+        launchableIds.has(arrow.instanceId),
+        isGame,
+        options.vanishProgressById?.get(arrow.instanceId) ?? 0,
+      );
+    }
     for (const pipe of topPipes) {
       this.drawPipe(pipe);
     }
@@ -171,14 +180,6 @@ export class BoardRenderer {
       }
     }
 
-    for (const arrow of topArrows) {
-      this.drawArrow(
-        arrow,
-        launchableIds.has(arrow.instanceId),
-        isGame,
-        options.vanishProgressById?.get(arrow.instanceId) ?? 0,
-      );
-    }
     if (options.frozenOverlays) {
       for (const overlay of options.frozenOverlays) {
         drawFrozenOverlay(this.ctx, overlay);

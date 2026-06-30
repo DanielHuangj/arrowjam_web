@@ -211,7 +211,7 @@ export class GameState {
     return this.arrows.filter(
       (a) =>
         !this.curtainManager.isArrowHidden(a) &&
-        this.zoneManager.isArrowActive(a, this.arrows, this.corners),
+        this.isArrowZoneActive(a),
     );
   }
 
@@ -224,7 +224,7 @@ export class GameState {
 
   private isArrowCoveredForMechanics(arrow: ArrowItem): boolean {
     if (this.curtainManager.isArrowHidden(arrow)) return true;
-    if (!this.zoneManager.isArrowActive(arrow, this.arrows, this.corners)) {
+    if (!this.isArrowZoneActive(arrow)) {
       return true;
     }
     if (this.frozenManager.isHostFrozen(arrow.instanceId)) return true;
@@ -241,6 +241,46 @@ export class GameState {
 
   getWallBlockerCells(): Set<string> {
     return this.wallManager.getBlockerCells();
+  }
+
+  /** 发射动画中覆盖箭的发射前原位，用于子区域揭示判定 */
+  private getZoneOverlayOriginalPositions(): Map<number, Vec2[]> {
+    const map = new Map<number, Vec2[]>();
+    for (const anim of this.animations) {
+      for (const id of anim.memberIds) {
+        const orig = anim.originalPositionsById[id];
+        if (orig) map.set(id, orig);
+      }
+    }
+    return map;
+  }
+
+  private isZoneContentRevealed(zoneId: number): boolean {
+    return this.zoneManager.isZoneContentRevealed(
+      zoneId,
+      this.arrows,
+      this.corners,
+      new Map(),
+      this.getZoneOverlayOriginalPositions(),
+    );
+  }
+
+  private isArrowZoneActive(arrow: ArrowItem): boolean {
+    return this.zoneManager.isArrowActive(
+      arrow,
+      this.arrows,
+      this.corners,
+      this.getZoneOverlayOriginalPositions(),
+    );
+  }
+
+  private isCornerZoneActive(corner: CornerItem): boolean {
+    return this.zoneManager.isCornerActive(
+      corner,
+      this.arrows,
+      this.corners,
+      this.getZoneOverlayOriginalPositions(),
+    );
   }
 
   private onArrowEliminationBatch(
@@ -268,7 +308,7 @@ export class GameState {
 
   getActiveCorners(): CornerItem[] {
     return this.corners.filter((c) =>
-      this.zoneManager.isCornerActive(c, this.arrows, this.corners),
+      this.isCornerZoneActive(c),
     );
   }
 
@@ -276,19 +316,7 @@ export class GameState {
     return this.bundles.filter(
       (b) =>
         !this.curtainManager.arePositionsHidden(b.occupiedPositions) &&
-        this.zoneManager.isArrowActive(
-          {
-            kind: 1,
-            instanceId: -1,
-            layer: 2,
-            zoneId: b.zoneId,
-            occupiedPositions: b.occupiedPositions,
-            direction: 1,
-            colorId: 1,
-          },
-          this.arrows,
-          this.corners,
-        ),
+        (b.zoneId == null || this.isZoneContentRevealed(b.zoneId)),
     );
   }
 
@@ -296,19 +324,7 @@ export class GameState {
     return this.pipes.filter(
       (p) =>
         p.health > 0 &&
-        this.zoneManager.isArrowActive(
-          {
-            kind: 1,
-            instanceId: -1,
-            layer: 2,
-            zoneId: p.zoneId,
-            occupiedPositions: p.occupiedPositions,
-            direction: 1,
-            colorId: 1,
-          },
-          this.arrows,
-          this.corners,
-        ),
+        (p.zoneId == null || this.isZoneContentRevealed(p.zoneId)),
     );
   }
 
@@ -345,17 +361,6 @@ export class GameState {
       anim.pipeTransitById[id] = null;
       anim.pipesCrossedById[id] = [];
     }
-  }
-
-  /** 正在管道内穿行的箭头（渲染时隐藏，位于管道层下） */
-  getPipeHiddenArrowIds(): Set<number> {
-    const hidden = new Set<number>();
-    for (const anim of this.animations) {
-      for (const id of anim.memberIds) {
-        if (anim.pipeTransitById[id]) hidden.add(id);
-      }
-    }
-    return hidden;
   }
 
   rebuildCellMap(): void {
@@ -436,7 +441,7 @@ export class GameState {
     const arrow = this.arrows.find((a) => a.instanceId === instanceId);
     if (
       !arrow ||
-      !this.zoneManager.isArrowActive(arrow, this.arrows, this.corners)
+      !this.isArrowZoneActive(arrow)
     ) {
       return false;
     }
@@ -445,7 +450,10 @@ export class GameState {
     const blockingArrows = this.getBlockingArrowsForPathCheck();
     const activeCorners = this.getActiveCorners();
     const group = this.bundleManager.getGroupForArrow(instanceId);
-    const stripIds = group?.stripIds ?? [];
+    const stripIds = this.bundleManager.getStripIdsForArrowIds(
+      memberIds,
+      this.bundles,
+    );
 
     const canExit = group
       ? this.bundleManager.canLaunchGroup(
@@ -484,6 +492,7 @@ export class GameState {
       currentDirectionById: snapshotDirections(this.arrows, memberIds),
       stepCount: 0,
       flightStepCount: 0,
+      stepAccumMs: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
     });
@@ -542,6 +551,9 @@ export class GameState {
     const group = this.bundleManager.getGroupForArrow(anim.instanceId);
     const removedArrows = this.arrows.filter((a) => removeIds.has(a.instanceId));
 
+    // 相邻消除须在钥匙扣幕布 health 之前结算，幕布下物件不受本次飞出消除影响
+    this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
+
     this.applyKeyRewards(removedArrows, anim);
     for (const id of anim.memberIds) {
       const orig = anim.originalPositionsById[id];
@@ -561,7 +573,6 @@ export class GameState {
     }
 
     this.applyPipeCrossingDamage(anim);
-    this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
     this.removeAnimation(anim);
     this.rebuildCellMap();
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
@@ -594,6 +605,26 @@ export class GameState {
     this.rebuildCellMap();
   }
 
+  advanceOneAnimation(anim: LaunchAnimation): void {
+    anim.stepCount += 1;
+    if (anim.stepCount > this.maxAnimationSteps(anim)) {
+      if (anim.mode === "exit" || anim.mode === "vanish") {
+        this.completeLaunchAnimation(anim);
+      } else {
+        this.finishAnimationOrPlaying(anim);
+      }
+      return;
+    }
+
+    if (anim.mode === "vanish") return;
+
+    if (anim.mode === "exit") {
+      this.advanceExitAnimation(anim);
+    } else {
+      this.advanceBumpAnimation(anim);
+    }
+  }
+
   advanceAnimation(): boolean {
     if (this.phase === "animating" && this.animations.length === 0) {
       this.phase = "playing";
@@ -605,28 +636,12 @@ export class GameState {
 
     for (const anim of [...this.animations]) {
       if (!this.animations.includes(anim)) continue;
-
-      anim.stepCount += 1;
-      if (anim.stepCount > this.maxAnimationSteps(anim)) {
-        if (anim.mode === "exit" || anim.mode === "vanish") {
-          this.completeLaunchAnimation(anim);
-        } else {
-          this.finishAnimationOrPlaying(anim);
-        }
-        continue;
-      }
-
-      if (anim.mode === "vanish") continue;
-
-      if (anim.mode === "exit") {
-        this.advanceExitAnimation(anim);
-      } else {
-        this.advanceBumpAnimation(anim);
-      }
+      this.advanceOneAnimation(anim);
     }
     return false;
   }
 
+  /** @deprecated 多箭并发请用各 anim 的 stepAccumMs；保留供单步测试 */
   getAnimStepIntervalMs(): number {
     const launchAnims = this.animations.filter((a) => a.mode !== "vanish");
     if (launchAnims.length === 0) {
@@ -652,6 +667,16 @@ export class GameState {
     return anim.memberIds
       .map((id) => this.arrows.find((a) => a.instanceId === id))
       .filter((a): a is ArrowItem => a != null);
+  }
+
+  private syncAnimationStrips(anim: LaunchAnimation, stepped: boolean): void {
+    if (!stepped) return;
+    const stripIds =
+      anim.stripIds.length > 0
+        ? anim.stripIds
+        : this.bundleManager.getStripIdsForArrowIds(anim.memberIds, this.bundles);
+    if (stripIds.length === 0) return;
+    this.bundleManager.syncGroupStrips(stripIds, this.bundles, this.arrows, true);
   }
 
   private advanceExitAnimation(anim: LaunchAnimation): boolean {
@@ -717,14 +742,7 @@ export class GameState {
       if (idx !== -1) this.arrows[idx] = arrow;
     }
 
-    if (anim.stripIds.length > 0) {
-      this.bundleManager.syncGroupStrips(
-        anim.stripIds,
-        this.bundles,
-        this.arrows,
-        true,
-      );
-    }
+    this.syncAnimationStrips(anim, stepped.length > 0);
 
     if (
       stepped.length > 0 &&
@@ -893,14 +911,7 @@ export class GameState {
       }
     }
 
-    if (anim.stripIds.length > 0) {
-      this.bundleManager.syncGroupStrips(
-        anim.stripIds,
-        this.bundles,
-        this.arrows,
-        true,
-      );
-    }
+    this.syncAnimationStrips(anim, stepped.length > 0);
 
     if (
       stepped.length > 0 &&
@@ -975,11 +986,7 @@ export class GameState {
     return this.arrows.filter(
       (a) =>
         a.zoneId != null &&
-        this.zoneManager.isZoneContentRevealed(
-          a.zoneId,
-          this.arrows,
-          this.corners,
-        ),
+        this.isZoneContentRevealed(a.zoneId),
     );
   }
 
@@ -999,11 +1006,7 @@ export class GameState {
     return this.corners.filter(
       (c) =>
         c.zoneId != null &&
-        this.zoneManager.isZoneContentRevealed(
-          c.zoneId,
-          this.arrows,
-          this.corners,
-        ),
+        this.isZoneContentRevealed(c.zoneId),
     );
   }
 
@@ -1019,11 +1022,7 @@ export class GameState {
     return this.bundles.filter(
       (b) =>
         b.zoneId != null &&
-        this.zoneManager.isZoneContentRevealed(
-          b.zoneId,
-          this.arrows,
-          this.corners,
-        ),
+        this.isZoneContentRevealed(b.zoneId),
     );
   }
 
@@ -1040,11 +1039,7 @@ export class GameState {
       (p) =>
         p.health > 0 &&
         p.zoneId != null &&
-        this.zoneManager.isZoneContentRevealed(
-          p.zoneId,
-          this.arrows,
-          this.corners,
-        ),
+        this.isZoneContentRevealed(p.zoneId),
     );
   }
 
@@ -1121,7 +1116,7 @@ export class GameState {
 
   private canVanishArrow(arrow: ArrowItem): boolean {
     if (this.curtainManager.isArrowHidden(arrow)) return false;
-    if (!this.zoneManager.isArrowActive(arrow, this.arrows, this.corners)) {
+    if (!this.isArrowZoneActive(arrow)) {
       return false;
     }
     if (this.bundleManager.getGroupForArrow(arrow.instanceId)) return false;
@@ -1177,6 +1172,7 @@ export class GameState {
       currentDirectionById: snapshotDirections(this.arrows, memberIds),
       stepCount: 0,
       flightStepCount: 0,
+      stepAccumMs: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
     });
@@ -1311,11 +1307,7 @@ export class GameState {
 
   private isMechanicDrawable(zoneId: number | null): boolean {
     if (zoneId == null) return true;
-    return this.zoneManager.isZoneContentRevealed(
-      zoneId,
-      this.arrows,
-      this.corners,
-    );
+    return this.isZoneContentRevealed(zoneId);
   }
 
   getBombs() {

@@ -97,4 +97,21 @@ describe("GameState launch click cooldown", () => {
     }
     expect(gs.tryLaunch(2, 1)).toBe(true);
   });
+
+  it("second launch starts acceleration from zero while first keeps its speed", () => {
+    const gs = new GameState(simpleLevel());
+    expect(gs.tryLaunch(1, 0)).toBe(true);
+    gs.animations[0]!.flightStepCount = 12;
+    gs.animations[0]!.stepAccumMs = 0;
+
+    expect(gs.tryLaunch(2, LAUNCH_CLICK_COOLDOWN_MS)).toBe(true);
+    expect(gs.animations[1]!.flightStepCount).toBe(0);
+    expect(gs.animations[1]!.stepAccumMs).toBe(0);
+
+    const before = gs.animations[0]!.flightStepCount;
+    gs.advanceOneAnimation(gs.animations[0]!);
+    gs.advanceOneAnimation(gs.animations[1]!);
+    expect(gs.animations[0]!.flightStepCount).toBe(before + 1);
+    expect(gs.animations[1]!.flightStepCount).toBe(1);
+  });
 });

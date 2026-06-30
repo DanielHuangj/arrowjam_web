@@ -323,6 +323,12 @@ export function defaultPipeHealthViewPathIndex(pathLength: number): number {
   return Math.floor(pathLength / 2);
 }
 
+/** kind13 冰冻箭血量 UI 锚在箭身中段（occupiedPositions 尾→头，最后一格为箭头） */
+export function frozenHealthViewPathIndex(pathLength: number): number {
+  if (pathLength <= 1) return 0;
+  return Math.floor((pathLength - 1) / 2);
+}
+
 const ARROW_HOST_KINDS = new Set([1, 2]);
 
 /** 炸弹绑定在宿主箭身的索引（尾→头，与手绘 buildBombItem 一致） */

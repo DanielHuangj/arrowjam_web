@@ -26,7 +26,6 @@ export class App {
   private devTests: LevelManifestEntry[] = [];
   private rafId = 0;
   private lastTime = 0;
-  private animAccum = 0;
   private modalShown = false;
   private targetVanishMode = false;
   private targetVanishHoverInvalid = false;
@@ -127,7 +126,6 @@ export class App {
 
       this.modalShown = false;
       this.lastTime = performance.now();
-      this.animAccum = 0;
       this.startLoop();
     } catch (err) {
       this.root.innerHTML = `<div class="screen error"><p>加载失败: ${String(err)}</p><button id="retry">返回选关</button></div>`;
@@ -145,11 +143,7 @@ export class App {
         this.state.tick(dt);
 
         if (this.state.phase === "animating") {
-          this.animAccum = tickGameAnimation(
-            this.state,
-            dt * 1000,
-            this.animAccum,
-          );
+          tickGameAnimation(this.state, dt * 1000);
         }
 
         this.renderFrame();
@@ -164,7 +158,6 @@ export class App {
   private stopLoop(): void {
     if (this.rafId) cancelAnimationFrame(this.rafId);
     this.rafId = 0;
-    this.animAccum = 0;
   }
 
   private renderFrame(): void {
@@ -214,9 +207,6 @@ export class App {
     );
 
     const launchable = this.state.getLaunchableIds();
-    const hidden = this.state.getPipeHiddenArrowIds();
-    const visible = (arrows: typeof this.state.arrows) =>
-      arrows.filter((a) => !hidden.has(a.instanceId));
 
     const vanishProgressById = new Map<number, number>();
     for (const anim of this.state.animations) {
@@ -231,11 +221,11 @@ export class App {
       this.state.level,
       launchable,
       this.state.zoneManager.getZones(),
-      visible(this.state.getDrawableRevealedZoneArrows()),
+      this.state.getDrawableRevealedZoneArrows(),
       this.state.getRevealedZoneCorners(),
       this.state.getDrawableRevealedZoneBundles(),
       this.state.getRevealedZonePipes(),
-      visible(this.state.getDrawableTopLevelArrows()),
+      this.state.getDrawableTopLevelArrows(),
       this.state.getTopLevelCorners(),
       this.state.getDrawableTopLevelBundles(),
       this.state.getTopLevelPipes(),

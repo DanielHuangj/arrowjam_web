@@ -370,18 +370,31 @@ export class BundleManager {
     return this.getGroupForArrow(arrowId)?.stripIds ?? [];
   }
 
-  /** 动画步进后：条带锚点随蛇身移动 */
+  /** 与 member 箭身锚定相连的所有条带 id（不依赖捆绑组） */
+  getStripIdsForArrowIds(arrowIds: number[], bundles: BundleItem[]): number[] {
+    const members = new Set(arrowIds);
+    const result = new Set<number>();
+    for (const strip of bundles) {
+      const anchors = this.liveAnchors.get(strip.instanceId);
+      if (!anchors) continue;
+      if (anchors.some((a) => members.has(a.arrowId))) {
+        result.add(strip.instanceId);
+      }
+    }
+    return [...result].sort((a, b) => a - b);
+  }
+
+  /** 动画步进后：条带锚点随蛇身 segment 移动（不递减 segmentIndex，否则条带会留在原格子） */
   syncGroupStrips(
     stripIds: number[],
     bundles: BundleItem[],
     arrows: ArrowItem[],
-    stepped: boolean,
+    _stepped = true,
   ): void {
     for (const stripId of stripIds) {
       const anchors = this.liveAnchors.get(stripId);
       const strip = bundles.find((b) => b.instanceId === stripId);
       if (!anchors || !strip) continue;
-      if (stepped) stepStripAnchors(anchors);
       syncStripPositions(strip, anchors, arrows);
     }
   }

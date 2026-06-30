@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { frozenHealthViewPathIndex } from "@arrowjaw/shared";
 import { FrozenManager } from "./frozen.ts";
 import type { ArrowItem, FrozenOverlayItem } from "../types.ts";
 
@@ -16,6 +17,14 @@ function overlay(health: number): FrozenOverlayItem {
     ],
   };
 }
+
+describe("frozenHealthViewPathIndex", () => {
+  it("anchors on middle body cell along tail-to-head path", () => {
+    expect(frozenHealthViewPathIndex(2)).toBe(0);
+    expect(frozenHealthViewPathIndex(3)).toBe(1);
+    expect(frozenHealthViewPathIndex(5)).toBe(2);
+  });
+});
 
 describe("FrozenManager", () => {
   it("reduces health on adjacent elimination", () => {

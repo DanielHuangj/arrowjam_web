@@ -125,13 +125,134 @@ describe("buildBundleGroups", () => {
     const stepped = arrows.map((a) => snakeStepArrow(a));
     mgr.syncGroupStrips([10], [strip], stepped, true);
     expect(strip.occupiedPositions).toEqual([
-      [2, 1],
-      [3, 1],
+      [2, 2],
+      [3, 2],
     ]);
+  });
+
+  it("getStripIdsForArrowIds finds strips by anchor without bundle group", () => {
+    const arrows: ArrowItem[] = [
+      {
+        kind: 1,
+        instanceId: 1,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[0, 1], [1, 1], [2, 1]],
+        direction: 3,
+        colorId: 3,
+      },
+    ];
+    const strip: BundleItem = {
+      kind: 8,
+      instanceId: 10,
+      layer: 3,
+      zoneId: null,
+      occupiedPositions: [[1, 1]],
+    };
+    const mgr = new BundleManager([strip], arrows);
+    expect(mgr.getStripIdsForArrowIds([1], [strip])).toEqual([10]);
+    expect(mgr.getStripIdsForArrowIds([99], [strip])).toEqual([]);
   });
 });
 
 describe("GameState bundle exit", () => {
+  it("keeps strip anchored while a single bundled arrow moves", () => {
+    const arrows: ArrowItem[] = [
+      {
+        kind: 1,
+        instanceId: 1,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[0, 1], [1, 1], [2, 1]],
+        direction: 3,
+        colorId: 3,
+      },
+    ];
+    const strip: BundleItem = {
+      kind: 8,
+      instanceId: 10,
+      layer: 3,
+      zoneId: null,
+      occupiedPositions: [[1, 1]],
+    };
+    const gs = new GameState({
+      id: 0,
+      width: 6,
+      height: 3,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      arrows,
+      corners: [],
+      zones: [],
+      bundles: [strip],
+      pipes: [],
+      curtains: [],
+      keys: [],
+    });
+    gs.tryLaunch(1);
+    expect(gs.animation?.stripIds).toEqual([10]);
+    gs.advanceAnimation();
+    const arrow = gs.arrows.find((a) => a.instanceId === 1)!;
+    const stripCells = new Set(gs.bundles[0]!.occupiedPositions.map((p) => `${p[0]},${p[1]}`));
+    expect(arrow.occupiedPositions.some((p) => stripCells.has(`${p[0]},${p[1]}`))).toBe(true);
+    expect(gs.bundles[0]!.occupiedPositions).toEqual([[2, 1]]);
+  });
+
+  it("moves multi-arrow strip during exit animation", () => {
+    const arrows: ArrowItem[] = [
+      {
+        kind: 1,
+        instanceId: 1,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[2, 0], [2, 1], [2, 2]],
+        direction: 1,
+        colorId: 3,
+      },
+      {
+        kind: 1,
+        instanceId: 2,
+        layer: 2,
+        zoneId: null,
+        occupiedPositions: [[3, 0], [3, 1], [3, 2]],
+        direction: 1,
+        colorId: 3,
+      },
+    ];
+    const strip: BundleItem = {
+      kind: 8,
+      instanceId: 10,
+      layer: 3,
+      zoneId: null,
+      occupiedPositions: [
+        [2, 1],
+        [3, 1],
+      ],
+    };
+    const gs = new GameState({
+      id: 0,
+      width: 6,
+      height: 6,
+      name: "t",
+      durationInSec: 60,
+      difficulty: 1,
+      arrows,
+      corners: [],
+      zones: [],
+      bundles: [strip],
+      pipes: [],
+      curtains: [],
+      keys: [],
+    });
+    gs.tryLaunch(1);
+    gs.advanceAnimation();
+    expect(gs.bundles[0]!.occupiedPositions).toEqual([
+      [2, 2],
+      [3, 2],
+    ]);
+  });
+
   it("completes exit when bundled arrows leave the board", () => {
     const arrows: ArrowItem[] = [
       {

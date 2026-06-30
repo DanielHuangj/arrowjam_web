@@ -343,6 +343,27 @@
       "p2Playable": false,
       "p3Playable": false,
       "p4Playable": false
+    },
+    {
+      "id": 9023,
+      "file": "level-9023.json",
+      "name": "Level 9023",
+      "difficulty": 1,
+      "width": 20,
+      "height": 26,
+      "durationInSec": 120,
+      "kinds": [
+        1,
+        4,
+        5,
+        12,
+        13
+      ],
+      "pureKind1": false,
+      "p1Playable": false,
+      "p2Playable": false,
+      "p3Playable": false,
+      "p4Playable": false
     }
   ],
   "levels": [

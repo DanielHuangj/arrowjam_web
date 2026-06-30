@@ -275,6 +275,38 @@ describe("ZoneManager", () => {
     expect(zm.isZoneContentRevealed(1, [inner], [])).toBe(true);
   });
 
+  it("keeps zone hidden while overlay arrow animates away from original cells", () => {
+    const zm = new ZoneManager([zone]);
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2]],
+      direction: 2,
+      colorId: 6,
+    };
+    const movedOff: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [[1, 2], [0, 2]],
+      direction: 3,
+      colorId: 3,
+    };
+    const overlayOriginals = new Map<number, Vec2[]>([
+      [1, [
+        [2, 2],
+        [1, 2],
+      ]],
+    ]);
+
+    expect(
+      zm.isZoneContentRevealed(1, [inner, movedOff], [], new Map(), overlayOriginals),
+    ).toBe(false);
+  });
+
   it("does not recurse infinitely when multiple zones cross-check reveal", () => {
     const zone1 = buildZoneItem({
       instanceId: 1,
@@ -422,6 +454,63 @@ describe("GameState", () => {
       2, 3,
     ]);
     expect(gs.getRevealedZoneArrows().map((a) => a.instanceId)).toEqual([2]);
+  });
+
+  it("does not reveal zone when overlay arrow bumps and returns", () => {
+    const zone = buildZoneItem({
+      instanceId: 1,
+      occupiedPositions: [
+        [2, 2],
+        [3, 2],
+      ],
+      items: [{ kind: 1, instanceId: 2 }],
+    });
+    const inner: ArrowItem = {
+      kind: 1,
+      instanceId: 2,
+      layer: 2,
+      zoneId: 1,
+      occupiedPositions: [[2, 2], [2, 1]],
+      direction: 2,
+      colorId: 6,
+    };
+    const onZone: ArrowItem = {
+      kind: 1,
+      instanceId: 1,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [
+        [2, 2],
+        [3, 2],
+      ],
+      direction: 3,
+      colorId: 3,
+    };
+    const blocker: ArrowItem = {
+      kind: 1,
+      instanceId: 3,
+      layer: 2,
+      zoneId: null,
+      occupiedPositions: [
+        [4, 2],
+        [5, 2],
+      ],
+      direction: 4,
+      colorId: 3,
+    };
+    const gs = new GameState({
+      ...emptyLevel([inner, onZone, blocker]),
+      zones: [zone],
+    });
+
+    expect(gs.getRevealedZoneArrows()).toEqual([]);
+    expect(gs.tryLaunch(1)).toBe(true);
+    expect(gs.animation?.mode).toBe("bump");
+    while (gs.phase === "animating") {
+      gs.advanceAnimation();
+    }
+    expect(gs.getRevealedZoneArrows()).toEqual([]);
+    expect(gs.arrows.some((a) => a.instanceId === 1)).toBe(true);
   });
 
   it("launches a single launchable arrow", () => {

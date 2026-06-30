@@ -1,5 +1,6 @@
 import type { BombItem, FrozenOverlayItem, MovingWallItem } from "../core/types.ts";
 import type { Vec2 } from "../core/types.ts";
+import { frozenHealthViewPathIndex } from "@arrowjaw/shared";
 import { vecKey } from "../core/types.ts";
 import { STEP, CELL } from "./colors.ts";
 
@@ -299,8 +300,13 @@ export function drawFrozenOverlay(
 
   drawIceOutline(ctx, cells, cellSet);
 
-  const centerX = ((minX + maxX + 1) * STEP) / 2;
-  const centerY = ((minY + maxY + 1) * STEP) / 2;
+  const healthIdx = Math.min(
+    frozenHealthViewPathIndex(cells.length),
+    cells.length - 1,
+  );
+  const [hx, hy] = cells[healthIdx]!;
+  const centerX = hx * STEP + CELL / 2;
+  const centerY = hy * STEP + CELL / 2;
   const fontSize = Math.max(12, Math.round(STEP * 0.42));
   ctx.save();
   ctx.font = `bold ${fontSize}px system-ui,sans-serif`;

@@ -1244,7 +1244,6 @@ export class EditorApp {
 
   private startPlayLoop(): void {
     let lastTime = performance.now();
-    let animAccum = 0;
 
     const renderPlayFrame = (): void => {
       const gs = this.gameState;
@@ -1252,9 +1251,6 @@ export class EditorApp {
       if (!gs || !renderer) return;
 
       const launchable = gs.getLaunchableIds();
-      const hidden = gs.getPipeHiddenArrowIds();
-      const visible = (arrows: typeof gs.arrows) =>
-        arrows.filter((a) => !hidden.has(a.instanceId));
 
       const vanishProgressById = new Map<number, number>();
       for (const anim of gs.animations) {
@@ -1269,11 +1265,11 @@ export class EditorApp {
         gs.level,
         launchable,
         gs.zoneManager.getZones(),
-        visible(gs.getDrawableRevealedZoneArrows()),
+        gs.getDrawableRevealedZoneArrows(),
         gs.getRevealedZoneCorners(),
         gs.getDrawableRevealedZoneBundles(),
         gs.getRevealedZonePipes(),
-        visible(gs.getDrawableTopLevelArrows()),
+        gs.getDrawableTopLevelArrows(),
         gs.getTopLevelCorners(),
         gs.getDrawableTopLevelBundles(),
         gs.getTopLevelPipes(),
@@ -1304,7 +1300,7 @@ export class EditorApp {
       gs.tick(dt);
 
       if (gs.phase === "animating") {
-        animAccum = tickGameAnimation(gs, dt * 1000, animAccum);
+        tickGameAnimation(gs, dt * 1000);
       }
 
       if (this.autoPlayActive) {

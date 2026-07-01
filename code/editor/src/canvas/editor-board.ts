@@ -22,13 +22,14 @@ export interface CornerPreview {
 }
 
 function zoneMechanicsVisible<T extends { zoneId: number | null }>(
-  items: T[],
+  items: T[] | undefined,
   activeZone: number | null,
 ): T[] {
+  const list = items ?? [];
   if (activeZone == null) {
-    return items.filter((i) => i.zoneId == null);
+    return list.filter((i) => i.zoneId == null);
   }
-  return items.filter((i) => i.zoneId === activeZone);
+  return list.filter((i) => i.zoneId === activeZone);
 }
 
 function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
@@ -39,6 +40,9 @@ function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
     movingWalls: activeZone == null ? level.movingWalls : [],
     frozenOverlays,
     bombStates: bombs.map((bomb) => ({ bomb, remaining: null as number | null })),
+    shrinkPipes: zoneMechanicsVisible(level.shrinkPipes, activeZone),
+    toggles: zoneMechanicsVisible(level.toggles, activeZone),
+    controllers: zoneMechanicsVisible(level.controllers, activeZone),
   };
 }
 
@@ -163,6 +167,9 @@ export class EditorBoardView {
         movingWalls: mechanics.movingWalls,
         frozenOverlays: mechanics.frozenOverlays,
         bombStates: mechanics.bombStates,
+        shrinkPipes: mechanics.shrinkPipes,
+        toggles: mechanics.toggles,
+        controllers: mechanics.controllers,
       },
     );
 

@@ -4,6 +4,9 @@ import {
   findItemParentList,
   getEditableItems,
   nextInstanceId,
+  hostMiddleCell,
+  nextControllerCellForHost,
+  vecKey,
 } from "@arrowjaw/shared";
 import {
   canPlaceArrowInEditContext,
@@ -68,6 +71,38 @@ function syncRigidItemTranslation(
   return next;
 }
 
+function syncShrinkPipesForPipe(
+  doc: EditorDocument,
+  pipeId: number,
+  oldPositions: Vec2[],
+  newPositions: Vec2[],
+): EditorDocument {
+  const delta = rigidTranslationDelta(oldPositions, newPositions);
+  if (!delta) return doc;
+  const [dx, dy] = delta;
+  const oldPipeKeys = new Set(oldPositions.map((p) => vecKey(p)));
+
+  function patchList(items: RawItem[]): RawItem[] {
+    return items.map((item) => {
+      let next = item;
+      if (item.kind === 14) {
+        const bind = item.bindCoordinate as Vec2 | undefined;
+        if (bind && oldPipeKeys.has(vecKey(bind))) {
+          next = {
+            ...next,
+            bindCoordinate: [bind[0] + dx, bind[1] + dy] as Vec2,
+            occupiedPositions: translateVec2List(item.occupiedPositions, dx, dy),
+          };
+        }
+      }
+      if (item.items) next = { ...next, items: patchList(item.items) };
+      return next;
+    });
+  }
+
+  return { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
+}
+
 function setSiblingList(doc: EditorDocument, hostId: number, newList: RawItem[]): EditorDocument {
   function replace(items: RawItem[]): RawItem[] {
     if (items.some((i) => i.instanceId === hostId)) return newList;
@@ -88,6 +123,7 @@ export function syncAttachmentsForHost(
   const parent = findItemParentList(doc.itemModels, hostId);
   if (!parent) return doc;
   const ref = previousPositions ?? hostPositions;
+  const hostItem = parent.list[parent.index];
 
   const newList = parent.list.map((item) => {
     if (item.instanceId === hostId) return item;
@@ -107,6 +143,14 @@ export function syncAttachmentsForHost(
         const nextCell = hostPositions[idx]!;
         return { ...item, occupiedPositions: [[nextCell[0], nextCell[1]]] };
       }
+    }
+    if (item.kind === 16 && item.bindInstanceId === hostId) {
+      if (hostItem?.kind === 14) {
+        const middle = hostMiddleCell(hostPositions);
+        return { ...item, occupiedPositions: [[middle[0], middle[1]]] };
+      }
+      const nextCell = nextControllerCellForHost(item, ref, hostPositions);
+      return { ...item, occupiedPositions: [[nextCell[0], nextCell[1]]] };
     }
     return item;
   });
@@ -234,12 +278,25 @@ export function updateItem(
   }
   let next = { ...doc, itemModels: patchList(doc.itemModels), dirty: true };
   if (effectivePatch.occupiedPositions && oldItem) {
-    if (oldItem.kind === 1 || oldItem.kind === 2) {
+    if (
+      oldItem.kind === 1 ||
+      oldItem.kind === 2 ||
+      oldItem.kind === 7 ||
+      oldItem.kind === 14
+    ) {
       next = syncAttachmentsForHost(
         next,
         id,
         effectivePatch.occupiedPositions,
         oldItem.occupiedPositions,
+      );
+    }
+    if (oldItem.kind === 3) {
+      next = syncShrinkPipesForPipe(
+        next,
+        id,
+        oldItem.occupiedPositions,
+        effectivePatch.occupiedPositions,
       );
     }
   }
@@ -256,6 +313,12 @@ function canPlaceDraggedItem(
 ): boolean {
   if (item.kind === 1 || item.kind === 2) {
     return canPlaceArrowInEditContext(doc, positions, movingIds);
+  }
+  if (item.kind === 16) {
+    const host = findItemById(doc.itemModels, item.bindInstanceId as number);
+    if (!host) return false;
+    const hostKeys = new Set(host.occupiedPositions.map((p) => vecKey(p)));
+    if (!positions.every((p) => hostKeys.has(vecKey(p)))) return false;
   }
   return canPlaceInEditContext(doc, positions);
 }

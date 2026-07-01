@@ -48,3 +48,30 @@ export function getCornerAt(
   }
   return null;
 }
+
+function rotateVec(v: Vec2, steps: number): Vec2 {
+  let [x, y] = v;
+  for (let i = 0; i < steps; i++) {
+    const nx = -y;
+    const ny = x;
+    x = nx === 0 ? 0 : nx;
+    y = ny;
+  }
+  return [x, y];
+}
+
+/** 按 spin（90° 倍数）与 spinDirection 旋转反射角向量 */
+export function rotateCorner(
+  corner: CornerItem,
+  spin: 0 | 90 | 180 | 270,
+  spinDirection: 0 | 1,
+): CornerItem {
+  if (spin === 0) return corner;
+  const steps = spin / 90;
+  const rot = spinDirection === 0 ? steps : (4 - steps) % 4;
+  return {
+    ...corner,
+    direction1: rotateVec(corner.direction1, rot),
+    direction2: rotateVec(corner.direction2, rot),
+  };
+}

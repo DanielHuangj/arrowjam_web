@@ -19,6 +19,8 @@ function serializeRawItem(item: RawItem): Record<string, unknown> {
   } else if (item.kind === 4) {
     out.direction1 = item.direction1;
     out.direction2 = item.direction2;
+    if (item.spin != null) out.spin = item.spin;
+    if (item.spinDirection != null) out.spinDirection = item.spinDirection;
   } else if (item.kind === 3) {
     out.health = item.health;
     out.passes = item.passes;
@@ -34,6 +36,15 @@ function serializeRawItem(item: RawItem): Record<string, unknown> {
     out.movingType = item.movingType;
   } else if (item.kind === 13) {
     out.health = item.health;
+  } else if (item.kind === 14) {
+    out.bindCoordinate = item.bindCoordinate;
+    out.shorten = item.shorten;
+  } else if (item.kind === 15) {
+    out.groupID = item.groupID;
+    out.direction = item.direction ?? 1;
+  } else if (item.kind === 16) {
+    out.groupID = item.groupID;
+    out.bindInstanceId = item.bindInstanceId;
   } else if (item.kind === 12 && item.items) {
     out.items = item.items.map(serializeRawItem);
   }

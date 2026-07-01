@@ -1,0 +1,37 @@
+{
+  "width": 14,
+  "height": 14,
+  "name": "[测] 收缩障碍",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 3,
+      "instanceId": 100,
+      "layer": 2,
+      "health": 3,
+      "occupiedPositions": [[4, 5], [5, 5], [6, 5], [7, 5], [8, 5], [9, 5]],
+      "passes": [
+        { "position": [4, 5], "directions": [[-1, 0], [1, 0]] },
+        { "position": [9, 5], "directions": [[-1, 0], [1, 0]] }
+      ],
+      "healthViewPathIndex": 1
+    },
+    {
+      "kind": 14,
+      "instanceId": 140,
+      "layer": 3,
+      "bindCoordinate": [4, 5],
+      "shorten": 2,
+      "occupiedPositions": [[4, 6], [4, 7], [4, 8]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3,
+      "occupiedPositions": [[1, 5], [2, 5]]
+    }
+  ]
+}

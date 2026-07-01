@@ -1,4 +1,13 @@
 import type { EditorDocument, RawItem, Vec2 } from "@arrowjaw/shared";
+import {
+  CONTROLLER_HOST_KINDS,
+  findControllerCellConflict,
+  findSingleCellOccupant,
+  getEditableItems,
+  hostMiddleCell,
+  isPolylineContinuous,
+  vecKey,
+} from "@arrowjaw/shared";
 import { BOARD_MAX_SIZE, BOARD_MIN_SIZE, boardSizeRangeLabel, isBoardSizeValid } from "./board-limits.ts";
 import {
   createDocumentFromJson,
@@ -73,6 +82,7 @@ import {
   buildArrowItem,
   buildBombItem,
   buildBundleItem,
+  buildControllerItem,
   buildCornerItem,
   buildCurtainItem,
   buildFlipArrowItem,
@@ -80,8 +90,11 @@ import {
   buildKeyItem,
   buildMovingWallItem,
   buildPipeItem,
+  buildShrinkPipeItem,
+  buildToggleItem,
   buildZoneItem,
   createDrawState,
+  extendShrinkPipeToCell,
   flipArrowDirection2,
   directionFromLastSegment,
   headMatchesDirection,
@@ -99,6 +112,9 @@ const ZONE_EDIT_TOOLS = new Set<EditorTool>([
   "bundle",
   "bomb",
   "frozen",
+  "toggle",
+  "shrinkPipe",
+  "controller",
 ]);
 
 interface TabState {
@@ -236,6 +252,9 @@ export class EditorApp {
       { tool: "bomb", label: "K5 定时炸弹", title: "定时炸弹：先选中 kind1/2 箭再添加" },
       { tool: "frozen", label: "K13 冻结箭", title: "冻结箭：先选中 kind1/2 箭再添加" },
       { tool: "movingWall", label: "K7 移动墙", title: "移动墙：框选墙身后编辑路径" },
+      { tool: "shrinkPipe", label: "K14 收缩障碍", title: "收缩障碍：箭头穿过管道触发缩短" },
+      { tool: "toggle", label: "K15 拨动杆", title: "拨动杆：箭头穿过触发同组物件动作" },
+      { tool: "controller", label: "K16 控制器", title: "控制器：接收拨动杆信号触发物件动作" },
       { tool: "zone", label: "K12 子区域", title: "子区域 kind12" },
     ];
     this.els.tools.innerHTML = `<div class="tool-label">物件工具</div>`;
@@ -265,6 +284,14 @@ export class EditorApp {
     }
     if (tool === "frozen") {
       this.startFrozen();
+      return;
+    }
+    if (tool === "shrinkPipe") {
+      this.startShrinkPipe();
+      return;
+    }
+    if (tool === "controller") {
+      this.startController();
       return;
     }
     const tab = this.activeTab();
@@ -311,6 +338,35 @@ export class EditorApp {
       const reason = getArrowPlacementBlockReason(tab.doc, item.occupiedPositions);
       if (reason) {
         this.placeBlocked(reason);
+        return false;
+      }
+    } else if (item.kind === 15) {
+      const cell = item.occupiedPositions[0];
+      if (!cell || !canPlaceInEditContext(tab.doc, [cell])) {
+        this.placeBlocked("zone");
+        return false;
+      }
+      if (findSingleCellOccupant(getEditableItems(tab.doc), cell)) {
+        this.placeBlocked("occupied");
+        return false;
+      }
+    } else if (item.kind === 16) {
+      const cell = item.occupiedPositions[0];
+      const hostId = item.bindInstanceId;
+      if (!cell || hostId == null || !canPlaceInEditContext(tab.doc, [cell])) {
+        this.placeBlocked("zone");
+        return false;
+      }
+      const host = findItemById(tab.doc.itemModels, hostId);
+      if (
+        !host ||
+        !host.occupiedPositions.some((p) => p[0] === cell[0] && p[1] === cell[1])
+      ) {
+        this.placeBlocked("zone");
+        return false;
+      }
+      if (findControllerCellConflict(getEditableItems(tab.doc), cell, hostId)) {
+        this.placeBlocked("occupied");
         return false;
       }
     } else if (!canPlaceInEditContext(tab.doc, item.occupiedPositions)) {
@@ -429,6 +485,68 @@ export class EditorApp {
       return;
     }
     this.tryCommitItem(buildFrozenItem(host.occupiedPositions));
+  }
+
+  private findSelectedPipe(): RawItem | null {
+    const tab = this.activeTab();
+    for (const id of tab.doc.selectedInstanceIds) {
+      const item = findItemById(tab.doc.itemModels, id);
+      if (item?.kind === 3) return item;
+    }
+    return null;
+  }
+
+  private findSelectedControllerHost(): RawItem | null {
+    const tab = this.activeTab();
+    for (const id of tab.doc.selectedInstanceIds) {
+      const item = findItemById(tab.doc.itemModels, id);
+      if (item && CONTROLLER_HOST_KINDS.has(item.kind)) return item;
+    }
+    return null;
+  }
+
+  private startShrinkPipe(): void {
+    if (!this.isToolAllowed("shrinkPipe")) return;
+    const pipe = this.findSelectedPipe();
+    if (!pipe) {
+      alert("请先选中一条 kind3 管道");
+      return;
+    }
+    const tab = this.activeTab();
+    tab.draw = {
+      ...createDrawState(),
+      tool: "shrinkPipe",
+      shrinkPipeId: pipe.instanceId,
+    };
+    this.refresh();
+  }
+
+  private startController(): void {
+    if (!this.isToolAllowed("controller")) return;
+    const host = this.findSelectedControllerHost();
+    if (!host) {
+      alert("请先选中 kind2/4/7/14 宿主物件");
+      return;
+    }
+    const cell = hostMiddleCell(host.occupiedPositions);
+    const siblings = getEditableItems(this.activeTab().doc);
+    const existing = siblings.find(
+      (i) => i.kind === 16 && i.bindInstanceId === host.instanceId,
+    );
+    if (existing) {
+      alert(`宿主 #${host.instanceId} 已有控制器 #${existing.instanceId}`);
+      return;
+    }
+    this.tryCommitItem(buildControllerItem(cell, 1, host.instanceId));
+  }
+
+  private shrinkPipeCells(): Set<string> | null {
+    const tab = this.activeTab();
+    const pipeId = tab.draw.shrinkPipeId;
+    if (pipeId == null) return null;
+    const pipe = findItemById(tab.doc.itemModels, pipeId);
+    if (!pipe) return null;
+    return new Set(pipe.occupiedPositions.map((p) => vecKey(p)));
   }
 
   private startWallPathEdit(instanceId: number): void {
@@ -626,6 +744,50 @@ export class EditorApp {
       return;
     }
 
+    if (tool === "shrinkPipe") {
+      const pipeCells = this.shrinkPipeCells();
+      if (!pipeCells) return;
+      if (pipeCells.has(vecKey(cell))) {
+        tab.draw.shrinkPipeBindCoord = cell;
+        tab.draw.polyline = [];
+        this.polylineDragging = true;
+        this.refresh();
+        return;
+      }
+      if (!tab.draw.shrinkPipeBindCoord) {
+        alert("请先在管道格上按下以设定 bindCoordinate");
+        return;
+      }
+      const next = extendShrinkPipeToCell(
+        tab.draw.polyline,
+        cell,
+        pipeCells,
+        tab.draw.shrinkPipeBindCoord,
+      );
+      if (next.length === tab.draw.polyline.length) return;
+      if (!canPlaceInEditContext(tab.doc, next)) {
+        this.placeBlocked("zone");
+        return;
+      }
+      this.polylineDragging = true;
+      tab.draw.polyline = next;
+      this.refresh();
+      return;
+    }
+
+    if (tool === "toggle") {
+      if (!canPlaceInEditContext(tab.doc, [cell])) {
+        this.placeBlocked("zone");
+        return;
+      }
+      if (findSingleCellOccupant(getEditableItems(tab.doc), cell)) {
+        this.placeBlocked("occupied");
+        return;
+      }
+      this.tryCommitItem(buildToggleItem(cell, tab.draw.toggleGroupId, 1));
+      return;
+    }
+
     if (tool === "wallPath" && cell) {
       this.applyWallPathAtCell(tab, cell);
       this.wallPathDragging = true;
@@ -697,11 +859,36 @@ export class EditorApp {
       this.polylineDragging &&
       (e.buttons & 1) &&
       cell &&
-      (tab.draw.tool === "arrow" || tab.draw.tool === "pipe" || tab.draw.tool === "flipArrow")
+      (tab.draw.tool === "arrow" ||
+        tab.draw.tool === "pipe" ||
+        tab.draw.tool === "flipArrow")
     ) {
       const next = extendPolylineToCell(tab.draw.polyline, cell);
       if (next.length !== tab.draw.polyline.length) {
         if (!this.canPlacePolyline(tab.doc, next, tab.draw.tool)) return;
+        tab.draw.polyline = next;
+        this.renderCanvas();
+      }
+      return;
+    }
+
+    if (
+      this.polylineDragging &&
+      (e.buttons & 1) &&
+      cell &&
+      tab.draw.tool === "shrinkPipe" &&
+      tab.draw.shrinkPipeBindCoord
+    ) {
+      const pipeCells = this.shrinkPipeCells();
+      if (!pipeCells) return;
+      const next = extendShrinkPipeToCell(
+        tab.draw.polyline,
+        cell,
+        pipeCells,
+        tab.draw.shrinkPipeBindCoord,
+      );
+      if (next.length !== tab.draw.polyline.length) {
+        if (!canPlaceInEditContext(tab.doc, next)) return;
         tab.draw.polyline = next;
         this.renderCanvas();
       }
@@ -754,7 +941,17 @@ export class EditorApp {
         const canPlace =
           item.kind === 1 || item.kind === 2
             ? canPlaceArrowInEditContext(tab.doc, item.occupiedPositions, movingIds)
-            : canPlaceInEditContext(tab.doc, item.occupiedPositions);
+            : item.kind === 16
+              ? (() => {
+                  const host = findItemById(tab.doc.itemModels, item.bindInstanceId as number);
+                  if (!host) return false;
+                  const hostKeys = new Set(host.occupiedPositions.map((p) => vecKey(p)));
+                  return (
+                    canPlaceInEditContext(tab.doc, item.occupiedPositions) &&
+                    item.occupiedPositions.every((p) => hostKeys.has(vecKey(p)))
+                  );
+                })()
+              : canPlaceInEditContext(tab.doc, item.occupiedPositions);
         if (!canPlace) {
           valid = false;
           break;
@@ -844,12 +1041,38 @@ export class EditorApp {
       this.finishPolyline("flipArrow");
     } else if (tab.draw.tool === "pipe" && tab.draw.polyline.length >= 2) {
       this.finishPolyline("pipe");
+    } else if (tab.draw.tool === "shrinkPipe" && tab.draw.polyline.length >= 1) {
+      this.finishPolyline("shrinkPipe");
     }
   }
 
-  private finishPolyline(kind: "arrow" | "pipe" | "flipArrow"): void {
+  private finishPolyline(kind: "arrow" | "pipe" | "flipArrow" | "shrinkPipe"): void {
     const tab = this.activeTab();
     const pl = tab.draw.polyline;
+
+    if (kind === "shrinkPipe") {
+      const bind = tab.draw.shrinkPipeBindCoord;
+      if (!bind || pl.length < 1) {
+        alert("收缩障碍须从管道格拖拽出至少 1 格路径");
+        return;
+      }
+      if (!isPolylineContinuous(pl) || new Set(pl.map((p) => vecKey(p))).size !== pl.length) {
+        alert("折线无效：须连续、不自交");
+        tab.draw.polyline = [];
+        this.refresh();
+        return;
+      }
+      if (!canPlaceInEditContext(tab.doc, pl)) {
+        this.placeBlocked("zone");
+        return;
+      }
+      this.tryCommitItem(buildShrinkPipeItem(pl, bind, 1));
+      tab.draw.polyline = [];
+      tab.draw.shrinkPipeBindCoord = null;
+      this.polylineDragging = false;
+      this.refresh();
+      return;
+    }
 
     if (kind === "flipArrow") {
       if (pl.length < 2) return;
@@ -982,7 +1205,8 @@ export class EditorApp {
       } else if (
         tab.draw.tool === "arrow" ||
         tab.draw.tool === "pipe" ||
-        tab.draw.tool === "flipArrow"
+        tab.draw.tool === "flipArrow" ||
+        tab.draw.tool === "shrinkPipe"
       ) {
         this.finishPolyline(tab.draw.tool);
       }
@@ -1282,6 +1506,10 @@ export class EditorApp {
           vanishProgressById,
           movingWalls: gs.getMovingWalls(),
           frozenOverlays: gs.getFrozenOverlays(),
+          shrinkPipes: gs.getDrawableShrinkPipes(),
+          toggles: gs.getDrawableToggles(),
+          controllers: gs.getDrawableControllers(),
+          toggleFlashGroupIds: gs.getToggleFlashGroupIds(),
           bombStates: gs.getBombDrawStates(),
           bombExplosion: gs.getBombExplosion(),
           urgentBombRemaining: gs.getUrgentBombRemaining(),

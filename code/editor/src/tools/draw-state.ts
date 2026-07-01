@@ -1,5 +1,5 @@
 import type { Direction, RawItem, Vec2 } from "@arrowjaw/shared";
-import { bombAnchorCell, DIR_VEC } from "@arrowjaw/shared";
+import { bombAnchorCell, DIR_VEC, isAdjacentCells, vecKey } from "@arrowjaw/shared";
 import { isPolylineContinuous } from "@arrowjaw/shared";
 
 export type EditorTool =
@@ -15,7 +15,10 @@ export type EditorTool =
   | "frozen"
   | "movingWall"
   | "wallPath"
-  | "zone";
+  | "zone"
+  | "shrinkPipe"
+  | "toggle"
+  | "controller";
 
 export interface DrawState {
   tool: EditorTool;
@@ -29,6 +32,9 @@ export interface DrawState {
   direction2: Direction;
   cornerD1: Vec2;
   cornerD2: Vec2;
+  shrinkPipeBindCoord: Vec2 | null;
+  shrinkPipeId: number | null;
+  toggleGroupId: number;
 }
 
 export function createDrawState(): DrawState {
@@ -44,6 +50,9 @@ export function createDrawState(): DrawState {
     direction2: 3,
     cornerD1: [1, 0],
     cornerD2: [0, -1],
+    shrinkPipeBindCoord: null,
+    shrinkPipeId: null,
+    toggleGroupId: 1,
   };
 }
 
@@ -92,7 +101,45 @@ export function extendPolylineToCell(polyline: Vec2[], target: Vec2): Vec2[] {
 }
 
 export function isPolylineTool(tool: EditorTool): boolean {
-  return tool === "arrow" || tool === "pipe" || tool === "flipArrow";
+  return tool === "arrow" || tool === "pipe" || tool === "flipArrow" || tool === "shrinkPipe";
+}
+
+export function appendShrinkPipePoint(
+  polyline: Vec2[],
+  cell: Vec2,
+  pipeCells: Set<string>,
+  bindCoord: Vec2,
+): Vec2[] {
+  if (pipeCells.has(vecKey(cell))) return polyline;
+  if (polyline.length === 0) {
+    if (!isAdjacentCells(cell, bindCoord)) return polyline;
+    return [cell];
+  }
+  return appendPolylinePoint(polyline, cell);
+}
+
+export function extendShrinkPipeToCell(
+  polyline: Vec2[],
+  target: Vec2,
+  pipeCells: Set<string>,
+  bindCoord: Vec2,
+): Vec2[] {
+  if (polyline.length === 0) return appendShrinkPipePoint(polyline, target, pipeCells, bindCoord);
+  let result = polyline;
+  let last = result.at(-1)!;
+  if (last[0] === target[0] && last[1] === target[1]) return result;
+  while (last[0] !== target[0] || last[1] !== target[1]) {
+    let nx = last[0];
+    let ny = last[1];
+    if (nx !== target[0]) nx += Math.sign(target[0] - nx);
+    else ny += Math.sign(target[1] - ny);
+    const next: Vec2 = [nx, ny];
+    const extended = appendShrinkPipePoint(result, next, pipeCells, bindCoord);
+    if (extended.length === result.length) break;
+    result = extended;
+    last = next;
+  }
+  return result;
 }
 
 export function buildArrowItem(polyline: Vec2[], colorId: number, direction: Direction, layer = 2): Omit<RawItem, "instanceId"> {
@@ -206,6 +253,48 @@ export function buildZoneItem(cells: Vec2[]): Omit<RawItem, "instanceId"> {
 
 export function buildBundleItem(cells: Vec2[]): Omit<RawItem, "instanceId"> {
   return { kind: 8, layer: 3, occupiedPositions: cells };
+}
+
+export function buildShrinkPipeItem(
+  strip: Vec2[],
+  bindCoordinate: Vec2,
+  shorten = 1,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 14,
+    layer: 2,
+    occupiedPositions: strip.map(([x, y]) => [x, y] as Vec2),
+    bindCoordinate: [bindCoordinate[0], bindCoordinate[1]],
+    shorten,
+  };
+}
+
+export function buildToggleItem(
+  cell: Vec2,
+  groupID = 1,
+  direction: Direction = 1,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 15,
+    layer: 3,
+    groupID,
+    direction,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildControllerItem(
+  cell: Vec2,
+  groupID: number,
+  bindInstanceId: number,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 16,
+    layer: 3,
+    groupID,
+    bindInstanceId,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
 }
 
 export function isValidPolyline(polyline: Vec2[]): boolean {

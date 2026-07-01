@@ -238,6 +238,10 @@ export class App {
         vanishProgressById,
         movingWalls: this.state.getMovingWalls(),
         frozenOverlays: this.state.getFrozenOverlays(),
+        shrinkPipes: this.state.getDrawableShrinkPipes(),
+        toggles: this.state.getDrawableToggles(),
+        controllers: this.state.getDrawableControllers(),
+        toggleFlashGroupIds: this.state.getToggleFlashGroupIds(),
         bombStates: this.state.getBombDrawStates(),
         bombExplosion: this.state.getBombExplosion(),
         urgentBombRemaining: this.state.getUrgentBombRemaining(),
@@ -270,6 +274,18 @@ export class App {
     }
   }
 
+  private findNextLevelId(currentId: number): number | null {
+    const devIdx = this.devTests.findIndex((l) => l.id === currentId);
+    if (devIdx >= 0) {
+      return this.devTests[devIdx + 1]?.id ?? null;
+    }
+    const mainIdx = this.levels.findIndex((l) => l.id === currentId);
+    if (mainIdx >= 0) {
+      return this.levels[mainIdx + 1]?.id ?? null;
+    }
+    return null;
+  }
+
   private checkEndState(): void {
     if (!this.state || !this.overlayEl || this.modalShown) return;
     if (this.state.phase === "won") {
@@ -292,8 +308,8 @@ export class App {
             primary: true,
             onClick: () => {
               hideModal(this.overlayEl!);
-              const next = this.levels.find((l) => l.id === this.state!.level.id + 1);
-              if (next) void this.startLevel(next.id);
+              const nextId = this.findNextLevelId(this.state!.level.id);
+              if (nextId != null) void this.startLevel(nextId);
               else this.showLevelSelect();
             },
           },

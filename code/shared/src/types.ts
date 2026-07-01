@@ -79,6 +79,33 @@ export interface CornerItem extends BaseItem {
   direction1: Vec2;
   direction2: Vec2;
   zoneId: number | null;
+  spin?: 0 | 90 | 180 | 270;
+  spinDirection?: 0 | 1;
+}
+
+export interface ShrinkPipeItem extends BaseItem {
+  kind: 14;
+  bindCoordinate: Vec2;
+  shorten: number;
+  zoneId: number | null;
+  /** 解析期：绑定管道 instanceId */
+  bindPipeId: number;
+}
+
+export type ToggleDirection = 1 | 2;
+
+export interface ToggleItem extends BaseItem {
+  kind: 15;
+  groupID: number;
+  direction: ToggleDirection;
+  zoneId: number | null;
+}
+
+export interface ControllerItem extends BaseItem {
+  kind: 16;
+  groupID: number;
+  bindInstanceId: number;
+  zoneId: number | null;
 }
 
 export interface ZoneItem extends BaseItem {
@@ -144,6 +171,12 @@ export interface RawItem {
   movingPath?: Vec2[];
   movingDistance?: number;
   movingType?: 1 | 2;
+  bindCoordinate?: Vec2;
+  shorten?: number;
+  groupID?: number;
+  bindInstanceId?: number;
+  spin?: 0 | 90 | 180 | 270;
+  spinDirection?: 0 | 1;
   items?: RawItem[];
   [key: string]: unknown;
 }
@@ -165,6 +198,9 @@ export interface GameLevel {
   bombs: BombItem[];
   movingWalls: MovingWallItem[];
   frozenOverlays: FrozenOverlayItem[];
+  shrinkPipes: ShrinkPipeItem[];
+  toggles: ToggleItem[];
+  controllers: ControllerItem[];
 }
 
 export type ValidationSeverity = "error" | "warning";

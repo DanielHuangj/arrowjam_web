@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-15  
 > **状态**：待开发  
-> **关联文档**：[Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_新机制开发步骤拆解.md](arrow_jaw_新机制开发步骤拆解.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md)
+> **关联文档**：[Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_新机制开发步骤拆解.md](arrow_jaw_新机制开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md)
 
 ---
 
@@ -31,6 +31,10 @@
 ### 1.3 与 P0–P4 关系
 
 本需求定义为 **P5 阶段**，不修改 P0–P4 已验收关卡的玩法与数据。
+
+### 1.4 后续阶段（P8 收缩拨动）
+
+kind 14/15/16（收缩障碍、拨动杆、控制器）见 [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md)。
 
 ---
 

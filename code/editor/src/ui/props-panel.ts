@@ -13,6 +13,9 @@ const KIND_LABELS: Record<number, string> = {
   11: "钥匙箭",
   12: "子区域",
   13: "冻结箭",
+  14: "收缩障碍",
+  15: "拨动杆",
+  16: "控制器",
 };
 
 const COLORS = [
@@ -168,6 +171,22 @@ function renderItemProps(
   } else if (item.kind === 4) {
     html += `<label><span>direction1</span><div class="dir-btn-group" id="d1-btns"></div></label>`;
     html += `<label><span>direction2</span><div class="dir-btn-group" id="d2-btns"></div></label>`;
+    html += `
+      <label><span>spin（°）</span>
+        <select id="prop-spin">
+          <option value="" ${item.spin == null ? "selected" : ""}>0（默认）</option>
+          <option value="90" ${item.spin === 90 ? "selected" : ""}>90</option>
+          <option value="180" ${item.spin === 180 ? "selected" : ""}>180</option>
+          <option value="270" ${item.spin === 270 ? "selected" : ""}>270</option>
+        </select>
+      </label>
+      <label><span>spinDirection</span>
+        <select id="prop-spin-dir">
+          <option value="0" ${(item.spinDirection ?? 0) === 0 ? "selected" : ""}>顺时针</option>
+          <option value="1" ${item.spinDirection === 1 ? "selected" : ""}>逆时针</option>
+        </select>
+      </label>
+    `;
   } else if (item.kind === 3) {
     html += `
       <label><span>血量</span><input type="number" id="prop-health" min="1" value="${item.health ?? 1}" /></label>
@@ -212,6 +231,28 @@ function renderItemProps(
     html += `
       <label><span>health</span><input type="number" id="prop-health" min="1" value="${item.health ?? 1}" /></label>
       <p>冻结区域: ${formatPositions(item.occupiedPositions)}</p>
+    `;
+  } else if (item.kind === 14) {
+    const bind = item.bindCoordinate as Vec2 | undefined;
+    html += `
+      <label><span>shorten</span><input type="number" id="prop-shorten" min="1" value="${item.shorten ?? 1}" /></label>
+      <p>bindCoordinate: [${bind?.[0] ?? "?"}, ${bind?.[1] ?? "?"}]</p>
+      <p>路径: ${formatPositions(item.occupiedPositions)}</p>
+    `;
+  } else if (item.kind === 15) {
+    html += `
+      <label><span>groupID</span><input type="number" id="prop-group-id" min="1" value="${item.groupID ?? 1}" /></label>
+      <label><span>direction</span>
+        <select id="prop-direction">
+          <option value="1" ${item.direction === 1 ? "selected" : ""}>1</option>
+          <option value="2" ${item.direction === 2 ? "selected" : ""}>2</option>
+        </select>
+      </label>
+    `;
+  } else if (item.kind === 16) {
+    html += `
+      <label><span>groupID</span><input type="number" id="prop-group-id" min="1" value="${item.groupID ?? 1}" /></label>
+      <p>bindInstanceId: ${item.bindInstanceId ?? "?"}</p>
     `;
   } else if (item.kind === 11) {
     const pos = item.occupiedPositions[0];
@@ -258,6 +299,19 @@ function renderItemProps(
   });
   el.querySelector("#prop-hvpi")?.addEventListener("change", (e) => {
     onItem({ healthViewPathIndex: parseInt((e.target as HTMLInputElement).value, 10) });
+  });
+  el.querySelector("#prop-shorten")?.addEventListener("change", (e) => {
+    onItem({ shorten: parseInt((e.target as HTMLInputElement).value, 10) });
+  });
+  el.querySelector("#prop-group-id")?.addEventListener("change", (e) => {
+    onItem({ groupID: parseInt((e.target as HTMLInputElement).value, 10) });
+  });
+  el.querySelector("#prop-spin")?.addEventListener("change", (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    onItem({ spin: v ? parseInt(v, 10) : undefined });
+  });
+  el.querySelector("#prop-spin-dir")?.addEventListener("change", (e) => {
+    onItem({ spinDirection: parseInt((e.target as HTMLSelectElement).value, 10) });
   });
   el.querySelector("#enter-zone")?.addEventListener("click", () => onEnterZone(item.instanceId));
 

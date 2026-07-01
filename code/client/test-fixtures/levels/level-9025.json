@@ -1,0 +1,42 @@
+{
+  "width": 12,
+  "height": 12,
+  "name": "[测] 拨动杆",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 7,
+      "instanceId": 70,
+      "layer": 2,
+      "occupiedPositions": [[8, 5], [8, 6]],
+      "movingPath": [[8, 5], [8, 6], [8, 7]],
+      "movingDistance": 1,
+      "movingType": 1
+    },
+    {
+      "kind": 15,
+      "instanceId": 150,
+      "layer": 3,
+      "groupID": 1,
+      "direction": 1,
+      "occupiedPositions": [[2, 5]]
+    },
+    {
+      "kind": 16,
+      "instanceId": 160,
+      "layer": 3,
+      "groupID": 1,
+      "bindInstanceId": 70,
+      "occupiedPositions": [[8, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6,
+      "occupiedPositions": [[0, 5], [1, 5]]
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 > **版本**：v0.1  
 > **日期**：2026-06-15  
-> **关联文档**：[arrow_jaw_新机制编辑器开发需求文档.md](arrow_jaw_新机制编辑器开发需求文档.md) · [Arrow Jam 新增规则编辑器需求.md](Arrow%20Jam%20新增规则编辑器需求.md) · [arrow_jaw_关卡编辑器开发步骤拆解.md](arrow_jaw_关卡编辑器开发步骤拆解.md)
+> **关联文档**：[arrow_jaw_新机制编辑器开发需求文档.md](arrow_jaw_新机制编辑器开发需求文档.md) · [Arrow Jam 新增规则编辑器需求.md](Arrow%20Jam%20新增规则编辑器需求.md) · [arrow_jaw_关卡编辑器开发步骤拆解.md](arrow_jaw_关卡编辑器开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发步骤拆解.md](arrow_jaw_收缩拨动机制开发步骤拆解.md)（附录 E-P8）
 
 本文档将 P6 新机制编辑器开发拆解为 **E-NE0 → E-NE5**。代码根目录 `code/editor`，共享层 `code/shared`。
 

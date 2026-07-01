@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-15  
 > **状态**：待开发  
-> **关联文档**：[Arrow Jam 新增规则编辑器需求.md](Arrow%20Jam%20新增规则编辑器需求.md) · [Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_新机制开发需求文档.md](arrow_jaw_新机制开发需求文档.md) · [arrow_jaw_关卡编辑器开发需求文档.md](arrow_jaw_关卡编辑器开发需求文档.md) · [arrow_jaw_新机制编辑器开发步骤拆解.md](arrow_jaw_新机制编辑器开发步骤拆解.md)
+> **关联文档**：[Arrow Jam 新增规则编辑器需求.md](Arrow%20Jam%20新增规则编辑器需求.md) · [Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_新机制开发需求文档.md](arrow_jaw_新机制开发需求文档.md) · [arrow_jaw_关卡编辑器开发需求文档.md](arrow_jaw_关卡编辑器开发需求文档.md) · [arrow_jaw_新机制编辑器开发步骤拆解.md](arrow_jaw_新机制编辑器开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md)（附录 A）
 
 ---
 
@@ -257,6 +257,10 @@ Esc 退出试玩恢复编辑态；编辑改动后试玩反映最新 `itemModels`
 - kind11 改为「先选箭再绑」
 - kind7 放入子区域
 - 自动关卡生成 / AI 辅助
+
+### 11.1 后续：kind 14/15/16
+
+收缩障碍与拨动杆编辑器需求已并入 [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md) 附录 A；实施步骤见 [arrow_jaw_收缩拨动机制开发步骤拆解.md](arrow_jaw_收缩拨动机制开发步骤拆解.md) 附录 E-P8。
 
 ---
 

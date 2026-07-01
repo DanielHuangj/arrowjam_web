@@ -2,6 +2,7 @@ import type {
   ArrowItem,
   BombItem,
   BundleItem,
+  ControllerItem,
   CornerItem,
   Direction,
   FrozenOverlayItem,
@@ -12,6 +13,8 @@ import type {
   LaunchAnimation,
   LostReason,
   PipeItem,
+  ShrinkPipeItem,
+  ToggleItem,
   Vec2,
 } from "../types.ts";
 import { vecKey } from "../types.ts";
@@ -34,9 +37,12 @@ import {
 import { getCornerAt } from "../mechanics/corner.ts";
 import { ZoneManager } from "../mechanics/zone.ts";
 import { flipUncoveredArrows } from "../mechanics/flip.ts";
+import { removeControllersForHosts, syncControllersForHost, syncControllersWithArrowHosts, syncControllersWithShrinkHosts } from "@arrowjaw/shared";
 import { BombManager, BOMB_EXPLOSION_DURATION } from "../mechanics/bomb.ts";
 import { MovingWallManager, wouldStepIntoWall } from "../mechanics/moving-wall.ts";
 import { FrozenManager } from "../mechanics/frozen.ts";
+import { ShrinkPipeManager } from "../mechanics/shrink-pipe.ts";
+import { ToggleManager } from "../mechanics/toggle.ts";
 import {
   getAnimStepIntervalMs as computeAnimStepIntervalMs,
 } from "./anim-timing.ts";
@@ -97,6 +103,11 @@ export class GameState {
   bombManager: BombManager;
   wallManager: MovingWallManager;
   frozenManager: FrozenManager;
+  shrinkPipes: ShrinkPipeItem[];
+  toggles: ToggleItem[];
+  controllers: ControllerItem[];
+  shrinkPipeManager: ShrinkPipeManager;
+  toggleManager: ToggleManager;
   private keyCells: Set<string>;
   private clearedTraceCells = new Set<string>();
   mistakeCount = 0;
@@ -198,6 +209,21 @@ export class GameState {
     this.bombManager = new BombManager(level.bombs ?? [], this.arrows);
     this.wallManager = new MovingWallManager(level.movingWalls ?? []);
     this.frozenManager = new FrozenManager(level.frozenOverlays ?? []);
+    this.shrinkPipes = (level.shrinkPipes ?? []).map((s) => ({
+      ...s,
+      bindCoordinate: [s.bindCoordinate[0], s.bindCoordinate[1]] as Vec2,
+      occupiedPositions: clonePositions(s.occupiedPositions),
+    }));
+    this.toggles = (level.toggles ?? []).map((t) => ({
+      ...t,
+      occupiedPositions: clonePositions(t.occupiedPositions),
+    }));
+    this.controllers = (level.controllers ?? []).map((c) => ({
+      ...c,
+      occupiedPositions: clonePositions(c.occupiedPositions),
+    }));
+    this.shrinkPipeManager = new ShrinkPipeManager(this.shrinkPipes, this.pipes);
+    this.toggleManager = new ToggleManager(this.toggles, this.controllers);
     this.keyCells = buildKeyCellSet(this.keys);
     this.rebuildCellMap();
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
@@ -240,7 +266,116 @@ export class GameState {
   }
 
   getWallBlockerCells(): Set<string> {
-    return this.wallManager.getBlockerCells();
+    const cells = this.wallManager.getBlockerCells();
+    for (const k of this.shrinkPipeManager.getBlockerCells()) {
+      cells.add(k);
+    }
+    return cells;
+  }
+
+  private getControllerBoundHostIds(): Set<number> {
+    return new Set(this.controllers.map((c) => c.bindInstanceId));
+  }
+
+  private getControlledWallIds(): Set<number> {
+    const bound = this.getControllerBoundHostIds();
+    return new Set(
+      this.wallManager
+        .getWalls()
+        .filter((w) => bound.has(w.instanceId))
+        .map((w) => w.instanceId),
+    );
+  }
+
+  private isToggleCovered(toggle: ToggleItem): boolean {
+    if (!this.isMechanicDrawable(toggle.zoneId)) return true;
+    const cell = toggle.occupiedPositions[0];
+    if (cell && this.getCurtainCells().has(vecKey(cell))) return true;
+    return false;
+  }
+
+  private isControllerCovered(ctrl: ControllerItem): boolean {
+    if (!this.isMechanicDrawable(ctrl.zoneId)) return true;
+    const cell = ctrl.occupiedPositions[0];
+    if (cell && this.getCurtainCells().has(vecKey(cell))) return true;
+    return false;
+  }
+
+  private syncControllersForHostMove(
+    hostId: number,
+    oldPositions: Vec2[],
+    newPositions: Vec2[],
+  ): void {
+    this.controllers = syncControllersForHost(
+      this.controllers,
+      hostId,
+      oldPositions,
+      newPositions,
+    );
+  }
+
+  private syncControllersIfHostMoved(
+    hostId: number,
+    oldPositions: Vec2[],
+    newPositions: Vec2[],
+  ): void {
+    if (
+      !this.controllers.some(
+        (c) => c.kind === 16 && c.bindInstanceId === hostId,
+      )
+    ) {
+      return;
+    }
+    if (
+      oldPositions.length === newPositions.length &&
+      oldPositions.every(
+        (p, i) =>
+          p[0] === newPositions[i]![0] && p[1] === newPositions[i]![1],
+      )
+    ) {
+      return;
+    }
+    this.syncControllersForHostMove(hostId, oldPositions, newPositions);
+  }
+
+  private toggleExecutionContext() {
+    return {
+      arrows: this.arrows,
+      corners: this.corners,
+      shrinkPipes: this.shrinkPipes,
+      controllers: this.controllers,
+      wallManager: this.wallManager,
+      shrinkPipeManager: this.shrinkPipeManager,
+      isToggleCovered: (t: ToggleItem) => this.isToggleCovered(t),
+      isControllerCovered: (c: ControllerItem) => this.isControllerCovered(c),
+      wallHasController: (id: number) => this.getControlledWallIds().has(id),
+    };
+  }
+
+  private recordToggleCrossingForAnim(
+    anim: LaunchAnimation,
+    prev: Vec2[],
+    next: Vec2[],
+  ): void {
+    if (anim.reversing) return;
+    const ids = this.toggleManager.collectCrossedToggleIds(
+      prev,
+      next,
+      this.toggleExecutionContext(),
+    );
+    for (const id of ids) {
+      if (!anim.togglesCrossedIds.includes(id)) {
+        anim.togglesCrossedIds.push(id);
+      }
+    }
+  }
+
+  private commitPendingToggles(anim: LaunchAnimation): void {
+    if (anim.togglesCrossedIds.length === 0) return;
+    const ctx = this.toggleExecutionContext();
+    this.toggleManager.commitToggles(anim.togglesCrossedIds, ctx);
+    this.controllers = ctx.controllers;
+    this.rebuildCellMap();
   }
 
   /** 发射动画中覆盖箭的发射前原位，用于子区域揭示判定 */
@@ -296,13 +431,57 @@ export class GameState {
     this.frozenManager.onAdjacentElimination(forFrozen, (overlay) =>
       this.canFrozenOverlayTakeAdjacentDamage(overlay),
     );
-    this.arrows = flipUncoveredArrows(this.arrows, (a) =>
-      this.isArrowCoveredForMechanics(a),
+    const arrowPosBefore = new Map(
+      this.arrows.map((a) => [a.instanceId, clonePositions(a.occupiedPositions)]),
     );
-    this.wallManager.advanceAll();
+    this.arrows = flipUncoveredArrows(this.arrows, (a) =>
+      this.isArrowCoveredForMechanics(a) ||
+      (a.kind === 2 && this.getControllerBoundHostIds().has(a.instanceId)),
+    );
+    for (const arrow of this.arrows) {
+      const oldPos = arrowPosBefore.get(arrow.instanceId);
+      if (!oldPos) continue;
+      if (
+        oldPos.length !== arrow.occupiedPositions.length ||
+        oldPos.some(
+          (p, i) =>
+            p[0] !== arrow.occupiedPositions[i]![0] ||
+            p[1] !== arrow.occupiedPositions[i]![1],
+        )
+      ) {
+        this.syncControllersForHostMove(
+          arrow.instanceId,
+          oldPos,
+          arrow.occupiedPositions,
+        );
+      }
+    }
+
+    const wallPosBefore = new Map(
+      this.wallManager.getWalls().map((w) => [w.instanceId, clonePositions(w.occupiedPositions)]),
+    );
+    this.wallManager.advanceAll(this.getControlledWallIds());
+    for (const wall of this.wallManager.getWalls()) {
+      const oldPos = wallPosBefore.get(wall.instanceId);
+      if (!oldPos) continue;
+      if (
+        oldPos.some(
+          (p, i) =>
+            p[0] !== wall.occupiedPositions[i]![0] ||
+            p[1] !== wall.occupiedPositions[i]![1],
+        )
+      ) {
+        this.syncControllersForHostMove(
+          wall.instanceId,
+          oldPos,
+          wall.occupiedPositions,
+        );
+      }
+    }
 
     const hostIds = new Set(removedArrows.map((a) => a.instanceId));
     this.bombManager.removeForHosts(hostIds);
+    removeControllersForHosts(this.controllers, hostIds);
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
   }
 
@@ -353,7 +532,16 @@ export class GameState {
     for (const pipeId of pipeIds) {
       decrementPipeHealth(this.pipes, pipeId);
     }
+    this.shrinkPipeManager.onPipeTraversed([...pipeIds]);
     this.pipes = pruneDeadPipes(this.pipes);
+    this.shrinkPipeManager.setPipes(this.pipes);
+    const livePipeIds = new Set(this.pipes.map((p) => p.instanceId));
+    const removedStripIds = this.shrinkPipes
+      .filter((s) => !livePipeIds.has(s.bindPipeId))
+      .map((s) => s.instanceId);
+    this.shrinkPipeManager.removeForDeadPipes(livePipeIds);
+    removeControllersForHosts(this.controllers, new Set(removedStripIds));
+    syncControllersWithShrinkHosts(this.controllers, this.shrinkPipes);
   }
 
   private clearPipeAnimState(anim: LaunchAnimation): void {
@@ -410,6 +598,7 @@ export class GameState {
     }
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
     const explodedCells = this.bombManager.tick(dt);
+    this.toggleManager.tickFlash(dt);
     if (
       explodedCells.length > 0 &&
       this.arrows.length > 0 &&
@@ -495,6 +684,7 @@ export class GameState {
       stepAccumMs: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
+      togglesCrossedIds: [],
     });
     this.lastLaunchTimeMs = now;
     this.phase = "animating";
@@ -550,6 +740,8 @@ export class GameState {
     const removeIds = new Set(anim.memberIds);
     const group = this.bundleManager.getGroupForArrow(anim.instanceId);
     const removedArrows = this.arrows.filter((a) => removeIds.has(a.instanceId));
+
+    this.commitPendingToggles(anim);
 
     // 相邻消除须在钥匙扣幕布 health 之前结算，幕布下物件不受本次飞出消除影响
     this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById);
@@ -738,8 +930,19 @@ export class GameState {
     }
 
     for (const arrow of stepped) {
+      const prev =
+        members.find((m) => m.instanceId === arrow.instanceId)?.occupiedPositions ??
+        arrow.occupiedPositions;
       const idx = this.arrows.findIndex((a) => a.instanceId === arrow.instanceId);
-      if (idx !== -1) this.arrows[idx] = arrow;
+      if (idx !== -1) {
+        this.arrows[idx] = arrow;
+        this.syncControllersIfHostMoved(
+          arrow.instanceId,
+          prev,
+          arrow.occupiedPositions,
+        );
+        this.recordToggleCrossingForAnim(anim, prev, arrow.occupiedPositions);
+      }
     }
 
     this.syncAnimationStrips(anim, stepped.length > 0);
@@ -786,7 +989,9 @@ export class GameState {
           prev ?? anim.originalPositionsById[arrow.instanceId] ?? arrow.occupiedPositions;
         const idx = this.arrows.findIndex((a) => a.instanceId === arrow.instanceId);
         if (idx !== -1) {
+          const oldPos = clonePositions(this.arrows[idx]!.occupiedPositions);
           this.arrows[idx] = withPositions(arrow, target);
+          this.syncControllersIfHostMoved(arrow.instanceId, oldPos, target);
           this.cellMap.addArrow(this.arrows[idx]!);
         }
         if (history.length > 0) allDone = false;
@@ -904,10 +1109,18 @@ export class GameState {
     }
 
     for (const arrow of stepped) {
+      const member = members.find((m) => m.instanceId === arrow.instanceId);
+      const prev = member?.occupiedPositions ?? arrow.occupiedPositions;
       const idx = this.arrows.findIndex((a) => a.instanceId === arrow.instanceId);
       if (idx !== -1) {
         this.arrows[idx] = arrow;
         this.cellMap.addArrow(arrow);
+        this.syncControllersIfHostMoved(
+          arrow.instanceId,
+          prev,
+          arrow.occupiedPositions,
+        );
+        this.recordToggleCrossingForAnim(anim, prev, arrow.occupiedPositions);
       }
     }
 
@@ -1175,6 +1388,7 @@ export class GameState {
       stepAccumMs: 0,
       pipeTransitById: Object.fromEntries(memberIds.map((id) => [id, null])),
       pipesCrossedById: Object.fromEntries(memberIds.map((id) => [id, []])),
+      togglesCrossedIds: [],
     });
     return true;
   }
@@ -1338,5 +1552,34 @@ export class GameState {
 
   getUrgentBombRemaining(): number | null {
     return this.bombManager.getUrgentRemaining();
+  }
+
+  getDrawableShrinkPipes(): ShrinkPipeItem[] {
+    return this.shrinkPipes.filter((s) => this.isMechanicDrawable(s.zoneId));
+  }
+
+  getDrawableToggles(): ToggleItem[] {
+    return this.toggles.filter((t) => this.isMechanicDrawable(t.zoneId));
+  }
+
+  getDrawableControllers(): ControllerItem[] {
+    syncControllersWithArrowHosts(this.controllers, this.arrows);
+    syncControllersWithShrinkHosts(this.controllers, this.shrinkPipes);
+    const vanishingHostIds = new Set<number>();
+    for (const anim of this.animations) {
+      if (anim.mode !== "vanish") continue;
+      for (const id of anim.memberIds) {
+        vanishingHostIds.add(id);
+      }
+    }
+    return this.controllers.filter(
+      (c) =>
+        this.isMechanicDrawable(c.zoneId) &&
+        !vanishingHostIds.has(c.bindInstanceId),
+    );
+  }
+
+  getToggleFlashGroupIds(): Set<number> {
+    return this.toggleManager.getFlashGroupIds();
   }
 }

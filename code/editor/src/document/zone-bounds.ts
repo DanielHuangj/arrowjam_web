@@ -30,7 +30,7 @@ export function canPlaceInEditContext(doc: EditorDocument, positions: Vec2[]): b
   return positionsWithinZone(zone, positions);
 }
 
-export type ArrowPlacementBlockReason = "zone" | "self" | "overlap";
+export type ArrowPlacementBlockReason = "zone" | "self" | "overlap" | "occupied";
 
 /** 折线箭放置：子区域范围 + 不自交 + 不与其他箭同格 */
 export function getArrowPlacementBlockReason(
@@ -62,5 +62,7 @@ export function arrowPlacementBlockMessage(reason: ArrowPlacementBlockReason): s
       return "折线箭路径不可自交";
     case "overlap":
       return "折线箭不可与其他箭占用同一格";
+    case "occupied":
+      return "该格已被其它物件占用";
   }
 }

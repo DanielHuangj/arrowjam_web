@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getReflectedDirection,
   isValidCornerEntry,
+  rotateCorner,
 } from "./corner.ts";
 import type { CornerItem } from "../types.ts";
 
@@ -34,5 +35,11 @@ describe("corner reflection", () => {
       direction1: [-1, 0],
     };
     expect(getReflectedDirection(1, corner)).toBe(4);
+  });
+
+  it("rotateCorner spins reflection vectors", () => {
+    const rotated = rotateCorner(bottomLeftCorner, 90, 0);
+    expect(rotated.direction1).toEqual([0, 1]);
+    expect(rotated.direction2).toEqual([1, 0]);
   });
 });

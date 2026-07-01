@@ -7,6 +7,9 @@ export type {
   BombItem,
   MovingWallItem,
   FrozenOverlayItem,
+  ShrinkPipeItem,
+  ToggleItem,
+  ControllerItem,
   CornerItem,
   ZoneItem,
   BundleItem,
@@ -97,6 +100,8 @@ export interface LaunchAnimation {
   stepAccumMs: number;
   pipeTransitById: Record<number, PipeTransitState | null>;
   pipesCrossedById: Record<number, number[]>;
+  /** 飞出消除动画中穿过、待箭消除后结算的拨动杆 instanceId */
+  togglesCrossedIds: number[];
 }
 
 export interface GameSnapshot {

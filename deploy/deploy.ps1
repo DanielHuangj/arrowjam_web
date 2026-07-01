@@ -31,7 +31,7 @@ npm run build
 Pop-Location
 
 Write-Host "== 2/5 Upload dist =="
-& (Join-Path $PSScriptRoot "upload.ps1")
+& (Join-Path $PSScriptRoot "upload.ps1") -IncludeLevels
 
 $Host_ = $env:DEPLOY_HOST
 $Path = $env:DEPLOY_PATH

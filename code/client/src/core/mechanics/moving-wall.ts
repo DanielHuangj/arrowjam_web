@@ -124,35 +124,46 @@ export class MovingWallManager {
     return cells;
   }
 
-  advanceAll(): void {
-    for (const state of this.states) {
-      const path = state.wall.movingPath;
-      const pathLen = path.length;
-      if (pathLen < 2) continue;
+  private advanceState(state: WallState): void {
+    const path = state.wall.movingPath;
+    const pathLen = path.length;
+    if (pathLen < 2) return;
 
-      if (state.wall.movingType === 2) {
-        state.pathIndex =
-          (state.pathIndex + state.wall.movingDistance) % pathLen;
-      } else {
-        const maxIndex = Math.max(0, pathLen - state.segmentCount);
-        const stepped = stepAlongPath(
-          state.pathIndex,
-          state.direction,
-          state.wall.movingDistance,
-          maxIndex,
-        );
-        state.pathIndex = stepped.pathIndex;
-        state.direction = stepped.direction;
-      }
-
-      state.wall = {
-        ...state.wall,
-        occupiedPositions: wallBodyFromPathIndex(
-          state.wall,
-          state.pathIndex,
-          state.segmentCount,
-        ),
-      };
+    if (state.wall.movingType === 2) {
+      state.pathIndex =
+        (state.pathIndex + state.wall.movingDistance) % pathLen;
+    } else {
+      const maxIndex = Math.max(0, pathLen - state.segmentCount);
+      const stepped = stepAlongPath(
+        state.pathIndex,
+        state.direction,
+        state.wall.movingDistance,
+        maxIndex,
+      );
+      state.pathIndex = stepped.pathIndex;
+      state.direction = stepped.direction;
     }
+
+    state.wall = {
+      ...state.wall,
+      occupiedPositions: wallBodyFromPathIndex(
+        state.wall,
+        state.pathIndex,
+        state.segmentCount,
+      ),
+    };
+  }
+
+  advanceAll(skipWallIds: Set<number> = new Set()): void {
+    for (const state of this.states) {
+      if (skipWallIds.has(state.wall.instanceId)) continue;
+      this.advanceState(state);
+    }
+  }
+
+  advanceWall(instanceId: number): void {
+    const state = this.states.find((s) => s.wall.instanceId === instanceId);
+    if (!state) return;
+    this.advanceState(state);
   }
 }

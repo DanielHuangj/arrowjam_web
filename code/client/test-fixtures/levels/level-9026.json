@@ -1,0 +1,42 @@
+{
+  "width": 16,
+  "height": 16,
+  "name": "[测] 分组联动",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "itemModels": [
+    {
+      "kind": 2,
+      "instanceId": 20,
+      "layer": 2,
+      "direction1": 3,
+      "direction2": 4,
+      "colorId": 7,
+      "occupiedPositions": [[10, 10], [11, 10]]
+    },
+    {
+      "kind": 15,
+      "instanceId": 151,
+      "layer": 3,
+      "groupID": 2,
+      "direction": 1,
+      "occupiedPositions": [[8, 10]]
+    },
+    {
+      "kind": 16,
+      "instanceId": 161,
+      "layer": 3,
+      "groupID": 2,
+      "bindInstanceId": 20,
+      "occupiedPositions": [[10, 10]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3,
+      "occupiedPositions": [[6, 10], [7, 10]]
+    }
+  ]
+}

@@ -3,12 +3,15 @@ import type {
   BoardSize,
   BombItem,
   BundleItem,
+  ControllerItem,
   CornerItem,
   CurtainItem,
   FrozenOverlayItem,
   KeyArrowItem,
   MovingWallItem,
   PipeItem,
+  ShrinkPipeItem,
+  ToggleItem,
   Vec2,
   ZoneItem,
 } from "../core/types.ts";
@@ -32,7 +35,7 @@ import { drawCornerInCell } from "./corner-drawer.ts";
 import { drawCurtainInBoard } from "./curtain-drawer.ts";
 import { drawKeyInCell } from "./key-drawer.ts";
 import { drawPipeInBoard } from "./pipe-drawer.ts";
-import { drawBomb, drawBombExplosion, drawFrozenOverlay, drawMovingWall } from "./mechanics-drawer.ts";
+import { drawBomb, drawBombExplosion, drawController, drawFrozenOverlay, drawMovingWall, drawShrinkPipe, drawToggle } from "./mechanics-drawer.ts";
 
 export type BoardRenderStyle = "editor" | "game";
 
@@ -49,6 +52,10 @@ export interface BoardDrawOptions {
   bombExplosion?: { cells: Vec2[]; progress: number } | null;
   bombs?: BombItem[];
   urgentBombRemaining?: number | null;
+  shrinkPipes?: ShrinkPipeItem[];
+  toggles?: ToggleItem[];
+  controllers?: ControllerItem[];
+  toggleFlashGroupIds?: Set<number>;
 }
 
 const DEFAULT_DRAW_OPTIONS: BoardDrawOptions = { style: "editor" };
@@ -115,6 +122,11 @@ export class BoardRenderer {
   ): void {
     const style = options.style ?? this.defaultStyle;
     const isGame = style === "game";
+    const cornerControllerHosts = this.buildCornerControllerHostMap(
+      zoneCorners,
+      topCorners,
+      options.controllers,
+    );
 
     this.resize(board);
     const { width, height } = boardPixelSize(board);
@@ -144,6 +156,12 @@ export class BoardRenderer {
       this.drawZone(zone);
     }
 
+    if (options.toggles) {
+      for (const toggle of options.toggles) {
+        drawToggle(this.ctx, toggle, STEP);
+      }
+    }
+
     for (const arrow of zoneArrows) {
       this.drawArrow(
         arrow,
@@ -156,7 +174,7 @@ export class BoardRenderer {
       this.drawPipe(pipe);
     }
     for (const corner of zoneCorners) {
-      this.drawCorner(corner);
+      this.drawCorner(corner, options, cornerControllerHosts);
     }
     for (const strip of zoneBundles) {
       this.drawBundle(strip);
@@ -174,6 +192,11 @@ export class BoardRenderer {
     for (const pipe of topPipes) {
       this.drawPipe(pipe);
     }
+    if (options.shrinkPipes) {
+      for (const strip of options.shrinkPipes) {
+        drawShrinkPipe(this.ctx, strip, STEP);
+      }
+    }
     if (options.movingWalls) {
       for (const wall of options.movingWalls) {
         drawMovingWall(this.ctx, wall);
@@ -186,10 +209,18 @@ export class BoardRenderer {
       }
     }
     for (const corner of topCorners) {
-      this.drawCorner(corner);
+      this.drawCorner(corner, options, cornerControllerHosts);
     }
     for (const strip of topBundles) {
       this.drawBundle(strip);
+    }
+
+    if (options.controllers) {
+      for (const ctrl of options.controllers) {
+        if (cornerControllerHosts.has(ctrl.bindInstanceId)) continue;
+        const flash = options.toggleFlashGroupIds?.has(ctrl.groupID) ?? false;
+        drawController(this.ctx, ctrl, STEP, flash);
+      }
     }
 
     for (const key of keys) {
@@ -250,9 +281,38 @@ export class BoardRenderer {
     this.ctx.setLineDash([]);
   }
 
-  private drawCorner(corner: CornerItem): void {
+  private buildCornerControllerHostMap(
+    zoneCorners: CornerItem[],
+    topCorners: CornerItem[],
+    controllers: ControllerItem[] | undefined,
+  ): Map<number, ControllerItem> {
+    const cornerIds = new Set([
+      ...zoneCorners.map((c) => c.instanceId),
+      ...topCorners.map((c) => c.instanceId),
+    ]);
+    const map = new Map<number, ControllerItem>();
+    for (const ctrl of controllers ?? []) {
+      if (cornerIds.has(ctrl.bindInstanceId)) {
+        map.set(ctrl.bindInstanceId, ctrl);
+      }
+    }
+    return map;
+  }
+
+  private drawCorner(
+    corner: CornerItem,
+    options: BoardDrawOptions,
+    cornerControllers: Map<number, ControllerItem>,
+  ): void {
     const [x, y] = corner.occupiedPositions[0] ?? [0, 0];
-    drawCornerInCell(this.ctx, x, y, corner, STEP);
+    const boundController = cornerControllers.get(corner.instanceId);
+    const controllerFlash =
+      boundController != null &&
+      (options.toggleFlashGroupIds?.has(boundController.groupID) ?? false);
+    drawCornerInCell(this.ctx, x, y, corner, STEP, {
+      boundController,
+      controllerFlash,
+    });
   }
 
   private drawPipe(pipe: PipeItem): void {

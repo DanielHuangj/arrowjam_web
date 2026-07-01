@@ -1,6 +1,6 @@
 import type { Direction, LevelData, RawItem, ValidationIssue, Vec2 } from "./types.ts";
 import { inBounds, vecKey } from "./types.ts";
-import { collectAllItems, findArrowCellOverlaps, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, findArrowHostingCell, findArrowHostingPositions, findItemParentList, isPolylineContinuous, isRectangular } from "./items.ts";
+import { collectAllItems, findArrowCellOverlaps, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, findArrowHostingCell, findArrowHostingPositions, findItemParentList, isPolylineContinuous, isRectangular, CONTROLLER_HOST_KINDS, validateShrinkStripAgainstPipe } from "./items.ts";
 
 function push(
   issues: ValidationIssue[],
@@ -109,12 +109,12 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
 
     if (item.kind === 12 && item.items) {
       for (const child of item.items) {
-        if (![1, 2, 4, 5, 8, 13].includes(child.kind)) {
+        if (![1, 2, 4, 5, 8, 13, 14, 15, 16].includes(child.kind)) {
           push(
             issues,
             "V06",
             "error",
-            `区域 #${item.instanceId} 子项 kind ${child.kind} 不允许（仅 1/2/4/5/8/13）`,
+            `区域 #${item.instanceId} 子项 kind ${child.kind} 不允许（仅 1/2/4/5/8/13/14/15/16）`,
             child.instanceId,
           );
         }
@@ -285,6 +285,100 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       }
     }
 
+    if (item.kind === 14) {
+      const shorten = item.shorten as number | undefined;
+      if (shorten == null || shorten < 1) {
+        push(issues, "V-P8-14", "error", `收缩障碍 #${item.instanceId} shorten 须 ≥ 1`, item.instanceId);
+      }
+      const bind = item.bindCoordinate as Vec2 | undefined;
+      if (!bind) {
+        push(issues, "V-P8-14", "error", `收缩障碍 #${item.instanceId} 缺少 bindCoordinate`, item.instanceId);
+      }
+      if (!isPolylineContinuous(item.occupiedPositions)) {
+        push(issues, "V-P8-14", "error", `收缩障碍 #${item.instanceId} 路径不连续`, item.instanceId);
+      }
+      if (bind) {
+        const pipes = all.filter((p) => p.kind === 3);
+        const hostPipe = pipes.find((p) =>
+          p.occupiedPositions.some((pc) => vecKey(pc) === vecKey(bind)),
+        );
+        if (!hostPipe) {
+          push(
+            issues,
+            "V-P8-14",
+            "error",
+            `收缩障碍 #${item.instanceId} bindCoordinate 不在管道占格上`,
+            item.instanceId,
+          );
+        } else {
+          const msg = validateShrinkStripAgainstPipe(
+            bind,
+            item.occupiedPositions,
+            hostPipe.occupiedPositions,
+          );
+          if (msg) {
+            push(issues, "V-P8-14", "error", `收缩障碍 #${item.instanceId} ${msg}`, item.instanceId);
+          }
+        }
+      }
+    }
+
+    if (item.kind === 15) {
+      if (item.occupiedPositions.length !== 1) {
+        push(issues, "V-P8-15", "error", `拨动杆 #${item.instanceId} 须占 1 格`, item.instanceId);
+      }
+      const groupID = item.groupID as number | undefined;
+      if (groupID == null || groupID < 1) {
+        push(issues, "V-P8-15", "error", `拨动杆 #${item.instanceId} groupID 无效`, item.instanceId);
+      }
+    }
+
+    if (item.kind === 16) {
+      if (item.occupiedPositions.length !== 1) {
+        push(issues, "V-P8-16", "error", `控制器 #${item.instanceId} 须占 1 格`, item.instanceId);
+      }
+      const groupID = item.groupID as number | undefined;
+      const bindInstanceId = item.bindInstanceId as number | undefined;
+      if (groupID == null || groupID < 1) {
+        push(issues, "V-P8-16", "error", `控制器 #${item.instanceId} groupID 无效`, item.instanceId);
+      }
+      if (bindInstanceId == null) {
+        push(issues, "V-P8-16", "error", `控制器 #${item.instanceId} 缺少 bindInstanceId`, item.instanceId);
+      } else {
+        const host = all.find((h) => h.instanceId === bindInstanceId);
+        if (!host || !CONTROLLER_HOST_KINDS.has(host.kind)) {
+          push(
+            issues,
+            "V-P8-16",
+            "error",
+            `控制器 #${item.instanceId} 绑定宿主无效（须 kind2/4/7/14）`,
+            item.instanceId,
+          );
+        } else {
+          const ctrlCell = item.occupiedPositions[0];
+          if (
+            ctrlCell &&
+            !host.occupiedPositions.some((p) => vecKey(p) === vecKey(ctrlCell))
+          ) {
+            push(
+              issues,
+              "V-P8-16",
+              "error",
+              `控制器 #${item.instanceId} 须落在宿主占格内`,
+              item.instanceId,
+            );
+          }
+        }
+      }
+    }
+
+    if (item.kind === 4) {
+      const spin = item.spin as number | undefined;
+      if (spin != null && ![0, 90, 180, 270].includes(spin)) {
+        push(issues, "V-P8-CORNER", "error", `角块 #${item.instanceId} spin 无效`, item.instanceId);
+      }
+    }
+
     if (item.kind === 13) {
       const health = item.health as number | undefined;
       if (health == null || health < 1) {
@@ -370,6 +464,51 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
       `折线箭 #${o.ids.join(" 与 #")} 共享格子 ${o.cell}`,
       o.ids[0],
     );
+  }
+
+  const toggleGroups = new Set<number>();
+  const controllerGroups = new Set<number>();
+  for (const item of all) {
+    if (item.kind === 15) {
+      const g = item.groupID as number | undefined;
+      if (g != null && g >= 1) toggleGroups.add(g);
+    }
+    if (item.kind === 16) {
+      const g = item.groupID as number | undefined;
+      if (g != null && g >= 1) controllerGroups.add(g);
+    }
+  }
+  for (const g of new Set([...toggleGroups, ...controllerGroups])) {
+    if (!toggleGroups.has(g)) {
+      push(issues, "V-P8-GROUP", "warning", `分组 ${g} 缺少拨动杆（kind15）`);
+    }
+    if (!controllerGroups.has(g)) {
+      push(issues, "V-P8-GROUP", "warning", `分组 ${g} 缺少控制器（kind16）`);
+    }
+  }
+
+  for (const item of all) {
+    if (item.kind !== 15 && item.kind !== 16) continue;
+    const cell = item.occupiedPositions[0];
+    if (!cell) continue;
+    const key = vecKey(cell);
+    for (const other of all) {
+      if (other.instanceId === item.instanceId) continue;
+      if (other.kind === 6 || other.kind === 12) continue;
+      if (item.kind === 16 && other.instanceId === (item.bindInstanceId as number)) {
+        continue;
+      }
+      if (other.occupiedPositions.some((p) => vecKey(p) === key)) {
+        push(
+          issues,
+          "V-P8-CELL",
+          "error",
+          `物件 #${item.instanceId} 与 #${other.instanceId} 共享格子 ${key}`,
+          item.instanceId,
+        );
+        break;
+      }
+    }
   }
 
   for (const arrow of all) {

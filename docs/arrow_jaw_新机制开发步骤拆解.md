@@ -2,7 +2,7 @@
 
 > **版本**：v0.1  
 > **日期**：2026-06-15  
-> **关联文档**：[arrow_jaw_新机制开发需求文档.md](arrow_jaw_新机制开发需求文档.md) · [arrow_jaw_开发步骤拆解.md](arrow_jaw_开发步骤拆解.md)
+> **关联文档**：[arrow_jaw_新机制开发需求文档.md](arrow_jaw_新机制开发需求文档.md) · [arrow_jaw_开发步骤拆解.md](arrow_jaw_开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发步骤拆解.md](arrow_jaw_收缩拨动机制开发步骤拆解.md)
 
 本文档将 kind 2/5/7/13 四机制拆解为可执行工程步骤。代码根目录：**code/client**（逻辑/渲染）、**code/shared**（类型/解析/校验）。
 

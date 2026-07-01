@@ -1,5 +1,6 @@
-import type { CornerItem, Vec2 } from "../core/types.ts";
+import type { ControllerItem, CornerItem, Vec2 } from "../core/types.ts";
 import { CELL, CORNER_COLOR, CORNER_SPRING_COLOR } from "./colors.ts";
+import { drawControllerAt } from "./mechanics-drawer.ts";
 
 const INSET = 5;
 /** 反射面镜面线宽（加粗以区分单面反射） */
@@ -8,6 +9,11 @@ const SPRING_LENGTH = 13;
 const SPRING_COILS = 3.5;
 const SPRING_AMPLITUDE = 2.8;
 const SPRING_LINE_W = 2.5;
+
+export interface CornerDrawOptions {
+  boundController?: ControllerItem;
+  controllerFlash?: boolean;
+}
 
 /**
  * Mirror line is perpendicular to the bisector of the two outgoing faces
@@ -70,6 +76,70 @@ export function cornerReflectionSideNormal(
   return { nx, ny };
 }
 
+function nearPoint(a: Vec2, b: Vec2, eps = 0.5): boolean {
+  return Math.hypot(a[0] - b[0], a[1] - b[1]) <= eps;
+}
+
+function cornerCellDiagonalCorners(
+  direction1: Vec2,
+  direction2: Vec2,
+  cellSize: number,
+): [Vec2, Vec2] {
+  const { x1, y1, x2, y2 } = cornerDiagonalInCell(direction1, direction2, cellSize, 0);
+  const slope = (y2 - y1) / (x2 - x1);
+  if (slope > 0) {
+    return [
+      [0, 0],
+      [cellSize, cellSize],
+    ];
+  }
+  return [
+    [cellSize, 0],
+    [0, cellSize],
+  ];
+}
+
+/** 非反射面一侧三角（仅用于控制器锚点） */
+export function cornerNonReflectiveTriangle(
+  direction1: Vec2,
+  direction2: Vec2,
+  cellSize = CELL,
+): [Vec2, Vec2, Vec2] {
+  const [d1, d2] = cornerCellDiagonalCorners(direction1, direction2, cellSize);
+  const corners: Vec2[] = [
+    [0, 0],
+    [cellSize, 0],
+    [cellSize, cellSize],
+    [0, cellSize],
+  ];
+  const offDiag = corners.filter((c) => !nearPoint(c, d1) && !nearPoint(c, d2));
+  const triA: [Vec2, Vec2, Vec2] = [d1, d2, offDiag[0]!];
+  const triB: [Vec2, Vec2, Vec2] = [d1, d2, offDiag[1]!];
+
+  const { nx, ny } = cornerReflectionSideNormal(direction1, direction2);
+  const cx = cellSize / 2;
+  const cy = cellSize / 2;
+  const centroid = (tri: [Vec2, Vec2, Vec2]): Vec2 => [
+    (tri[0][0] + tri[1][0] + tri[2][0]) / 3,
+    (tri[0][1] + tri[1][1] + tri[2][1]) / 3,
+  ];
+  const dotA =
+    (centroid(triA)[0] - cx) * nx + (centroid(triA)[1] - cy) * ny;
+  return dotA > 0 ? triB : triA;
+}
+
+export function cornerNonReflectiveTriangleCentroid(
+  direction1: Vec2,
+  direction2: Vec2,
+  cellSize = CELL,
+): Vec2 {
+  const tri = cornerNonReflectiveTriangle(direction1, direction2, cellSize);
+  return [
+    (tri[0][0] + tri[1][0] + tri[2][0]) / 3,
+    (tri[0][1] + tri[1][1] + tri[2][1]) / 3,
+  ];
+}
+
 function drawSpringOnReflectionSide(
   ctx: CanvasRenderingContext2D,
   originX: number,
@@ -106,6 +176,7 @@ export function drawCornerInCell(
   cellY: number,
   corner: CornerItem,
   step: number,
+  options: CornerDrawOptions = {},
 ): void {
   const gx = cellX * step;
   const gy = cellY * step;
@@ -129,4 +200,19 @@ export function drawCornerInCell(
   ctx.stroke();
 
   drawSpringOnReflectionSide(ctx, cx, cy, nx, ny, CORNER_SPRING_COLOR);
+
+  if (options.boundController) {
+    const [lx, ly] = cornerNonReflectiveTriangleCentroid(
+      corner.direction1,
+      corner.direction2,
+    );
+    drawControllerAt(
+      ctx,
+      gx + lx,
+      gy + ly,
+      options.boundController.groupID,
+      options.controllerFlash ?? false,
+      { compact: true },
+    );
+  }
 }

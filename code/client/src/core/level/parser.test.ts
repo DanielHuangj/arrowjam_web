@@ -11,9 +11,11 @@ import { ZoneManager, buildZoneItem } from "../mechanics/zone.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const levelsDir = join(__dirname, "../../../public/levels");
+const fixtureLevelsDir = join(__dirname, "../../../test-fixtures/levels");
 
 function loadJsonLevel(id: number): LevelData {
-  const raw = readFileSync(join(levelsDir, `level-${id}.json`), "utf-8");
+  const dir = id >= 9024 && id <= 9026 ? fixtureLevelsDir : levelsDir;
+  const raw = readFileSync(join(dir, `level-${id}.json`), "utf-8");
   return JSON.parse(raw) as LevelData;
 }
 
@@ -35,6 +37,9 @@ function emptyLevel(arrows: ArrowItem[]) {
     bombs: [],
     movingWalls: [],
     frozenOverlays: [],
+    shrinkPipes: [],
+    toggles: [],
+    controllers: [],
   };
 }
 
@@ -528,5 +533,19 @@ describe("GameState", () => {
     while (gs.phase === "animating") gs.advanceAnimation();
     expect(gs.phase).toBe("won");
     expect(gs.arrows.length).toBe(0);
+  });
+
+  it("parses kind 14/15/16 from level 9024-9026", () => {
+    const l24 = parseLevelData(9024, loadJsonLevel(9024));
+    expect(l24.shrinkPipes).toHaveLength(1);
+    expect(l24.shrinkPipes[0]!.bindPipeId).toBe(100);
+
+    const l25 = parseLevelData(9025, loadJsonLevel(9025));
+    expect(l25.toggles).toHaveLength(1);
+    expect(l25.controllers).toHaveLength(1);
+
+    const l26 = parseLevelData(9026, loadJsonLevel(9026));
+    expect(l26.toggles[0]!.groupID).toBe(2);
+    expect(new GameState(l26).arrows.find((a) => a.kind === 2)).toBeTruthy();
   });
 });

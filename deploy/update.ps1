@@ -1,5 +1,6 @@
 # 日常更新：本地打包并上传到外网服务器应用目录
 # 用法: .\deploy\update.ps1
+#       .\deploy\update.ps1 -IncludeLevels    # 同时上传关卡（默认跳过，关卡多上传较慢）
 #       .\deploy\update.ps1 -SkipBuild        # 跳过构建，仅上传已有 dist/
 #       .\deploy\update.ps1 -SkipSmokeTest    # 上传后不做远程验收
 #
@@ -8,6 +9,7 @@
 #   2. 填写 DEPLOY_HOST（如 root@1.2.3.4）和 DEPLOY_PATH（默认 /data/yunwei/arrawjam）
 
 param(
+    [switch]$IncludeLevels,
     [switch]$SkipBuild,
     [switch]$SkipSmokeTest
 )
@@ -64,7 +66,11 @@ if (-not (Test-Path (Join-Path $Dist "index.html"))) {
 }
 
 Write-Host "== 2/3 上传到 ${env:DEPLOY_HOST}:${DeployPath}/ =="
-& (Join-Path $PSScriptRoot "upload.ps1")
+$uploadArgs = @{}
+if ($IncludeLevels) {
+    $uploadArgs.IncludeLevels = $true
+}
+& (Join-Path $PSScriptRoot "upload.ps1") @uploadArgs
 
 if (-not $SkipSmokeTest) {
     $SiteUrl = $env:SITE_URL

@@ -2,6 +2,7 @@ import type {
   ArrowItem,
   BombItem,
   BundleItem,
+  ControllerItem,
   CornerItem,
   CurtainItem,
   FrozenOverlayItem,
@@ -11,6 +12,8 @@ import type {
   MovingWallItem,
   PipeItem,
   RawItem,
+  ShrinkPipeItem,
+  ToggleItem,
   Vec2,
   ZoneItem,
 } from "./types.ts";
@@ -55,6 +58,8 @@ function parseCorner(item: RawItem, zoneId: number | null): CornerItem {
   if (!d1 || !d2) {
     throw new Error(`Corner #${item.instanceId} missing direction1/2`);
   }
+  const spin = item.spin as 0 | 90 | 180 | 270 | undefined;
+  const spinDirection = item.spinDirection as 0 | 1 | undefined;
   return {
     kind: 4,
     instanceId: item.instanceId,
@@ -63,6 +68,8 @@ function parseCorner(item: RawItem, zoneId: number | null): CornerItem {
     direction1: d1,
     direction2: d2,
     zoneId,
+    spin: spin ?? 0,
+    spinDirection: spinDirection ?? 0,
   };
 }
 
@@ -200,6 +207,125 @@ function parseMovingWallForEditor(item: RawItem): MovingWallItem {
   };
 }
 
+function findPipeOnCell(pipes: PipeItem[], cell: Vec2): PipeItem | null {
+  const key = vecKey(cell);
+  for (const pipe of pipes) {
+    if (pipe.occupiedPositions.some((p) => vecKey(p) === key)) return pipe;
+  }
+  return null;
+}
+
+function parseShrinkPipe(
+  item: RawItem,
+  zoneId: number | null,
+  pipes: PipeItem[],
+): ShrinkPipeItem {
+  const bind = item.bindCoordinate as Vec2 | undefined;
+  const shorten = item.shorten as number | undefined;
+  if (!bind || bind.length !== 2) {
+    throw new Error(`Shrink pipe #${item.instanceId} missing bindCoordinate`);
+  }
+  if (shorten == null || shorten < 1) {
+    throw new Error(`Shrink pipe #${item.instanceId} invalid shorten`);
+  }
+  const pipe = findPipeOnCell(pipes, bind);
+  if (!pipe) {
+    throw new Error(`Shrink pipe #${item.instanceId} bindCoordinate not on pipe`);
+  }
+  return {
+    kind: 14,
+    instanceId: item.instanceId,
+    layer: item.layer,
+    occupiedPositions: clonePositions(item.occupiedPositions),
+    bindCoordinate: [bind[0], bind[1]],
+    shorten,
+    zoneId,
+    bindPipeId: pipe.instanceId,
+  };
+}
+
+function parseToggle(item: RawItem, zoneId: number | null): ToggleItem {
+  const groupID = item.groupID as number | undefined;
+  if (groupID == null || groupID < 1) {
+    throw new Error(`Toggle #${item.instanceId} invalid groupID`);
+  }
+  if (item.occupiedPositions.length !== 1) {
+    throw new Error(`Toggle #${item.instanceId} must occupy one cell`);
+  }
+  const direction = (item.direction as 1 | 2 | undefined) ?? 1;
+  return {
+    kind: 15,
+    instanceId: item.instanceId,
+    layer: item.layer,
+    occupiedPositions: clonePositions(item.occupiedPositions),
+    groupID,
+    direction: direction === 2 ? 2 : 1,
+    zoneId,
+  };
+}
+
+type HostKind = 2 | 4 | 7 | 14;
+
+function findHostKind(
+  id: number,
+  ctx: CollectCtx,
+): HostKind | null {
+  if (ctx.arrows.some((a) => a.instanceId === id && a.kind === 2)) return 2;
+  if (ctx.corners.some((c) => c.instanceId === id)) return 4;
+  if (ctx.movingWalls.some((w) => w.instanceId === id)) return 7;
+  if (ctx.shrinkPipes.some((s) => s.instanceId === id)) return 14;
+  return null;
+}
+
+function parseController(item: RawItem, zoneId: number | null, ctx: CollectCtx): ControllerItem {
+  const groupID = item.groupID as number | undefined;
+  const bindInstanceId = item.bindInstanceId as number | undefined;
+  if (groupID == null || groupID < 1) {
+    throw new Error(`Controller #${item.instanceId} invalid groupID`);
+  }
+  if (bindInstanceId == null) {
+    throw new Error(`Controller #${item.instanceId} missing bindInstanceId`);
+  }
+  if (item.occupiedPositions.length !== 1) {
+    throw new Error(`Controller #${item.instanceId} must occupy one cell`);
+  }
+  const hostKind = findHostKind(bindInstanceId, ctx);
+  if (!hostKind) {
+    throw new Error(`Controller #${item.instanceId} invalid bindInstanceId`);
+  }
+  const hostPositions = getHostPositions(bindInstanceId, hostKind, ctx);
+  const cell = item.occupiedPositions[0]!;
+  if (!hostPositions.some((p) => p[0] === cell[0] && p[1] === cell[1])) {
+    throw new Error(`Controller #${item.instanceId} not on host cell`);
+  }
+  return {
+    kind: 16,
+    instanceId: item.instanceId,
+    layer: item.layer,
+    occupiedPositions: clonePositions(item.occupiedPositions),
+    groupID,
+    bindInstanceId,
+    zoneId,
+  };
+}
+
+function getHostPositions(
+  id: number,
+  kind: HostKind,
+  ctx: CollectCtx,
+): Vec2[] {
+  if (kind === 2) {
+    return ctx.arrows.find((a) => a.instanceId === id)?.occupiedPositions ?? [];
+  }
+  if (kind === 4) {
+    return ctx.corners.find((c) => c.instanceId === id)?.occupiedPositions ?? [];
+  }
+  if (kind === 7) {
+    return ctx.movingWalls.find((w) => w.instanceId === id)?.occupiedPositions ?? [];
+  }
+  return ctx.shrinkPipes.find((s) => s.instanceId === id)?.occupiedPositions ?? [];
+}
+
 interface CollectCtx {
   arrows: ArrowItem[];
   corners: CornerItem[];
@@ -208,6 +334,10 @@ interface CollectCtx {
   bombs: BombItem[];
   frozenOverlays: FrozenOverlayItem[];
   keys: KeyArrowItem[];
+  shrinkPipes: ShrinkPipeItem[];
+  toggles: ToggleItem[];
+  controllers: ControllerItem[];
+  movingWalls: MovingWallItem[];
 }
 
 function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectCtx): void {
@@ -266,6 +396,12 @@ function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectC
       });
     } else if (item.kind === 11) {
       ctx.keys.push(parseKey(item));
+    } else if (item.kind === 14) {
+      ctx.shrinkPipes.push(parseShrinkPipe(item, zoneId, ctx.pipes));
+    } else if (item.kind === 15) {
+      ctx.toggles.push(parseToggle(item, zoneId));
+    } else if (item.kind === 16) {
+      ctx.controllers.push(parseController(item, zoneId, ctx));
     } else if (item.kind === 12) {
       if (item.items) {
         collectFromItems(item.items, item.instanceId, ctx);
@@ -297,6 +433,23 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
   const bombs: BombItem[] = [];
   const movingWalls: MovingWallItem[] = [];
   const frozenOverlays: FrozenOverlayItem[] = [];
+  const shrinkPipes: ShrinkPipeItem[] = [];
+  const toggles: ToggleItem[] = [];
+  const controllers: ControllerItem[] = [];
+
+  const topCtx: CollectCtx = {
+    arrows,
+    corners,
+    bundles,
+    pipes,
+    bombs,
+    frozenOverlays,
+    keys,
+    shrinkPipes,
+    toggles,
+    controllers,
+    movingWalls,
+  };
 
   for (const item of data.itemModels) {
     if (item.kind === 12) {
@@ -310,6 +463,10 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
           bombs,
           frozenOverlays,
           keys,
+          shrinkPipes,
+          toggles,
+          controllers,
+          movingWalls,
         });
       }
     } else if (item.kind === 1 || item.kind === 2) {
@@ -371,6 +528,12 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
         zoneId: null,
         hostArrowId: host.instanceId,
       });
+    } else if (item.kind === 14) {
+      topCtx.shrinkPipes.push(parseShrinkPipe(item, null, pipes));
+    } else if (item.kind === 15) {
+      topCtx.toggles.push(parseToggle(item, null));
+    } else if (item.kind === 16) {
+      topCtx.controllers.push(parseController(item, null, topCtx));
     }
   }
 
@@ -386,6 +549,9 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     ...bombs,
     ...movingWalls,
     ...frozenOverlays,
+    ...shrinkPipes,
+    ...toggles,
+    ...controllers,
   ]) {
     if (seen.has(obj.instanceId)) {
       throw new Error(`Duplicate instanceId ${obj.instanceId}`);
@@ -410,6 +576,9 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     bombs,
     movingWalls,
     frozenOverlays,
+    shrinkPipes,
+    toggles,
+    controllers,
   };
 }
 

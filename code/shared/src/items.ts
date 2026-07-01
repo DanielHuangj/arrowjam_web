@@ -387,3 +387,169 @@ export function isBombAnchoredOnMidBody(hostPositions: Vec2[], bombCell: Vec2): 
   if (idx <= 0 || idx >= hostPositions.length - 1) return false;
   return anchor[0] === bombCell[0] && anchor[1] === bombCell[1];
 }
+
+export const CONTROLLER_HOST_KINDS = new Set([2, 4, 7, 14]);
+
+export function isAdjacentCells(a: Vec2, b: Vec2): boolean {
+  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
+}
+
+export function hostMiddleCell(positions: Vec2[]): Vec2 {
+  const idx = Math.floor(positions.length / 2);
+  return positions[idx] ?? positions[0]!;
+}
+
+function controllerAnchorIndex(
+  ctrl: { occupiedPositions: Vec2[] },
+  hostPositions: Vec2[],
+): number {
+  const cell = ctrl.occupiedPositions[0];
+  if (!cell) return Math.floor(hostPositions.length / 2);
+  const idx = hostPositions.findIndex((p) => p[0] === cell[0] && p[1] === cell[1]);
+  return idx >= 0 ? idx : Math.floor(hostPositions.length / 2);
+}
+
+/** 宿主占格变化后，控制器落在原锚点索引对应的新格（翻转/平移/墙移） */
+export function nextControllerCellForHost(
+  ctrl: { occupiedPositions: Vec2[] },
+  oldHostPositions: Vec2[],
+  newHostPositions: Vec2[],
+): Vec2 {
+  const idx = controllerAnchorIndex(ctrl, oldHostPositions);
+  const clamped = Math.min(idx, Math.max(0, newHostPositions.length - 1));
+  const cell = newHostPositions[clamped] ?? hostMiddleCell(newHostPositions);
+  return [cell[0], cell[1]];
+}
+
+export function syncControllersForHost<T extends {
+  kind: number;
+  bindInstanceId?: number;
+  occupiedPositions: Vec2[];
+}>(
+  items: T[],
+  hostId: number,
+  oldHostPositions: Vec2[],
+  newHostPositions: Vec2[],
+): T[] {
+  for (const item of items) {
+    if (item.kind !== 16 || item.bindInstanceId !== hostId) continue;
+    const next = nextControllerCellForHost(item, oldHostPositions, newHostPositions);
+    item.occupiedPositions = [next];
+  }
+  return items;
+}
+
+/** 收缩障碍宿主上的控制器始终落在障碍中部格 */
+export function syncControllersWithShrinkHosts<T extends {
+  kind: number;
+  bindInstanceId?: number;
+  occupiedPositions: Vec2[];
+}>(
+  controllers: T[],
+  strips: Array<{ instanceId: number; occupiedPositions: Vec2[] }>,
+): void {
+  for (const ctrl of controllers) {
+    if (ctrl.kind !== 16) continue;
+    const strip = strips.find((s) => s.instanceId === ctrl.bindInstanceId);
+    if (!strip || strip.occupiedPositions.length === 0) continue;
+    const middle = hostMiddleCell(strip.occupiedPositions);
+    ctrl.occupiedPositions = [[middle[0], middle[1]]];
+  }
+}
+
+/** 宿主箭移动时，将绑定控制器同步到宿主当前占格（发射动画渲染用） */
+export function syncControllersWithArrowHosts<T extends {
+  kind: number;
+  bindInstanceId?: number;
+  occupiedPositions: Vec2[];
+}>(
+  controllers: T[],
+  arrows: Array<{ instanceId: number; occupiedPositions: Vec2[] }>,
+): void {
+  for (const ctrl of controllers) {
+    if (ctrl.kind !== 16) continue;
+    const host = arrows.find((a) => a.instanceId === ctrl.bindInstanceId);
+    if (!host || host.occupiedPositions.length === 0) continue;
+    const idx = controllerAnchorIndex(ctrl, host.occupiedPositions);
+    const clamped = Math.min(idx, host.occupiedPositions.length - 1);
+    const cell = host.occupiedPositions[clamped]!;
+    ctrl.occupiedPositions = [[cell[0], cell[1]]];
+  }
+}
+
+/** 宿主被消除时，原地移除绑定控制器（与炸弹 removeForHosts 一致） */
+export function removeControllersForHosts<T extends {
+  kind: number;
+  bindInstanceId?: number;
+}>(controllers: T[], hostIds: Set<number>): void {
+  for (let i = controllers.length - 1; i >= 0; i--) {
+    const item = controllers[i]!;
+    if (item.kind === 16 && hostIds.has(item.bindInstanceId!)) {
+      controllers.splice(i, 1);
+    }
+  }
+}
+
+/** 单格物件（拨动杆等）是否与同作用域其它物件占格冲突 */
+export function findSingleCellOccupant(
+  scope: RawItem[],
+  cell: Vec2,
+  excludeInstanceId?: number,
+): RawItem | null {
+  const key = vecKey(cell);
+  for (let i = scope.length - 1; i >= 0; i--) {
+    const item = scope[i]!;
+    if (excludeInstanceId != null && item.instanceId === excludeInstanceId) continue;
+    if (item.kind === 6 || item.kind === 12) continue;
+    if (item.occupiedPositions.some((p) => vecKey(p) === key)) return item;
+  }
+  return null;
+}
+
+/** 控制器可与 bind 宿主占格重叠（同钥匙/炸弹叠在宿主上），其它物件仍算冲突 */
+export function findControllerCellConflict(
+  scope: RawItem[],
+  cell: Vec2,
+  hostInstanceId: number,
+): RawItem | null {
+  const key = vecKey(cell);
+  for (let i = scope.length - 1; i >= 0; i--) {
+    const item = scope[i]!;
+    if (item.instanceId === hostInstanceId) continue;
+    if (item.kind === 6 || item.kind === 12) continue;
+    if (item.occupiedPositions.some((p) => vecKey(p) === key)) return item;
+  }
+  return null;
+}
+
+/** kind14 障碍路径与管道关系；返回错误文案或 null 表示通过 */
+export function validateShrinkStripAgainstPipe(
+  bind: Vec2,
+  strip: Vec2[],
+  pipePositions: Vec2[],
+): string | null {
+  if (strip.length === 0) return "收缩障碍路径不能为空";
+  const pipeKeys = new Set(pipePositions.map((p) => vecKey(p)));
+  const first = strip[0]!;
+  if (!isAdjacentCells(first, bind)) return "起点须与 bindCoordinate 相邻";
+  for (const p of strip) {
+    if (pipeKeys.has(vecKey(p))) return "路径不可占用管道格";
+  }
+  const outDx = Math.sign(first[0] - bind[0]);
+  const outDy = Math.sign(first[1] - bind[1]);
+  if (outDx === 0 && outDy === 0) return "起点须与 bindCoordinate 相邻";
+  for (const p of strip) {
+    for (const pc of pipePositions) {
+      if (!isAdjacentCells(p, pc)) continue;
+      const towardDx = Math.sign(p[0] - pc[0]);
+      const towardDy = Math.sign(p[1] - pc[1]);
+      if (outDx !== 0 && towardDx !== 0 && towardDx !== outDx) {
+        return "路径须保持在管道同一侧";
+      }
+      if (outDy !== 0 && towardDy !== 0 && towardDy !== outDy) {
+        return "路径须保持在管道同一侧";
+      }
+    }
+  }
+  return null;
+}

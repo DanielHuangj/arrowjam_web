@@ -181,7 +181,6 @@ export function drawMovingWall(
 }
 
 const ICE_INSET = 1.5;
-const ICE_SHADOW = "rgba(14, 116, 144, 0.28)";
 const ICE_HIGHLIGHT = "#ecfeff";
 const ICE_FACE = "#a5f3fc";
 const ICE_FACE_ALT = "#7dd3fc";
@@ -283,9 +282,6 @@ export function drawFrozenOverlay(
   const bh = (maxY - minY + 1) * STEP - ICE_INSET * 2;
 
   ctx.save();
-
-  ctx.fillStyle = ICE_SHADOW;
-  ctx.fillRect(bx + 2, by + 3, bw, bh);
 
   ctx.beginPath();
   for (const [cx, cy] of cells) {
@@ -530,5 +526,360 @@ function drawExplosionAt(
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+function shrinkCellCenter(x: number, y: number, step: number): [number, number] {
+  return [x * step + CELL / 2, y * step + CELL / 2];
+}
+
+const SHRINK_BAND_W = 15;
+const SHRINK_HUG_PX = 7;
+const SHRINK_STRIPE_W = 5;
+
+function stripCellsForDraw(strip: import("../core/types.ts").ShrinkPipeItem): Vec2[] {
+  const bindKey = vecKey(strip.bindCoordinate);
+  return strip.occupiedPositions.filter((p) => vecKey(p) !== bindKey);
+}
+
+function cellSegmentAngle(
+  strip: Vec2[],
+  index: number,
+): number {
+  const cell = strip[index]!;
+  let dx = 0;
+  let dy = 0;
+  if (index > 0) {
+    const prev = strip[index - 1]!;
+    dx += cell[0] - prev[0];
+    dy += cell[1] - prev[1];
+  }
+  if (index < strip.length - 1) {
+    const next = strip[index + 1]!;
+    dx += next[0] - cell[0];
+    dy += next[1] - cell[1];
+  }
+  if (dx === 0 && dy === 0) return 0;
+  return Math.atan2(dy, dx);
+}
+
+function drawBarberPoleBand(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  angle: number,
+  length: number,
+): void {
+  const halfL = length / 2;
+  const halfW = SHRINK_BAND_W / 2;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  const r = 5;
+  ctx.moveTo(-halfL + r, -halfW);
+  ctx.lineTo(halfL - r, -halfW);
+  ctx.quadraticCurveTo(halfL, -halfW, halfL, -halfW + r);
+  ctx.lineTo(halfL, halfW - r);
+  ctx.quadraticCurveTo(halfL, halfW, halfL - r, halfW);
+  ctx.lineTo(-halfL + r, halfW);
+  ctx.quadraticCurveTo(-halfL, halfW, -halfL, halfW - r);
+  ctx.lineTo(-halfL, -halfW + r);
+  ctx.quadraticCurveTo(-halfL, -halfW, -halfL + r, -halfW);
+  ctx.closePath();
+  ctx.clip();
+
+  ctx.fillStyle = "#b91c1c";
+  ctx.fillRect(-halfL - halfW, -halfW, length + SHRINK_BAND_W * 2, SHRINK_BAND_W);
+
+  ctx.fillStyle = "#f8fafc";
+  const stripeStep = SHRINK_STRIPE_W * 2;
+  for (let x = -halfL - halfW * 2; x < halfL + halfW * 2; x += stripeStep) {
+    ctx.save();
+    ctx.translate(x, 0);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-1, -halfW * 2, SHRINK_STRIPE_W, halfW * 4);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawShrinkClasp(
+  ctx: CanvasRenderingContext2D,
+  bind: Vec2,
+  firstStrip: Vec2,
+  step: number,
+): void {
+  const [bx, by] = shrinkCellCenter(bind[0], bind[1], step);
+  const [fx, fy] = shrinkCellCenter(firstStrip[0], firstStrip[1], step);
+  const mx = (bx + fx) / 2;
+  const my = (by + fy) / 2;
+  const angle = Math.atan2(fy - by, fx - bx);
+
+  ctx.save();
+  ctx.translate(mx, my);
+  ctx.rotate(angle + Math.PI / 2);
+
+  ctx.fillStyle = "#6b7280";
+  ctx.strokeStyle = "#d1d5db";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(-9, -5, 18, 10, 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#374151";
+  ctx.beginPath();
+  ctx.arc(-5, 0, 2, 0, Math.PI * 2);
+  ctx.arc(5, 0, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#9ca3af";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-3, -7);
+  ctx.lineTo(-3, -11);
+  ctx.moveTo(3, -7);
+  ctx.lineTo(3, -11);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export function drawShrinkPipe(
+  ctx: CanvasRenderingContext2D,
+  strip: import("../core/types.ts").ShrinkPipeItem,
+  step: number,
+): void {
+  const cells = stripCellsForDraw(strip);
+  if (cells.length === 0) return;
+
+  const bind = strip.bindCoordinate;
+  const first = cells[0]!;
+  const hugDx = Math.sign(first[0] - bind[0]);
+  const hugDy = Math.sign(first[1] - bind[1]);
+  const bandLen = CELL - 2;
+
+  ctx.save();
+
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i]!;
+    const [cx, cy] = shrinkCellCenter(cell[0], cell[1], step);
+    const px = cx + hugDx * SHRINK_HUG_PX;
+    const py = cy + hugDy * SHRINK_HUG_PX;
+    const angle = cellSegmentAngle(cells, i);
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.35)";
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetY = 1;
+    drawBarberPoleBand(ctx, px, py, angle, bandLen);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(0,0,0,0.2)";
+    ctx.lineWidth = 1;
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    const halfL = bandLen / 2;
+    const halfW = SHRINK_BAND_W / 2;
+    ctx.strokeRect(-halfL, -halfW, bandLen, SHRINK_BAND_W);
+    ctx.restore();
+  }
+
+  drawShrinkClasp(ctx, bind, first, step);
+  ctx.restore();
+}
+
+export function drawToggle(
+  ctx: CanvasRenderingContext2D,
+  toggle: import("../core/types.ts").ToggleItem,
+  step: number,
+): void {
+  const [x, y] = toggle.occupiedPositions[0] ?? [0, 0];
+  const [cx, cy] = shrinkCellCenter(x, y, step);
+  const leverLeft = toggle.direction === 1;
+
+  const housingW = STEP * 0.84;
+  const housingH = STEP * 0.58;
+  const housingR = STEP * 0.1;
+  const trackW = STEP * 0.7;
+  const trackH = STEP * 0.2;
+  const leverW = STEP * 0.3;
+  const leverH = STEP * 0.46;
+  const leverTravel = STEP * 0.17;
+
+  ctx.save();
+
+  ctx.fillStyle = "rgba(0,0,0,0.32)";
+  ctx.beginPath();
+  ctx.ellipse(cx + 1, cy + housingH * 0.34, housingW * 0.44, housingH * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const hx = cx - housingW / 2;
+  const hy = cy - housingH / 2;
+
+  const housingGrad = ctx.createLinearGradient(hx, hy, hx, hy + housingH);
+  housingGrad.addColorStop(0, "#f87171");
+  housingGrad.addColorStop(0.35, "#ef4444");
+  housingGrad.addColorStop(0.72, "#dc2626");
+  housingGrad.addColorStop(1, "#991b1b");
+  ctx.fillStyle = housingGrad;
+  roundRect(ctx, hx, hy, housingW, housingH, housingR);
+  ctx.fill();
+
+  ctx.strokeStyle = "#7f1d1d";
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, hx, hy, housingW, housingH, housingR);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255,255,255,0.42)";
+  ctx.lineWidth = 1.25;
+  ctx.beginPath();
+  ctx.moveTo(hx + housingR * 0.8, hy + 1.5);
+  ctx.lineTo(hx + housingW - housingR * 0.8, hy + 1.5);
+  ctx.stroke();
+
+  const trackX = cx - trackW / 2;
+  const trackY = cy - trackH / 2;
+  const trackGrad = ctx.createLinearGradient(trackX, trackY, trackX, trackY + trackH);
+  trackGrad.addColorStop(0, "#450a0a");
+  trackGrad.addColorStop(0.45, "#7f1d1d");
+  trackGrad.addColorStop(1, "#450a0a");
+  ctx.fillStyle = trackGrad;
+  roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(0,0,0,0.35)";
+  ctx.lineWidth = 1;
+  roundRect(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+  ctx.stroke();
+
+  const leverCx = cx + (leverLeft ? -leverTravel : leverTravel);
+  const leverX = leverCx - leverW / 2;
+  const leverY = cy - leverH / 2;
+  const leverR = leverW * 0.42;
+
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  roundRect(ctx, leverX + 1.5, leverY + 2, leverW, leverH, leverR);
+  ctx.fill();
+
+  const leverGrad = ctx.createLinearGradient(leverX, leverY, leverX + leverW, leverY + leverH);
+  leverGrad.addColorStop(0, "#fff1f2");
+  leverGrad.addColorStop(0.28, "#fecaca");
+  leverGrad.addColorStop(0.55, "#f87171");
+  leverGrad.addColorStop(1, "#b91c1c");
+  ctx.fillStyle = leverGrad;
+  roundRect(ctx, leverX, leverY, leverW, leverH, leverR);
+  ctx.fill();
+
+  ctx.strokeStyle = "#7f1d1d";
+  ctx.lineWidth = 1.25;
+  roundRect(ctx, leverX, leverY, leverW, leverH, leverR);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  roundRect(ctx, leverX + leverW * 0.12, leverY + leverH * 0.1, leverW * 0.35, leverH * 0.22, leverR * 0.35);
+  ctx.fill();
+
+  ctx.strokeStyle = "#fca5a5";
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(leverCx, leverY + leverH * 0.22);
+  ctx.lineTo(leverCx, leverY + leverH * 0.78);
+  ctx.stroke();
+
+  const badgeW = Math.max(16, STEP * 0.38);
+  const badgeH = Math.max(12, STEP * 0.3);
+  const badgeX = cx - badgeW / 2;
+  const badgeY = hy - badgeH - 3;
+  const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeH);
+  badgeGrad.addColorStop(0, "#450a0a");
+  badgeGrad.addColorStop(1, "#7f1d1d");
+  ctx.fillStyle = badgeGrad;
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
+  ctx.fill();
+  ctx.strokeStyle = "#fca5a5";
+  ctx.lineWidth = 1;
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
+  ctx.stroke();
+
+  const fontSize = Math.max(10, Math.round(STEP * 0.3));
+  ctx.font = `bold ${fontSize}px system-ui,sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "#450a0a";
+  ctx.fillStyle = "#fff1f2";
+  const label = String(toggle.groupID);
+  ctx.strokeText(label, cx, badgeY + badgeH / 2);
+  ctx.fillText(label, cx, badgeY + badgeH / 2);
+
+  ctx.restore();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+export function drawController(
+  ctx: CanvasRenderingContext2D,
+  ctrl: import("../core/types.ts").ControllerItem,
+  step: number,
+  flash: boolean,
+): void {
+  const [x, y] = ctrl.occupiedPositions[0] ?? [0, 0];
+  const [cx, cy] = shrinkCellCenter(x, y, step);
+  drawControllerAt(ctx, cx, cy, ctrl.groupID, flash);
+}
+
+export function drawControllerAt(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  groupID: number,
+  flash: boolean,
+  options: { compact?: boolean } = {},
+): void {
+  const compact = options.compact ?? false;
+  const outerR = compact ? 8 : 10;
+  const innerR = compact ? 4 : 5;
+  const labelOffset = compact ? 12 : 18;
+  const fontSize = compact ? 8 : 9;
+
+  ctx.save();
+  ctx.fillStyle = flash ? "#fca5a5" : "#1f2937";
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = flash ? "#ef4444" : "#dc2626";
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f9fafb";
+  ctx.font = `bold ${fontSize}px system-ui,sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(groupID), cx, cy + labelOffset);
   ctx.restore();
 }

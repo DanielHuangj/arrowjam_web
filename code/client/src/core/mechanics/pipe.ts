@@ -362,6 +362,7 @@ function simulateArrowFlight(
   pipes: PipeItem[],
   curtainCells: Set<string> = new Set(),
   extraBlockerCells: Set<string> = new Set(),
+  blackHoleCells: Set<string> = new Set(),
 ): ArrowFlightResult {
   const simPipes = clonePipesForSim(pipes);
   let positions = arrow.occupiedPositions.map(([x, y]) => [x, y] as Vec2);
@@ -370,6 +371,7 @@ function simulateArrowFlight(
   const pipesCrossed: number[] = [];
   const cornersCrossed: number[] = [];
   const maxSteps = (board.width + board.height) * positions.length * 8;
+  let prevKeys = new Set(positions.map(vecKey));
 
   for (let step = 0; step < maxSteps; step++) {
     const fakeArrow: ArrowItem = {
@@ -402,6 +404,14 @@ function simulateArrowFlight(
     positions = result.arrow.occupiedPositions;
     dir = result.dir;
     transit = result.transit;
+
+    const nextKeys = new Set(positions.map(vecKey));
+    for (const k of nextKeys) {
+      if (!prevKeys.has(k) && blackHoleCells.has(k)) {
+        return { offBoard: true, pipesCrossed, cornersCrossed };
+      }
+    }
+    prevKeys = nextKeys;
 
     if (positionsFullyOffBoard(positions, board)) {
       return { offBoard: true, pipesCrossed, cornersCrossed };
@@ -552,6 +562,7 @@ export function simulateCanExitWithPipes(
   pipes: PipeItem[],
   curtainCells: Set<string> = new Set(),
   extraBlockerCells: Set<string> = new Set(),
+  blackHoleCells: Set<string> = new Set(),
 ): boolean {
   return simulateArrowFlight(
     arrow,
@@ -561,6 +572,7 @@ export function simulateCanExitWithPipes(
     pipes,
     curtainCells,
     extraBlockerCells,
+    blackHoleCells,
   ).offBoard;
 }
 

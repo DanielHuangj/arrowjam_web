@@ -13,6 +13,7 @@ import {
 import { loadLevel, loadManifest } from "./core/level/loader.ts";
 import type { LevelManifestEntry } from "./core/types.ts";
 import { tickGameAnimation } from "./core/game/anim-timing.ts";
+import type { SpawnEmergence } from "./core/mechanics/spawn.ts";
 
 export class App {
   private root: HTMLElement;
@@ -24,6 +25,7 @@ export class App {
   private canvas: HTMLCanvasElement | null = null;
   private levels: LevelManifestEntry[] = [];
   private devTests: LevelManifestEntry[] = [];
+  private rushTests: LevelManifestEntry[] = [];
   private rafId = 0;
   private lastTime = 0;
   private modalShown = false;
@@ -41,6 +43,7 @@ export class App {
     const manifest = await loadManifest();
     this.levels = manifest.levels;
     this.devTests = manifest.devTests ?? [];
+    this.rushTests = manifest.rushTests ?? [];
     this.showLevelSelect();
   }
 
@@ -49,7 +52,7 @@ export class App {
     this.disposeGame();
     renderLevelSelect(
       this.root,
-      { levels: this.levels, devTests: this.devTests },
+      { levels: this.levels, devTests: this.devTests, rushTests: this.rushTests },
       (id) => void this.startLevel(id),
     );
   }
@@ -98,6 +101,11 @@ export class App {
       shell.hud.querySelector(".btn-target-vanish")!.addEventListener("click", () => {
         this.toggleTargetVanishMode();
       });
+
+      const rush = level.gameMode === "rush";
+      shell.hud.querySelector(".btn-auto-clear")!.classList.toggle("hidden", rush);
+      shell.hud.querySelector(".btn-random-vanish")!.classList.toggle("hidden", rush);
+      shell.hud.querySelector(".btn-target-vanish")!.classList.toggle("hidden", rush);
 
       this.input = new InputHandler(
         this.canvas,
@@ -174,6 +182,12 @@ export class App {
       arrowCount: this.state.arrows.length,
       difficulty: this.state.level.difficulty,
       bombRemaining: this.state.getUrgentBombRemaining(),
+      rushGoals: this.state.isRushLevel()
+        ? this.state.getGoalProgress()
+        : undefined,
+      spawnCountdownSec: this.state.isRushLevel()
+        ? this.state.getSpawnCountdownSec()
+        : null,
     });
 
     const autoBtn = this.hudEl.querySelector(".btn-auto-clear") as HTMLButtonElement | null;
@@ -216,6 +230,25 @@ export class App {
         vanishProgressById.set(id, progress);
       }
     }
+    for (const [id, progress] of this.state.getBlackHoleRegionSwallowProgressForRender()) {
+      vanishProgressById.set(id, Math.max(vanishProgressById.get(id) ?? 0, progress));
+    }
+
+    const spawnEmergenceById = new Map<number, SpawnEmergence>();
+    if (this.state.isSpawnPhase()) {
+      for (const a of this.state.arrows) {
+        const fx = this.state.getSpawnEmergence(a.instanceId);
+        if (fx) spawnEmergenceById.set(a.instanceId, fx);
+      }
+      for (const c of this.state.corners) {
+        const fx = this.state.getSpawnEmergence(c.instanceId);
+        if (fx) spawnEmergenceById.set(c.instanceId, fx);
+      }
+      for (const b of this.state.getDrawableBuffs()) {
+        const fx = this.state.getSpawnEmergence(b.instanceId);
+        if (fx) spawnEmergenceById.set(b.instanceId, fx);
+      }
+    }
 
     this.renderer.drawBoard(
       this.state.level,
@@ -233,8 +266,7 @@ export class App {
       this.state.getActiveCurtainsForRender(),
       {
         style: "game",
-        clearedTraces: this.state.getClearedTraceCells(),
-        occupiedCells: this.state.getOccupiedArrowCellKeys(),
+        occupiedCells: this.state.getBoardOccupiedCellKeys(),
         vanishProgressById,
         movingWalls: this.state.getMovingWalls(),
         frozenOverlays: this.state.getFrozenOverlays(),
@@ -245,6 +277,24 @@ export class App {
         bombStates: this.state.getBombDrawStates(),
         bombExplosion: this.state.getBombExplosion(),
         urgentBombRemaining: this.state.getUrgentBombRemaining(),
+        buffs: this.state.getDrawableBuffs(),
+        spawnEmergenceById,
+        areaBombEffects: this.state.getAreaBombEffectsForRender(),
+        crossBombEffects: this.state.getCrossBombEffectsForRender(),
+        fireBombEffects: this.state.getFireBombEffectsForRender(),
+        waitingBalloonEffects: this.state.getWaitingBalloonsForRender(),
+        pendingBalloonBuffIds: this.state.getPendingBalloonBuffIds(),
+        balloonEffects: this.state.getBalloonEffectsForRender(),
+        candyMachineEffects: this.state.getCandyMachineEffectsForRender(),
+        autoRefreshEffect: this.state.getAutoRefreshEffectForRender(),
+        balloonArrowFxById: this.state.getBalloonArrowFxForRender(),
+        blackHoleFxById: this.state.getBlackHoleFxForRender(),
+        launchClickEffects: this.state.getLaunchClickEffectsForRender(),
+        dotPulseEffects: this.state.getDotPulseEffectsForRender(),
+        playableCells: this.state.level.playableCells,
+        blackHoleCells: this.state.level.blackHoleCells,
+        invalidCellColors: this.state.level.invalidCellColors,
+        blackHoleRegionPhase: performance.now() * 0.001,
       },
     );
   }
@@ -275,6 +325,10 @@ export class App {
   }
 
   private findNextLevelId(currentId: number): number | null {
+    const rushIdx = this.rushTests.findIndex((l) => l.id === currentId);
+    if (rushIdx >= 0) {
+      return this.rushTests[rushIdx + 1]?.id ?? null;
+    }
     const devIdx = this.devTests.findIndex((l) => l.id === currentId);
     if (devIdx >= 0) {
       return this.devTests[devIdx + 1]?.id ?? null;

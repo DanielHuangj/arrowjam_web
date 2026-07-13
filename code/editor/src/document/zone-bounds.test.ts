@@ -24,7 +24,7 @@ const docInZone: EditorDocument = {
   meta: { width: 10, height: 10, name: "t", durationInSec: 60, difficulty: 1 },
   itemModels: [zone],
   selectedInstanceIds: [],
-  editContext: { zoneInstanceId: 100 },
+  editContext: { zoneInstanceId: 100, regionEditMode: null },
   source: { name: "level-1.json", handle: null },
   dirty: false,
 };
@@ -43,7 +43,7 @@ const arrow1 = {
 
 describe("zone-bounds", () => {
   it("allows any position at top level", () => {
-    const doc = { ...docInZone, editContext: { zoneInstanceId: null } };
+    const doc = { ...docInZone, editContext: { zoneInstanceId: null, regionEditMode: null } };
     expect(canPlaceInEditContext(doc, [[9, 9]])).toBe(true);
   });
 
@@ -56,7 +56,7 @@ describe("zone-bounds", () => {
   it("rejects arrow path overlapping existing arrow", () => {
     const doc: EditorDocument = {
       ...docInZone,
-      editContext: { zoneInstanceId: null },
+      editContext: { zoneInstanceId: null, regionEditMode: null },
       itemModels: [arrow1],
     };
     expect(canPlaceArrowInEditContext(doc, [[1, 0], [2, 0]])).toBe(false);
@@ -67,7 +67,7 @@ describe("zone-bounds", () => {
   it("allows dragging arrow when excluding its own instance", () => {
     const doc: EditorDocument = {
       ...docInZone,
-      editContext: { zoneInstanceId: null },
+      editContext: { zoneInstanceId: null, regionEditMode: null },
       itemModels: [arrow1],
     };
     expect(
@@ -85,7 +85,7 @@ describe("zone-bounds", () => {
   it("rejects self-intersecting arrow path", () => {
     const doc: EditorDocument = {
       ...docInZone,
-      editContext: { zoneInstanceId: null },
+      editContext: { zoneInstanceId: null, regionEditMode: null },
       itemModels: [],
     };
     expect(
@@ -119,13 +119,13 @@ describe("zone-bounds", () => {
     };
     const doc: EditorDocument = {
       ...docInZone,
-      editContext: { zoneInstanceId: null },
+      editContext: { zoneInstanceId: null, regionEditMode: null },
       itemModels: [arrow1, innerZone],
     };
     expect(canPlaceArrowInEditContext(doc, [[1, 0], [2, 0]])).toBe(false);
     const zoneDoc: EditorDocument = {
       ...doc,
-      editContext: { zoneInstanceId: 100 },
+      editContext: { zoneInstanceId: 100, regionEditMode: null },
     };
     expect(canPlaceArrowInEditContext(zoneDoc, [[0, 0], [1, 0]], 2)).toBe(true);
   });

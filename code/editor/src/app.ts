@@ -1,4 +1,11 @@
+import {
+  applyInvalidCellColor,
+  INVALID_CELL_COLOR_BLACK,
+  INVALID_CELL_COLOR_WHITE,
+  INVALID_CELL_PAINT_COLOR_IDS,
+} from "@arrowjaw/shared";
 import type { EditorDocument, RawItem, Vec2 } from "@arrowjaw/shared";
+import { invalidCellColorHex } from "@arrowjaw/client/render/colors.ts";
 import {
   CONTROLLER_HOST_KINDS,
   findControllerCellConflict,
@@ -8,7 +15,7 @@ import {
   isPolylineContinuous,
   vecKey,
 } from "@arrowjaw/shared";
-import { BOARD_MAX_SIZE, BOARD_MIN_SIZE, boardSizeRangeLabel, isBoardSizeValid } from "./board-limits.ts";
+import { BOARD_MAX_SIZE, BOARD_MIN_SIZE, BOARD_BG_IMAGE_MAX_BYTES, boardSizeRangeLabel, isBoardSizeValid } from "./board-limits.ts";
 import {
   createDocumentFromJson,
   createEmptyDocument,
@@ -22,9 +29,17 @@ import {
   validateLevelData,
 } from "@arrowjaw/shared";
 import { GameState } from "@arrowjaw/client/core/game/game-state.ts";
-import { tickGameAnimation } from "@arrowjaw/client/core/game/anim-timing.ts";
+import {
+  beginAnimTimingPlayPreview,
+  endAnimTimingPlayPreview,
+  reloadOfficialAnimTimingConfig,
+  resetAnimTimingConfig,
+  tickGameAnimation,
+} from "@arrowjaw/client/core/game/anim-timing.ts";
+import type { SpawnEmergence } from "@arrowjaw/client/core/mechanics/spawn.ts";
 import { BoardRenderer } from "@arrowjaw/client/render/board-renderer.ts";
 import { InputHandler } from "@arrowjaw/client/render/input-handler.ts";
+import { resetViewport as resetGamePlayViewport } from "@arrowjaw/client/render/viewport.ts";
 import { EditorBoardView, documentToGameLevel } from "./canvas/editor-board.ts";
 import {
   applyViewportToCanvas,
@@ -38,8 +53,13 @@ import {
 import {
   addItem,
   applyDragDelta,
+  commitBlackHoleRegions,
+  commitInvalidCellColors,
+  commitPlayableMask,
   copyItems,
+  enterRegionEdit,
   enterZone,
+  exitRegionEdit,
   exitZone,
   findItemAtCell,
   pasteItems,
@@ -58,6 +78,19 @@ import {
   getArrowPlacementBlockReason,
   type ArrowPlacementBlockReason,
 } from "./document/zone-bounds.ts";
+import {
+  applyRegionDraftRect,
+  blackHoleCommitErrorMessage,
+  enforceBlackHolesInPlayableDraft,
+  hasCustomInvalidRegion,
+  loadInvalidColorDraft,
+  loadRegionDraftCells,
+  playableCommitErrorMessage,
+  resolveInvalidCells,
+  resolvePlayableCells,
+  validateBlackHoleCommit,
+  validatePlayableCommit,
+} from "./document/board-region.ts";
 import { createHistory, pushHistory, redo, undo } from "./document/history.ts";
 import {
   exportDownload,
@@ -78,13 +111,24 @@ import {
   updatePlayHud,
 } from "./ui/play-mode-ui.ts";
 import {
+  mountAnimTimingTuner,
+  type AnimTimingTunerHandle,
+} from "./ui/anim-timing-tuner.ts";
+import {
   extendPolylineToCell,
   buildArrowItem,
+  buildAreaBombItem,
+  buildBalloonItem,
+  buildBlackHoleItem,
+  buildFlipButtonItem,
+  buildCandyMachineItem,
   buildBombItem,
   buildBundleItem,
   buildControllerItem,
   buildCornerItem,
+  buildCrossBombItem,
   buildCurtainItem,
+  buildFireBombItem,
   buildFlipArrowItem,
   buildFrozenItem,
   buildKeyItem,
@@ -123,6 +167,11 @@ interface TabState {
   history: ReturnType<typeof createHistory>;
   draw: DrawState;
   viewport: ViewportState;
+  regionDraftCells: Set<string> | null;
+  regionRectStart: Vec2 | null;
+  regionColorDraft: Map<string, number> | null;
+  regionColorSelection: Set<string> | null;
+  invalidPaintColor: number;
 }
 
 let tabCounter = 0;
@@ -137,6 +186,7 @@ export class EditorApp {
   private gameState: GameState | null = null;
   private playRenderer: BoardRenderer | null = null;
   private playInput: InputHandler | null = null;
+  private animTimingTuner: AnimTimingTunerHandle | null = null;
   private hoverCell: Vec2 | null = null;
   private panStart: { x: number; y: number; ox: number; oy: number } | null = null;
   private dragOrigin?: Vec2;
@@ -151,6 +201,7 @@ export class EditorApp {
   private rafId = 0;
   private statusHint: string | null = null;
   private statusHintTimer = 0;
+  private regionRectDragging = false;
 
   private els = {
     menu: document.getElementById("menu-bar")!,
@@ -167,14 +218,18 @@ export class EditorApp {
     playToolbar: document.getElementById("play-toolbar")!,
     playControls: document.getElementById("play-controls")!,
     playHud: document.getElementById("play-hud")!,
+    playTimingPanel: document.getElementById("play-timing-panel")!,
     playResultOverlay: document.getElementById("play-result-overlay")!,
     modal: document.getElementById("modal-root")!,
+    boardRegionTools: document.getElementById("board-region-tools")!,
+    bgImageInput: document.getElementById("bg-image-input") as HTMLInputElement,
   };
 
   constructor() {
     this.boardView = new EditorBoardView(this.els.canvas, this.els.overlay);
     this.buildMenu();
     this.buildTools();
+    this.buildBoardRegionTools();
     this.bindEvents();
     this.newTab(createEmptyDocument());
     if (!supportsFSA()) {
@@ -194,6 +249,11 @@ export class EditorApp {
       history: createHistory(),
       draw: createDrawState(),
       viewport: createViewport(),
+      regionDraftCells: null,
+      regionRectStart: null,
+      regionColorDraft: null,
+      regionColorSelection: null,
+      invalidPaintColor: 1,
     };
     this.tabs.push(tab);
     this.activeTabId = id;
@@ -209,7 +269,12 @@ export class EditorApp {
   }
 
   private refresh(): void {
+    if (this.playMode) {
+      this.renderStatus();
+      return;
+    }
     this.ensureZoneEditTool(this.activeTab());
+    this.renderBoardRegionTools();
     this.renderTabs();
     this.renderBreadcrumb();
     this.renderCanvas();
@@ -256,6 +321,13 @@ export class EditorApp {
       { tool: "toggle", label: "K15 拨动杆", title: "拨动杆：箭头穿过触发同组物件动作" },
       { tool: "controller", label: "K16 控制器", title: "控制器：接收拨动杆信号触发物件动作" },
       { tool: "zone", label: "K12 子区域", title: "子区域 kind12" },
+      { tool: "areaBomb", label: "K17 区域炸弹", title: "区域炸弹：单格放置，属性面板选 3×3/5×5" },
+      { tool: "crossBomb", label: "K18 十字炸弹", title: "十字炸弹：单格放置，属性面板选臂长" },
+      { tool: "fireBomb", label: "K19 燃烧弹", title: "燃烧弹：单格放置" },
+      { tool: "balloon", label: "K20 定向气球", title: "定向气球：箭撞击或炸弹引爆触发；炸弹触发时取棋盘最多箭色" },
+      { tool: "blackHole", label: "K21 黑洞", title: "黑洞：箭头经过时被吞噬；生成后存活 10 秒，到期内收消失" },
+      { tool: "flipButton", label: "K22 翻转按钮", title: "翻转按钮：点击或箭穿越触发，全盘箭头头尾翻转" },
+      { tool: "candyMachine", label: "K23 糖果机", title: "糖果机：点击或箭穿越触发，随机向 8 支箭发射糖果并消除" },
     ];
     this.els.tools.innerHTML = `<div class="tool-label">物件工具</div>`;
     for (const t of tools) {
@@ -276,8 +348,296 @@ export class EditorApp {
     this.els.tools.appendChild(bundleBtn);
   }
 
+  private buildBoardRegionTools(): void {
+    this.els.boardRegionTools.innerHTML = "";
+    const playableBtn = document.createElement("button");
+    playableBtn.type = "button";
+    playableBtn.id = "region-playable-btn";
+    playableBtn.textContent = "异形棋盘";
+    playableBtn.title = "编辑有效格（异形棋盘）";
+    playableBtn.addEventListener("click", () => this.toggleRegionEditMode("playable"));
+
+    const blackHoleBtn = document.createElement("button");
+    blackHoleBtn.type = "button";
+    blackHoleBtn.id = "region-blackhole-btn";
+    blackHoleBtn.textContent = "黑洞区域";
+    blackHoleBtn.title = "编辑永久黑洞区域";
+    blackHoleBtn.addEventListener("click", () => this.toggleRegionEditMode("blackHole"));
+
+    const colorEditBtn = document.createElement("button");
+    colorEditBtn.type = "button";
+    colorEditBtn.id = "region-color-edit-btn";
+    colorEditBtn.textContent = "颜色编辑";
+    colorEditBtn.title = "为无效格设置颜色（需先定义异形棋盘）";
+    colorEditBtn.addEventListener("click", () => this.toggleRegionEditMode("invalidColor"));
+
+    const finishBtn = document.createElement("button");
+    finishBtn.type = "button";
+    finishBtn.id = "region-finish-btn";
+    finishBtn.textContent = "完成编辑";
+    finishBtn.title = "完成当前区域编辑并写入关卡";
+    finishBtn.addEventListener("click", () => this.finishRegionEdit());
+
+    const divider = document.createElement("div");
+    divider.className = "region-divider";
+
+    const importBgBtn = document.createElement("button");
+    importBgBtn.type = "button";
+    importBgBtn.id = "region-import-bg-btn";
+    importBgBtn.textContent = "导入背景";
+    importBgBtn.title = "导入 jpg/png 背景图（≤5MB，仅本会话）";
+    importBgBtn.addEventListener("click", () => this.els.bgImageInput.click());
+
+    const removeBgBtn = document.createElement("button");
+    removeBgBtn.type = "button";
+    removeBgBtn.id = "region-remove-bg-btn";
+    removeBgBtn.textContent = "删除背景";
+    removeBgBtn.title = "删除编辑器背景图";
+    removeBgBtn.addEventListener("click", () => this.removeBackgroundImage());
+
+    const colorPalette = document.createElement("div");
+    colorPalette.id = "region-color-palette";
+    colorPalette.className = "region-color-palette hidden";
+    colorPalette.title = "先选中无效格，再点颜色上色；可多次重复，完成编辑后统一保存";
+    for (const colorId of [INVALID_CELL_COLOR_WHITE, ...INVALID_CELL_PAINT_COLOR_IDS]) {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "region-color-swatch";
+      swatch.dataset.color = String(colorId);
+      swatch.style.background = invalidCellColorHex(colorId);
+      swatch.title =
+        colorId === INVALID_CELL_COLOR_WHITE
+          ? "白色（默认）"
+          : colorId === INVALID_CELL_COLOR_BLACK
+            ? "黑色"
+            : `箭色 ${colorId}`;
+      swatch.addEventListener("click", () => this.pickInvalidCellColor(colorId));
+      colorPalette.appendChild(swatch);
+    }
+
+    for (const el of [
+      playableBtn,
+      colorEditBtn,
+      blackHoleBtn,
+      finishBtn,
+      divider,
+      colorPalette,
+      importBgBtn,
+      removeBgBtn,
+    ]) {
+      this.els.boardRegionTools.appendChild(el);
+    }
+
+    this.els.bgImageInput.addEventListener("change", () => void this.importBackgroundImage());
+  }
+
+  private renderBoardRegionTools(): void {
+    if (this.playMode) {
+      this.els.boardRegionTools.classList.add("hidden");
+      return;
+    }
+    this.els.boardRegionTools.classList.remove("hidden");
+    const tab = this.activeTab();
+    const mode = tab.doc.editContext.regionEditMode;
+    const inZone = tab.doc.editContext.zoneInstanceId != null;
+    const playableBtn = this.els.boardRegionTools.querySelector("#region-playable-btn");
+    const colorEditBtn = this.els.boardRegionTools.querySelector("#region-color-edit-btn");
+    const blackHoleBtn = this.els.boardRegionTools.querySelector("#region-blackhole-btn");
+    const finishBtn = this.els.boardRegionTools.querySelector("#region-finish-btn");
+    const colorPalette = this.els.boardRegionTools.querySelector("#region-color-palette");
+    const importBgBtn = this.els.boardRegionTools.querySelector("#region-import-bg-btn");
+    const removeBgBtn = this.els.boardRegionTools.querySelector("#region-remove-bg-btn");
+    const canColorEdit = hasCustomInvalidRegion(tab.doc);
+    for (const btn of [playableBtn, colorEditBtn, blackHoleBtn, finishBtn, importBgBtn, removeBgBtn]) {
+      if (btn instanceof HTMLButtonElement) {
+        btn.disabled = inZone;
+      }
+    }
+    if (colorEditBtn instanceof HTMLButtonElement) {
+      colorEditBtn.disabled = inZone || !canColorEdit;
+    }
+    playableBtn?.classList.toggle("active", mode === "playable");
+    colorEditBtn?.classList.toggle("active", mode === "invalidColor");
+    blackHoleBtn?.classList.toggle("active", mode === "blackHole");
+    colorPalette?.classList.toggle("hidden", mode !== "invalidColor");
+    colorPalette?.querySelectorAll(".region-color-swatch").forEach((node) => {
+      if (!(node instanceof HTMLButtonElement)) return;
+      const id = Number(node.dataset.color);
+      node.classList.toggle("selected", id === tab.invalidPaintColor);
+    });
+    if (finishBtn instanceof HTMLButtonElement) {
+      finishBtn.disabled = inZone || mode == null;
+    }
+    if (removeBgBtn instanceof HTMLButtonElement) {
+      removeBgBtn.disabled = inZone || !tab.doc.editorOnly?.backgroundImage;
+    }
+  }
+
+  private isInRegionEdit(): boolean {
+    return this.activeTab().doc.editContext.regionEditMode != null;
+  }
+
+  private toggleRegionEditMode(mode: "playable" | "blackHole" | "invalidColor"): void {
+    if (this.playMode || this.isInZoneEdit()) return;
+    if (mode === "invalidColor" && !hasCustomInvalidRegion(this.activeTab().doc)) return;
+    const tab = this.activeTab();
+    if (tab.doc.editContext.regionEditMode === mode) {
+      this.cancelRegionEdit();
+      return;
+    }
+    let doc = tab.doc;
+    if (doc.editContext.regionEditMode != null) {
+      doc = exitRegionEdit(doc);
+    }
+    doc = enterRegionEdit(doc, mode);
+    tab.doc = doc;
+    tab.regionDraftCells =
+      mode === "invalidColor" ? null : loadRegionDraftCells(doc, mode);
+    tab.regionColorDraft = mode === "invalidColor" ? loadInvalidColorDraft(doc) : null;
+    tab.regionColorSelection = mode === "invalidColor" ? new Set() : null;
+    tab.invalidPaintColor = 1;
+    tab.regionRectStart = null;
+    tab.draw = createDrawState();
+    this.commit(doc);
+  }
+
+  private pickInvalidCellColor(colorId: number): void {
+    const tab = this.activeTab();
+    if (tab.doc.editContext.regionEditMode !== "invalidColor") return;
+    tab.invalidPaintColor = colorId;
+    if (!tab.regionColorDraft) tab.regionColorDraft = loadInvalidColorDraft(tab.doc);
+    if (tab.regionColorSelection && tab.regionColorSelection.size > 0) {
+      tab.regionColorDraft = applyInvalidCellColor(
+        tab.regionColorDraft,
+        tab.regionColorSelection,
+        colorId as import("@arrowjaw/shared").InvalidCellColorId,
+      );
+      tab.regionColorSelection = new Set();
+    }
+    this.renderBoardRegionTools();
+    this.renderCanvas();
+  }
+
+  private cancelRegionEdit(): void {
+    const tab = this.activeTab();
+    tab.regionDraftCells = null;
+    tab.regionColorDraft = null;
+    tab.regionColorSelection = null;
+    tab.regionRectStart = null;
+    this.regionRectDragging = false;
+    if (tab.doc.editContext.regionEditMode != null) {
+      this.commit(exitRegionEdit(tab.doc));
+    } else {
+      this.refresh();
+    }
+  }
+
+  private finishRegionEdit(): void {
+    const tab = this.activeTab();
+    const mode = tab.doc.editContext.regionEditMode;
+    if (mode == null) return;
+
+    if (mode === "invalidColor") {
+      const colorDraft = tab.regionColorDraft ?? loadInvalidColorDraft(tab.doc);
+      this.commit(commitInvalidCellColors(tab.doc, colorDraft));
+      tab.regionColorDraft = null;
+      tab.regionColorSelection = null;
+      tab.regionRectStart = null;
+      this.regionRectDragging = false;
+      return;
+    }
+
+    const draft = tab.regionDraftCells;
+    if (!draft) return;
+
+    if (mode === "playable") {
+      const err = validatePlayableCommit(tab.doc, draft);
+      if (err) {
+        alert(playableCommitErrorMessage(err));
+        return;
+      }
+      this.commit(commitPlayableMask(tab.doc, draft));
+    } else if (mode === "blackHole") {
+      const playable = resolvePlayableCells(tab.doc);
+      const err = validateBlackHoleCommit(tab.doc, draft, playable);
+      if (err) {
+        alert(blackHoleCommitErrorMessage(err));
+        return;
+      }
+      this.commit(commitBlackHoleRegions(tab.doc, draft));
+    }
+    tab.regionDraftCells = null;
+    tab.regionColorDraft = null;
+    tab.regionColorSelection = null;
+    tab.regionRectStart = null;
+    this.regionRectDragging = false;
+  }
+
+  private async importBackgroundImage(): Promise<void> {
+    const file = this.els.bgImageInput.files?.[0];
+    this.els.bgImageInput.value = "";
+    if (!file) return;
+    if (file.size > BOARD_BG_IMAGE_MAX_BYTES) {
+      alert("背景图须 ≤ 5MB");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    const tab = this.activeTab();
+    tab.doc = {
+      ...tab.doc,
+      editorOnly: {
+        ...tab.doc.editorOnly,
+        backgroundImage: { dataUrl, name: file.name },
+      },
+      dirty: tab.doc.dirty,
+    };
+    this.commit(tab.doc);
+  }
+
+  private removeBackgroundImage(): void {
+    const tab = this.activeTab();
+    if (!tab.doc.editorOnly?.backgroundImage) return;
+    const { backgroundImage: _bg, ...rest } = tab.doc.editorOnly ?? {};
+    tab.doc = {
+      ...tab.doc,
+      editorOnly: Object.keys(rest).length ? rest : undefined,
+    };
+    this.commit(tab.doc);
+  }
+
+  private handleRegionEditMouseDown(cell: Vec2, _e: MouseEvent): void {
+    const tab = this.activeTab();
+    const mode = tab.doc.editContext.regionEditMode;
+    if (mode == null) return;
+    if (mode === "invalidColor") {
+      if (!resolveInvalidCells(tab.doc).has(vecKey(cell))) return;
+      if (!tab.regionColorSelection) tab.regionColorSelection = new Set();
+      tab.regionRectStart = cell;
+      this.regionRectDragging = true;
+      (tab as unknown as { draftRect?: Vec2[] }).draftRect = [cell];
+      this.renderCanvas();
+      return;
+    }
+    if (!tab.regionDraftCells) {
+      tab.regionDraftCells = loadRegionDraftCells(tab.doc, mode);
+    }
+    if (mode === "blackHole") {
+      const playable = resolvePlayableCells(tab.doc);
+      if (!playable.has(vecKey(cell))) return;
+    }
+    tab.regionRectStart = cell;
+    this.regionRectDragging = true;
+    (tab as unknown as { draftRect?: Vec2[] }).draftRect = [cell];
+    this.renderCanvas();
+  }
+
   private setTool(tool: EditorTool): void {
-    if (this.playMode || !this.isToolAllowed(tool)) return;
+    if (this.playMode || !this.isToolAllowed(tool) || this.isInRegionEdit()) return;
     if (tool === "bomb") {
       this.startBomb();
       return;
@@ -319,6 +679,7 @@ export class EditorApp {
   }
 
   private enterZoneEdit(zoneId: number): void {
+    if (this.isInRegionEdit()) return;
     this.commit(enterZone(this.activeTab().doc, zoneId));
   }
 
@@ -341,6 +702,24 @@ export class EditorApp {
         return false;
       }
     } else if (item.kind === 15) {
+      const cell = item.occupiedPositions[0];
+      if (!cell || !canPlaceInEditContext(tab.doc, [cell])) {
+        this.placeBlocked("zone");
+        return false;
+      }
+      if (findSingleCellOccupant(getEditableItems(tab.doc), cell)) {
+        this.placeBlocked("occupied");
+        return false;
+      }
+    } else if (
+      item.kind === 17 ||
+      item.kind === 18 ||
+      item.kind === 19 ||
+      item.kind === 20 ||
+      item.kind === 21 ||
+      item.kind === 22 ||
+      item.kind === 23
+    ) {
       const cell = item.occupiedPositions[0];
       if (!cell || !canPlaceInEditContext(tab.doc, [cell])) {
         this.placeBlocked("zone");
@@ -625,10 +1004,11 @@ export class EditorApp {
     const tab = this.activeTab();
     const tool = tab.draw.tool;
     const inZone = this.isInZoneEdit();
+    const inRegion = this.isInRegionEdit();
     this.els.tools.querySelectorAll("button[data-tool]").forEach((b) => {
       const el = b as HTMLButtonElement;
       const t = el.dataset.tool as EditorTool;
-      const allowed = !inZone || ZONE_EDIT_TOOLS.has(t);
+      const allowed = !inRegion && (!inZone || ZONE_EDIT_TOOLS.has(t));
       el.disabled = !allowed;
       el.classList.toggle("tool-disabled", !allowed);
       el.classList.toggle("active", allowed && t === tool);
@@ -695,12 +1075,20 @@ export class EditorApp {
 
   private onMouseDown(e: MouseEvent): void {
     const tab = this.activeTab();
+    if (this.playMode) return;
+
+    if (tab.doc.editContext.regionEditMode != null) {
+      const cell = this.cellFromEvent(e);
+      if (!cell) return;
+      this.handleRegionEditMouseDown(cell, e);
+      return;
+    }
+
     if (shouldStartViewportPan(e, tab.viewport)) {
       e.preventDefault();
       this.panStart = { x: e.clientX, y: e.clientY, ox: tab.viewport.offsetX, oy: tab.viewport.offsetY };
       return;
     }
-    if (this.playMode) return;
     const cell = this.cellFromEvent(e);
     if (!cell) return;
 
@@ -801,6 +1189,41 @@ export class EditorApp {
         return;
       }
       this.tryCommitItem(buildCornerItem(cell, tab.draw.cornerD1, tab.draw.cornerD2));
+      return;
+    }
+
+    if (tool === "areaBomb") {
+      this.tryCommitItem(buildAreaBombItem(cell, tab.draw.bombRadius));
+      return;
+    }
+
+    if (tool === "crossBomb") {
+      this.tryCommitItem(buildCrossBombItem(cell, tab.draw.crossArm));
+      return;
+    }
+
+    if (tool === "fireBomb") {
+      this.tryCommitItem(buildFireBombItem(cell));
+      return;
+    }
+
+    if (tool === "balloon") {
+      this.tryCommitItem(buildBalloonItem(cell));
+      return;
+    }
+
+    if (tool === "blackHole") {
+      this.tryCommitItem(buildBlackHoleItem(cell));
+      return;
+    }
+
+    if (tool === "flipButton") {
+      this.tryCommitItem(buildFlipButtonItem(cell));
+      return;
+    }
+
+    if (tool === "candyMachine") {
+      this.tryCommitItem(buildCandyMachineItem(cell));
       return;
     }
 
@@ -914,6 +1337,24 @@ export class EditorApp {
       );
       (tab as unknown as { draftRect: Vec2[] }).draftRect = cells;
       this.renderCanvas();
+      return;
+    }
+
+    if (
+      this.regionRectDragging &&
+      tab.regionRectStart &&
+      cell &&
+      tab.doc.editContext.regionEditMode != null
+    ) {
+      const cells = rectPositions(
+        tab.regionRectStart[0],
+        tab.regionRectStart[1],
+        cell[0],
+        cell[1],
+      );
+      (tab as unknown as { draftRect: Vec2[] }).draftRect = cells;
+      this.renderCanvas();
+      return;
     }
   }
 
@@ -930,6 +1371,38 @@ export class EditorApp {
     if (this.wallPathDragging) {
       this.wallPathDragging = false;
       this.renderProps();
+    }
+
+    if (this.regionRectDragging && tab.regionRectStart) {
+      const draftRect = (tab as unknown as { draftRect?: Vec2[] }).draftRect ?? [];
+      const mode = tab.doc.editContext.regionEditMode;
+      if (mode === "invalidColor" && draftRect.length > 0) {
+        const invalid = resolveInvalidCells(tab.doc);
+        const cells = draftRect.filter((p) => invalid.has(vecKey(p)));
+        tab.regionColorSelection = new Set(cells.map((p) => vecKey(p)));
+      } else if (mode && tab.regionDraftCells && draftRect.length > 0) {
+        let cells = draftRect;
+        if (mode === "blackHole") {
+          const playable = resolvePlayableCells(tab.doc);
+          cells = cells.filter((p) => playable.has(vecKey(p)));
+        }
+        tab.regionDraftCells = applyRegionDraftRect(
+          tab.regionDraftCells,
+          cells,
+          "toggle",
+        );
+        if (mode === "playable") {
+          tab.regionDraftCells = enforceBlackHolesInPlayableDraft(
+            tab.doc,
+            tab.regionDraftCells,
+          );
+        }
+      }
+      tab.regionRectStart = null;
+      this.regionRectDragging = false;
+      (tab as unknown as { draftRect?: Vec2[] }).draftRect = undefined;
+      this.renderCanvas();
+      return;
     }
 
     if (this.dragSnapshots && this.dragOrigin) {
@@ -1119,15 +1592,37 @@ export class EditorApp {
     this.refresh();
   }
 
+  private isPlayTimingTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && target.closest("#play-timing-panel") != null;
+  }
+
   private onKeyDown(e: KeyboardEvent): void {
+    if (this.playMode) {
+      if (e.key === "Escape" && !this.isPlayTimingTarget(e.target)) {
+        e.preventDefault();
+        this.stopPlayMode();
+        return;
+      }
+      if (
+        e.ctrlKey &&
+        ["z", "y", "n", "o", "s"].includes(e.key.toLowerCase())
+      ) {
+        e.preventDefault();
+      }
+      return;
+    }
+
     const tab = this.activeTab();
     if (e.code === "Space") {
       tab.viewport = { ...tab.viewport, spaceHeld: true };
       e.preventDefault();
     }
     if (e.key === "Escape") {
-      if (this.playMode) this.togglePlayMode();
-      else if (tab.draw.tool === "wallPath") this.cancelWallPathEdit();
+      if (tab.doc.editContext.regionEditMode != null) {
+        this.cancelRegionEdit();
+        return;
+      }
+      if (tab.draw.tool === "wallPath") this.cancelWallPathEdit();
       else if (tab.doc.editContext.zoneInstanceId != null) this.commit(exitZone(tab.doc));
       else {
         tab.draw = createDrawState();
@@ -1357,65 +1852,101 @@ export class EditorApp {
   }
 
   private togglePlayMode(): void {
+    if (this.playMode) this.stopPlayMode();
+    else void this.startPlayMode();
+  }
+
+  private async startPlayMode(): Promise<void> {
     const tab = this.activeTab();
+    if (tab.doc.editContext.regionEditMode != null) {
+      alert("请先完成或取消区域编辑再试玩");
+      return;
+    }
     const issues = validateLevelData(levelDataFromDocument(tab.doc));
-    if (!this.playMode && hasBlockingErrors(issues)) {
+    if (hasBlockingErrors(issues)) {
       alert("请先修复阻塞级校验错误再试玩");
       return;
     }
-    this.playMode = !this.playMode;
-    this.els.playToolbar.classList.toggle("hidden", !this.playMode);
-    if (this.playMode) {
-      const tab = this.activeTab();
-      tab.viewport = resetViewport(this.els.wrap, tab.doc.meta);
-      applyViewportToCanvas(this.els.canvas, tab.viewport);
-      applyViewportToCanvas(this.els.overlay, tab.viewport);
-      this.els.overlay.style.visibility = "hidden";
-      this.els.tooltip.classList.add("hidden");
-      this.playModalShown = false;
-      hidePlayResultModal(this.els.playResultOverlay);
-      mountPlayHud(this.els.playHud);
 
-      const level = documentToGameLevel(tab.doc);
-      this.gameState = new GameState(level);
-      this.playRenderer = new BoardRenderer(this.els.canvas);
-      this.playInput?.dispose();
-      this.playInput = new InputHandler(
-        this.els.canvas,
-        () => this.gameState,
-        () => tab.viewport,
-      );
-      this.els.playControls.innerHTML = `
-        <button type="button" id="play-auto" class="play-auto-btn" title="自动依次点击当前无阻挡、可立即出界的箭">一键试玩</button>
-        <button type="button" id="play-reset">重置</button>
-        <button type="button" id="play-exit">退出 (Esc)</button>
-      `;
-      this.els.playControls.querySelector("#play-auto")?.addEventListener("click", () => {
-        this.autoPlayActive = !this.autoPlayActive;
-        if (this.autoPlayActive && this.gameState?.phase === "playing") {
-          this.gameState.tryAutoLaunch();
-        }
-        this.syncAutoPlayButton();
-      });
-      this.els.playControls.querySelector("#play-reset")?.addEventListener("click", () => {
-        this.resetPlaySession();
-      });
-      this.els.playControls.querySelector("#play-exit")?.addEventListener("click", () =>
-        this.togglePlayMode(),
-      );
-      this.startPlayLoop();
-    } else {
-      cancelAnimationFrame(this.rafId);
-      this.autoPlayActive = false;
-      this.playModalShown = false;
-      hidePlayResultModal(this.els.playResultOverlay);
-      this.playInput?.dispose();
-      this.playInput = null;
-      this.gameState = null;
-      this.playRenderer = null;
-      this.els.overlay.style.visibility = "";
-      this.refresh();
+    try {
+      await reloadOfficialAnimTimingConfig();
+    } catch {
+      resetAnimTimingConfig();
     }
+    beginAnimTimingPlayPreview();
+
+    this.playMode = true;
+    this.els.props.classList.add("hidden");
+    this.els.boardRegionTools.classList.add("hidden");
+    this.els.playToolbar.classList.remove("hidden");
+    this.els.playTimingPanel.classList.remove("hidden");
+
+    tab.viewport = resetGamePlayViewport(this.els.wrap, tab.doc.meta, true);
+    applyViewportToCanvas(this.els.canvas, tab.viewport);
+    applyViewportToCanvas(this.els.overlay, tab.viewport);
+    this.els.overlay.style.visibility = "hidden";
+    this.els.tooltip.classList.add("hidden");
+    this.playModalShown = false;
+    hidePlayResultModal(this.els.playResultOverlay);
+    mountPlayHud(this.els.playHud);
+    this.animTimingTuner?.dispose();
+    this.animTimingTuner = mountAnimTimingTuner(this.els.playTimingPanel);
+
+    const level = documentToGameLevel(tab.doc);
+    this.gameState = new GameState(level);
+    this.playRenderer = new BoardRenderer(this.els.canvas);
+    this.playInput?.dispose();
+    this.playInput = new InputHandler(
+      this.els.canvas,
+      () => this.gameState,
+      () => tab.viewport,
+    );
+    this.els.playControls.innerHTML = `
+      <button type="button" id="play-auto" class="play-auto-btn" title="自动依次点击当前无阻挡、可立即出界的箭">一键试玩</button>
+      <button type="button" id="play-reset">重置</button>
+      <button type="button" id="play-exit">退出 (Esc)</button>
+    `;
+    this.els.playControls.querySelector("#play-auto")?.addEventListener("click", () => {
+      this.autoPlayActive = !this.autoPlayActive;
+      if (this.autoPlayActive && this.gameState?.phase === "playing") {
+        this.gameState.tryAutoLaunch();
+      }
+      this.syncAutoPlayButton();
+    });
+    this.els.playControls.querySelector("#play-reset")?.addEventListener("click", () => {
+      this.resetPlaySession();
+    });
+    this.els.playControls.querySelector("#play-exit")?.addEventListener("click", () =>
+      this.stopPlayMode(),
+    );
+    this.startPlayLoop();
+  }
+
+  stopPlayLoop(): void {
+    cancelAnimationFrame(this.rafId);
+    this.rafId = 0;
+  }
+
+  private stopPlayMode(): void {
+    if (!this.playMode) return;
+
+    endAnimTimingPlayPreview();
+    this.stopPlayLoop();
+    this.playMode = false;
+    this.autoPlayActive = false;
+    this.playModalShown = false;
+    this.animTimingTuner?.dispose();
+    this.animTimingTuner = null;
+    hidePlayResultModal(this.els.playResultOverlay);
+    this.playInput?.dispose();
+    this.playInput = null;
+    this.gameState = null;
+    this.playRenderer = null;
+    this.els.playToolbar.classList.add("hidden");
+    this.els.playTimingPanel.classList.add("hidden");
+    this.els.props.classList.remove("hidden");
+    this.els.overlay.style.visibility = "";
+    this.refresh();
   }
 
   private resetPlaySession(): void {
@@ -1444,7 +1975,7 @@ export class EditorApp {
       },
       {
         label: "退出试玩",
-        onClick: () => this.togglePlayMode(),
+        onClick: () => this.stopPlayMode(),
       },
     ]);
   }
@@ -1484,6 +2015,25 @@ export class EditorApp {
           vanishProgressById.set(id, progress);
         }
       }
+      for (const [id, progress] of gs.getBlackHoleRegionSwallowProgressForRender()) {
+        vanishProgressById.set(id, Math.max(vanishProgressById.get(id) ?? 0, progress));
+      }
+
+      const spawnEmergenceById = new Map<number, SpawnEmergence>();
+      if (gs.isSpawnPhase()) {
+        for (const a of gs.arrows) {
+          const fx = gs.getSpawnEmergence(a.instanceId);
+          if (fx) spawnEmergenceById.set(a.instanceId, fx);
+        }
+        for (const c of gs.corners) {
+          const fx = gs.getSpawnEmergence(c.instanceId);
+          if (fx) spawnEmergenceById.set(c.instanceId, fx);
+        }
+        for (const b of gs.getDrawableBuffs()) {
+          const fx = gs.getSpawnEmergence(b.instanceId);
+          if (fx) spawnEmergenceById.set(b.instanceId, fx);
+        }
+      }
 
       renderer.drawBoard(
         gs.level,
@@ -1501,8 +2051,7 @@ export class EditorApp {
         gs.getActiveCurtainsForRender(),
         {
           style: "game",
-          clearedTraces: gs.getClearedTraceCells(),
-          occupiedCells: gs.getOccupiedArrowCellKeys(),
+          occupiedCells: gs.getBoardOccupiedCellKeys(),
           vanishProgressById,
           movingWalls: gs.getMovingWalls(),
           frozenOverlays: gs.getFrozenOverlays(),
@@ -1513,6 +2062,24 @@ export class EditorApp {
           bombStates: gs.getBombDrawStates(),
           bombExplosion: gs.getBombExplosion(),
           urgentBombRemaining: gs.getUrgentBombRemaining(),
+          buffs: gs.getDrawableBuffs(),
+          spawnEmergenceById,
+          areaBombEffects: gs.getAreaBombEffectsForRender(),
+          crossBombEffects: gs.getCrossBombEffectsForRender(),
+          fireBombEffects: gs.getFireBombEffectsForRender(),
+          waitingBalloonEffects: gs.getWaitingBalloonsForRender(),
+          pendingBalloonBuffIds: gs.getPendingBalloonBuffIds(),
+          balloonEffects: gs.getBalloonEffectsForRender(),
+          candyMachineEffects: gs.getCandyMachineEffectsForRender(),
+          autoRefreshEffect: gs.getAutoRefreshEffectForRender(),
+          balloonArrowFxById: gs.getBalloonArrowFxForRender(),
+          blackHoleFxById: gs.getBlackHoleFxForRender(),
+          launchClickEffects: gs.getLaunchClickEffectsForRender(),
+          dotPulseEffects: gs.getDotPulseEffectsForRender(),
+          playableCells: gs.level.playableCells,
+          blackHoleCells: gs.level.blackHoleCells,
+          invalidCellColors: gs.level.invalidCellColors,
+          blackHoleRegionPhase: performance.now() * 0.001,
         },
       );
       updatePlayHud(this.els.playHud, gs);
@@ -1557,6 +2124,7 @@ export class EditorApp {
       el.className = `tab${tab.id === this.activeTabId ? " active" : ""}`;
       el.innerHTML = `<span>${tab.doc.source.name}${tab.doc.dirty ? " *" : ""}</span><span class="close">×</span>`;
       el.querySelector("span")?.addEventListener("click", () => {
+        if (this.playMode) return;
         this.activeTabId = tab.id;
         this.refresh();
       });
@@ -1569,6 +2137,9 @@ export class EditorApp {
   }
 
   private closeTab(id: string): void {
+    if (this.playMode && this.activeTabId === id) {
+      this.stopPlayMode();
+    }
     const tab = this.tabs.find((t) => t.id === id);
     if (tab?.doc.dirty) {
       if (!confirm("关卡未保存，确定关闭？")) return;
@@ -1638,6 +2209,11 @@ export class EditorApp {
           tab.draw.tool === "flipArrow"
             ? flipArrowDirection2(tab.draw.polyline)
             : undefined,
+        regionDraftCells: tab.regionDraftCells ?? undefined,
+        regionEditMode: tab.doc.editContext.regionEditMode,
+        regionColorDraft: tab.regionColorDraft ?? undefined,
+        regionColorSelection: tab.regionColorSelection ?? undefined,
+        boldRulers: !!tab.doc.editorOnly?.backgroundImage,
       },
     );
   }
@@ -1666,6 +2242,16 @@ export class EditorApp {
       wallPathEdit,
       () => this.finishWallPathEdit(),
       () => this.cancelWallPathEdit(),
+      {
+        tool: tab.draw.tool,
+        bombRadius: tab.draw.bombRadius,
+        crossArm: tab.draw.crossArm,
+        colorId: tab.draw.colorId,
+      },
+      (patch) => {
+        tab.draw = { ...tab.draw, ...patch };
+        this.renderProps();
+      },
     );
   }
 

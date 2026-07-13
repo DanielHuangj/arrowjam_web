@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-15  
 > **状态**：待开发  
-> **关联文档**：[Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_新机制开发步骤拆解.md](arrow_jaw_新机制开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md)
+> **关联文档**：[Arrow Jam 新增规则内容.md](Arrow%20Jam%20新增规则内容.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_新机制开发步骤拆解.md](arrow_jaw_新机制开发步骤拆解.md) · [arrow_jaw_收缩拨动机制开发需求文档.md](arrow_jaw_收缩拨动机制开发需求文档.md) · [arrow_jaw_爽快版开发需求文档.md](arrow_jaw_爽快版开发需求文档.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md)
 
 ---
 

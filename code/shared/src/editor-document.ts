@@ -11,12 +11,20 @@ export function createEmptyDocument(meta: Partial<EditorMeta> = {}): EditorDocum
       durationInSec: meta.durationInSec ?? 150,
       difficulty: meta.difficulty ?? 1,
       levelKind: meta.levelKind,
+      gameMode: meta.gameMode ?? "classic",
+      spawnIntervalSec: meta.spawnIntervalSec,
+      spawnPool: meta.spawnPool,
+      levelGoals: meta.levelGoals,
+      boardShape: meta.boardShape,
+      playableMask: meta.playableMask,
+      blackHoleRegions: meta.blackHoleRegions,
+      invalidCellColors: meta.invalidCellColors,
     },
     itemModels: [],
     source: { name: "未命名关卡.json" },
     dirty: true,
     selectedInstanceIds: [],
-    editContext: { zoneInstanceId: null },
+    editContext: { zoneInstanceId: null, regionEditMode: null },
   };
 }
 
@@ -49,12 +57,34 @@ export function createDocumentFromJson(
       durationInSec: data.durationInSec ?? 150,
       difficulty: data.difficulty ?? 1,
       levelKind: data.levelKind,
+      gameMode: data.gameMode ?? "classic",
+      spawnIntervalSec: data.spawnIntervalSec,
+      spawnPool: data.spawnPool?.map((e) => ({ ...e })),
+      levelGoals: data.levelGoals?.map((g) =>
+        g.type === "clearColorArrows"
+          ? {
+              type: "clearColorArrows" as const,
+              targets: g.targets.map((t) => ({ ...t })),
+            }
+          : { ...g },
+      ),
+      boardShape: data.boardShape,
+      playableMask: data.playableMask
+        ? { rows: data.playableMask.rows.map(([y, a, b]) => [y, a, b] as [number, number, number]) }
+        : undefined,
+      blackHoleRegions: data.blackHoleRegions?.map((r) => ({
+        rows: r.rows.map(([y, a, b]) => [y, a, b] as [number, number, number]),
+      })),
+      invalidCellColors: data.invalidCellColors?.map((e) => ({
+        color: e.color,
+        rows: e.rows.map(([y, a, b]) => [y, a, b] as [number, number, number]),
+      })),
     },
     itemModels,
     source: { name, handle },
     dirty: false,
     selectedInstanceIds: [],
-    editContext: { zoneInstanceId: null },
+    editContext: { zoneInstanceId: null, regionEditMode: null },
   };
   return { doc, warnings };
 }

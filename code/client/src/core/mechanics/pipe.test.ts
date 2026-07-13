@@ -263,6 +263,16 @@ describe("pipe mechanics", () => {
       pipes: [horizontalPipe],
       curtains: [],
       keys: [],
+      buffs: [
+        {
+          kind: 17,
+          instanceId: 99,
+          layer: 2,
+          zoneId: null,
+          occupiedPositions: [[0, 0]],
+          bombRadius: 1,
+        },
+      ],
     });
     expect(gs.tryLaunch(1)).toBe(true);
     expect(gs.animation?.mode).toBe("bump");

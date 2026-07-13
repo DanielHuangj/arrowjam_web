@@ -1,5 +1,15 @@
 import type { Direction, LevelData, RawItem, ValidationIssue, Vec2 } from "./types.ts";
 import { inBounds, vecKey } from "./types.ts";
+import {
+  buildBoardMaskFromLevel,
+  expandMaskRows,
+  isOrthogonallyConnected,
+  resolveBoardShape,
+} from "./board-mask.ts";
+import {
+  isValidInvalidCellColorId,
+} from "./invalid-cell-colors.ts";
+import { isSpawnWeightTotalValid, SPAWN_WEIGHT_TOTAL } from "./spawn-weight.ts";
 import { collectAllItems, findArrowCellOverlaps, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, findArrowHostingCell, findArrowHostingPositions, findItemParentList, isPolylineContinuous, isRectangular, CONTROLLER_HOST_KINDS, validateShrinkStripAgainstPipe } from "./items.ts";
 
 function push(
@@ -44,7 +54,10 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
     return issues;
   }
 
+  validateRushFields(data, issues);
+
   const all = collectAllItems(data.itemModels);
+  validateBoardMaskFields(data, issues, all);
   const idSet = new Map<number, number>();
   for (const item of all) {
     idSet.set(item.instanceId, (idSet.get(item.instanceId) ?? 0) + 1);
@@ -547,6 +560,211 @@ export function validateLevelData(data: LevelData): ValidationIssue[] {
   }
 
   return issues;
+}
+
+function spawnPoolEntryKey(entry: import("./types.ts").SpawnPoolEntry): string {
+  return `${entry.kind}:${entry.colorId ?? ""}:${entry.bombRadius ?? ""}:${entry.crossArm ?? ""}`;
+}
+
+function validateRushFields(data: import("./types.ts").LevelData, issues: ValidationIssue[]): void {
+  const isRush =
+    data.gameMode === "rush" ||
+    (data.gameMode !== "classic" &&
+      (data.spawnIntervalSec != null ||
+        (data.spawnPool != null && data.spawnPool.length > 0) ||
+        (data.levelGoals != null && data.levelGoals.length > 0)));
+
+  if (!isRush) return;
+
+  if (data.spawnIntervalSec == null || data.spawnIntervalSec <= 0) {
+    push(issues, "V-V2-001", "error", "rush 模式缺少有效的 spawnIntervalSec");
+  }
+  if (!data.spawnPool || data.spawnPool.length === 0) {
+    push(issues, "V-V2-001", "error", "rush 模式缺少 spawnPool");
+  }
+  if (!data.levelGoals || data.levelGoals.length === 0) {
+    push(issues, "V-V2-001", "error", "rush 模式缺少 levelGoals");
+  }
+
+  if (data.spawnPool) {
+    const sum = data.spawnPool.reduce((s, e) => s + e.weight, 0);
+    if (!isSpawnWeightTotalValid(sum)) {
+      push(issues, "V-V2-002", "error", `spawnPool 权重之和须为 ${SPAWN_WEIGHT_TOTAL}，当前为 ${sum}`);
+    }
+    const keys = new Set<string>();
+    for (const entry of data.spawnPool) {
+      const key = spawnPoolEntryKey(entry);
+      if (keys.has(key)) {
+        push(issues, "V-V2-003", "error", `spawnPool 重复条目: ${key}`);
+      }
+      keys.add(key);
+      if ((entry.kind === 1 || entry.kind === 2) && entry.colorId == null) {
+        push(issues, "V-V2-004", "error", `spawnPool 箭头条目须配置 colorId`);
+      }
+      if (entry.kind === 17 && entry.bombRadius !== 1 && entry.bombRadius !== 2) {
+        push(issues, "V-V2-004", "error", `spawnPool 区域炸弹须配置 bombRadius`);
+      }
+      if (entry.kind === 18 && entry.crossArm !== 2 && entry.crossArm !== 5) {
+        push(issues, "V-V2-004", "error", `spawnPool 十字炸弹须配置 crossArm`);
+      }
+    }
+  }
+
+  if (data.spawnWeightAdjust != null) {
+    if (data.spawnWeightAdjust.length === 0) {
+      push(issues, "V-V2-006", "error", "spawnWeightAdjust 须至少包含一段配置");
+    }
+    let prevMin = -1;
+    for (const tier of [...data.spawnWeightAdjust].sort(
+      (a, b) => a.minElimCells - b.minElimCells,
+    )) {
+      if (!Number.isFinite(tier.minElimCells) || tier.minElimCells < 0) {
+        push(issues, "V-V2-006", "error", "spawnWeightAdjust.minElimCells 须为非负整数");
+      }
+      if (tier.minElimCells <= prevMin) {
+        push(
+          issues,
+          "V-V2-006",
+          "error",
+          "spawnWeightAdjust 各段 minElimCells 须严格升序",
+        );
+      }
+      prevMin = tier.minElimCells;
+      for (const key of ["buffDelta", "arrowDelta", "mechDelta"] as const) {
+        if (!Number.isFinite(tier[key])) {
+          push(
+            issues,
+            "V-V2-006",
+            "error",
+            `spawnWeightAdjust.${key} 须为有效数字`,
+          );
+        }
+      }
+    }
+    const first = data.spawnWeightAdjust.reduce(
+      (m, t) => (t.minElimCells < m.minElimCells ? t : m),
+      data.spawnWeightAdjust[0]!,
+    );
+    if (first.minElimCells !== 0) {
+      push(
+        issues,
+        "V-V2-006",
+        "warning",
+        "spawnWeightAdjust 建议首段 minElimCells 为 0",
+      );
+    }
+  }
+
+  if (data.levelGoals) {
+    for (const goal of data.levelGoals) {
+      if (goal.type === "clearArrowCount") {
+        if (goal.count <= 0) {
+          push(issues, "V-V2-005", "error", "clearArrowCount 须大于 0");
+        }
+      } else if (goal.type === "clearColorArrows") {
+        if (!goal.targets.length) {
+          push(issues, "V-V2-005", "error", "clearColorArrows 须至少一个颜色目标");
+        }
+        for (const t of goal.targets) {
+          if (t.colorId <= 0 || t.count <= 0) {
+            push(issues, "V-V2-005", "error", "颜色目标须指定有效 colorId 与 count");
+          }
+        }
+      }
+    }
+  }
+}
+
+function validateBoardMaskFields(
+  data: LevelData,
+  issues: ValidationIssue[],
+  all: RawItem[],
+): void {
+  const boardShape = resolveBoardShape(data);
+  const { playableCells, blackHoleCells } = buildBoardMaskFromLevel(data);
+
+  if (boardShape === "custom") {
+    if (!data.playableMask?.rows?.length) {
+      push(issues, "V-BOARD-01", "error", "异形棋盘缺少 playableMask");
+    } else if (playableCells.size === 0) {
+      push(issues, "V-BOARD-01", "error", "有效格不能为空");
+    } else if (!isOrthogonallyConnected(playableCells)) {
+      push(issues, "V-BOARD-01", "error", "有效格须四邻连通成片");
+    }
+  }
+
+  for (const item of all) {
+    for (const pos of item.occupiedPositions) {
+      const key = vecKey(pos);
+      if (boardShape === "custom" && !playableCells.has(key)) {
+        push(
+          issues,
+          "V-BOARD-02",
+          "error",
+          `物件 #${item.instanceId} 坐标 [${pos[0]},${pos[1]}] 不在有效格内`,
+          item.instanceId,
+        );
+      }
+      if (blackHoleCells.has(key)) {
+        push(
+          issues,
+          "V-BOARD-05",
+          "error",
+          `物件 #${item.instanceId} 坐标 [${pos[0]},${pos[1]}] 与黑洞区域重叠`,
+          item.instanceId,
+        );
+      }
+    }
+  }
+
+  for (const key of blackHoleCells) {
+    if (!playableCells.has(key)) {
+      push(issues, "V-BOARD-03", "error", `黑洞格 ${key} 不在有效格内`);
+    }
+  }
+
+  for (let i = 0; i < (data.blackHoleRegions?.length ?? 0); i++) {
+    const region = data.blackHoleRegions![i]!;
+    const cells = expandMaskRows(data.width, data.height, region.rows ?? []);
+    if (cells.size > 0 && !isOrthogonallyConnected(cells)) {
+      push(issues, "V-BOARD-04", "warning", `黑洞区域 #${i + 1} 未四邻连通`);
+    }
+  }
+
+  if (data.invalidCellColors?.length) {
+    const total = data.width * data.height;
+    const invalidCells = new Set<string>();
+    if (boardShape === "custom") {
+      for (let y = 0; y < data.height; y++) {
+        for (let x = 0; x < data.width; x++) {
+          const key = vecKey([x, y]);
+          if (!playableCells.has(key)) invalidCells.add(key);
+        }
+      }
+    }
+    for (let i = 0; i < data.invalidCellColors.length; i++) {
+      const entry = data.invalidCellColors[i]!;
+      if (!isValidInvalidCellColorId(entry.color)) {
+        push(
+          issues,
+          "V-BOARD-06",
+          "error",
+          `无效格着色 #${i + 1} 使用了非法颜色 ${entry.color}`,
+        );
+        continue;
+      }
+      for (const key of expandMaskRows(data.width, data.height, entry.rows ?? [])) {
+        if (boardShape !== "custom") {
+          push(issues, "V-BOARD-06", "error", `无效格着色 ${key} 仅可用于异形棋盘`);
+        } else if (!invalidCells.has(key)) {
+          push(issues, "V-BOARD-06", "error", `无效格着色 ${key} 不在无效格内`);
+        }
+      }
+    }
+    if (boardShape === "custom" && playableCells.size === total && data.invalidCellColors.length > 0) {
+      push(issues, "V-BOARD-06", "warning", "全格有效时无效格着色将被忽略");
+    }
+  }
 }
 
 export function hasBlockingErrors(issues: ValidationIssue[]): boolean {

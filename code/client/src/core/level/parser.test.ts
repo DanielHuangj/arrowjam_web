@@ -27,6 +27,7 @@ function emptyLevel(arrows: ArrowItem[]) {
     name: "test",
     durationInSec: 60,
     difficulty: 1,
+    gameMode: "classic" as const,
     arrows,
     corners: [],
     zones: [],
@@ -40,6 +41,7 @@ function emptyLevel(arrows: ArrowItem[]) {
     shrinkPipes: [],
     toggles: [],
     controllers: [],
+    buffs: [],
   };
 }
 
@@ -396,7 +398,19 @@ describe("GameState", () => {
       direction: 1,
       colorId: 6,
     };
-    const gs = new GameState(emptyLevel([blocked, blocker]));
+    const gs = new GameState({
+      ...emptyLevel([blocked, blocker]),
+      buffs: [
+        {
+          kind: 17,
+          instanceId: 99,
+          layer: 2,
+          zoneId: null,
+          occupiedPositions: [[4, 4]],
+          bombRadius: 1,
+        },
+      ],
+    });
     const origin = blocked.occupiedPositions.map((p) => [...p]);
 
     expect(gs.tryLaunch(1)).toBe(true);

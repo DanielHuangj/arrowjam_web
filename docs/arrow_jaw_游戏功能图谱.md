@@ -89,6 +89,11 @@ kind 2：`direction1` 为默认头（尾→头折线的头部方向）；`direct
 | 有效范围 | x ∈ [0, width−1]，y ∈ [0, height−1] |
 | 格点 | 整数坐标；箭/管道等为占格物件 |
 | 渲染 | `STEP=37` 像素/格，`CELL=34` 为格内绘制区（`colors.ts`） |
+| 默认形状 | 省略 `boardShape` 时视为 **矩形全格有效**（与历史关卡一致） |
+| 异形棋盘 | `boardShape: "custom"` + `playableMask`（按行水平 span 压缩）；无效格不可放置/生成/点击，编辑器内置灰、游戏内与面板同色且无圆点 |
+| 黑洞区域 | `blackHoleRegions[]`（永久关卡几何，与 K21 道具黑洞并存）；箭身 newly-enter 即吞噬消除；不可放置/生成；游戏内星空动画，编辑器白底标识 |
+| 数据层 | `code/shared/src/board-mask.ts`；校验 V-BOARD-01~05 |
+| 测试关 | `level-9036.json`（异形 + 黑洞区域） |
 
 ---
 
@@ -109,6 +114,9 @@ kind 2：`direction1` 为默认头（尾→头折线的头部方向）；`direct
 | `durationInSec` | number | 是 | 限时秒数，默认 120 |
 | `difficulty` | number | 是 | 1=Normal，2=Hard，3=Superhuman |
 | `levelKind` | number | 否 | 关卡类型标签 |
+| `boardShape` | `"full"` \| `"custom"` | 否 | 省略=full；custom 时须带 `playableMask` |
+| `playableMask` | `{ rows: [y,startX,endX][] }` | 否 | 有效格水平段（含端点）；仅 custom 时写入 |
+| `blackHoleRegions` | `MaskRows[]` | 否 | 永久黑洞区域，每块为正交连通 span 列表 |
 | `itemModels` | RawItem[] | 是 | 顶层物件列表 |
 
 ### 3.3 物件通用字段（`RawItem`）

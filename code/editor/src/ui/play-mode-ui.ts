@@ -20,6 +20,8 @@ export function updatePlayHud(root: HTMLElement, gs: GameState): void {
     arrowCount: gs.arrows.length,
     difficulty: gs.level.difficulty,
     bombRemaining: gs.getUrgentBombRemaining(),
+    rushGoals: gs.isRushLevel() ? gs.getGoalProgress() : undefined,
+    spawnCountdownSec: gs.isRushLevel() ? gs.getSpawnCountdownSec() : null,
   });
 }
 
@@ -34,14 +36,31 @@ export function showPlayResultModal(
   if (gs.phase === "won") {
     title = "胜利！";
     const sec = Math.ceil(gs.remainingSeconds);
-    body = `剩余时间 ${sec}s · 误操作 ${gs.mistakeCount} 次`;
+    if (gs.isRushLevel()) {
+      const goals = gs
+        .getGoalProgress()
+        .map((g) => `${g.label} ${g.current}/${g.target}`)
+        .join(" · ");
+      body = `目标达成 · 剩余时间 ${sec}s${goals ? ` · ${goals}` : ""}`;
+    } else {
+      body = `剩余时间 ${sec}s · 误操作 ${gs.mistakeCount} 次`;
+    }
   } else {
     const reason = gs.getLostReason();
     title = reason === "bomb" ? "炸弹爆炸！" : "时间到";
-    body =
-      reason === "bomb"
-        ? `定时炸弹引爆 · 还有 ${gs.arrows.length} 条箭未清除`
-        : `还有 ${gs.arrows.length} 条箭未清除`;
+    if (gs.isRushLevel() && reason !== "bomb") {
+      const pending = gs
+        .getGoalProgress()
+        .filter((g) => !g.done)
+        .map((g) => `${g.label} ${g.current}/${g.target}`)
+        .join(" · ");
+      body = pending ? `未达成目标：${pending}` : `还有 ${gs.arrows.length} 条箭未清除`;
+    } else {
+      body =
+        reason === "bomb"
+          ? `定时炸弹引爆 · 还有 ${gs.arrows.length} 条箭未清除`
+          : `还有 ${gs.arrows.length} 条箭未清除`;
+    }
   }
 
   overlay.classList.remove("hidden");

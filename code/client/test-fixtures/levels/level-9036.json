@@ -1,0 +1,42 @@
+{
+  "width": 12,
+  "height": 12,
+  "name": "Board mask test",
+  "durationInSec": 120,
+  "difficulty": 1,
+  "boardShape": "custom",
+  "playableMask": {
+    "rows": [
+      [2, 3, 8],
+      [3, 2, 9],
+      [4, 1, 10],
+      [5, 1, 10],
+      [6, 1, 10],
+      [7, 2, 9],
+      [8, 3, 8]
+    ]
+  },
+  "blackHoleRegions": [
+    {
+      "rows": [[7, 5, 6]]
+    }
+  ],
+  "itemModels": [
+    {
+      "kind": 1,
+      "occupiedPositions": [[5, 4], [5, 5], [5, 6]],
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [[3, 4], [4, 4], [4, 5]],
+      "instanceId": 2,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3
+    }
+  ]
+}

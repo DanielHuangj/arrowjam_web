@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-15  
 > **状态**：游戏客户端已实现（测试/辅助向）  
-> **关联文档**：[arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [Arrow玩法规则详解.md](Arrow玩法规则详解.md)
+> **关联文档**：[arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [Arrow玩法规则详解.md](Arrow玩法规则详解.md) · [arrow_jaw_爽快版开发需求文档.md](arrow_jaw_爽快版开发需求文档.md)（V2 棋盘增益道具 kind 17–20 与 HUD 测试道具区分见附录 A）
 
 ---
 

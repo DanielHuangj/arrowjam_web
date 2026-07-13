@@ -1,0 +1,35 @@
+{
+  "width": 12,
+  "height": 14,
+  "name": "Rush: Spawn Basic",
+  "durationInSec": 90,
+  "difficulty": 1,
+  "gameMode": "rush",
+  "spawnIntervalSec": 8,
+  "spawnPool": [
+    { "kind": 1, "weight": 600, "colorId": 7 },
+    { "kind": 1, "weight": 250, "colorId": 3 },
+    { "kind": 4, "weight": 150 }
+  ],
+  "levelGoals": [
+    { "type": "clearArrowCount", "count": 8 }
+  ],
+  "itemModels": [
+    {
+      "kind": 1,
+      "instanceId": 1,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 7,
+      "occupiedPositions": [[5, 3], [5, 4], [5, 5]]
+    },
+    {
+      "kind": 1,
+      "instanceId": 2,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3,
+      "occupiedPositions": [[8, 6], [9, 6]]
+    }
+  ]
+}

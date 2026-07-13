@@ -279,6 +279,7 @@ export function simulateCanExitBundle(
   pipes: PipeItem[] = [],
   curtainCells: Set<string> = new Set(),
   extraBlockerCells: Set<string> = new Set(),
+  blackHoleCells: Set<string> = new Set(),
 ): boolean {
   const members = memberIds
     .map((id) => allArrows.find((a) => a.instanceId === id))
@@ -297,6 +298,10 @@ export function simulateCanExitBundle(
 
   const maxLen = Math.max(...members.map((a) => a.occupiedPositions.length), 1);
   const maxSteps = (board.width + board.height) * maxLen * 8;
+  const prevMemberKeys = new Map<number, Set<string>>();
+  for (const id of memberIds) {
+    prevMemberKeys.set(id, new Set(members.find((a) => a.instanceId === id)!.occupiedPositions.map(vecKey)));
+  }
 
   for (let step = 0; step < maxSteps; step++) {
     const result = advanceBundleStep(
@@ -315,7 +320,17 @@ export function simulateCanExitBundle(
     if (result.blocked) return false;
 
     for (const arrow of result.arrows) {
-      positions.set(arrow.instanceId, clonePositions(arrow.occupiedPositions));
+      const id = arrow.instanceId;
+      const nextPos = clonePositions(arrow.occupiedPositions);
+      if (blackHoleCells.size > 0) {
+        const prevKeys = prevMemberKeys.get(id)!;
+        for (const p of nextPos) {
+          const k = vecKey(p);
+          if (!prevKeys.has(k) && blackHoleCells.has(k)) return true;
+        }
+        prevMemberKeys.set(id, new Set(nextPos.map(vecKey)));
+      }
+      positions.set(id, nextPos);
     }
 
     if (
@@ -455,6 +470,7 @@ export class BundleManager {
     curtainCells: Set<string> = new Set(),
     extraBlockerCells: Set<string> = new Set(),
     blockingArrows: ArrowItem[] = launchableArrows,
+    blackHoleCells: Set<string> = new Set(),
   ): boolean {
     const members = group.arrowIds
       .map((id) => launchableArrows.find((a) => a.instanceId === id))
@@ -468,6 +484,7 @@ export class BundleManager {
       pipes,
       curtainCells,
       extraBlockerCells,
+      blackHoleCells,
     );
   }
 }

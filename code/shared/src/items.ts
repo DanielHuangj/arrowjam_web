@@ -139,6 +139,15 @@ export function levelDataFromDocument(doc: {
     durationInSec: number;
     difficulty: number;
     levelKind?: number;
+    gameMode?: import("./types.ts").GameMode;
+    spawnIntervalSec?: number;
+    spawnPool?: import("./types.ts").SpawnPoolEntry[];
+    spawnWeightAdjust?: import("./types.ts").SpawnWeightAdjustTier[];
+    levelGoals?: import("./types.ts").LevelGoal[];
+    boardShape?: import("./types.ts").BoardShape;
+    playableMask?: import("./types.ts").MaskRows;
+    blackHoleRegions?: import("./types.ts").MaskRows[];
+    invalidCellColors?: import("./types.ts").ColoredMaskEntry[];
   };
   itemModels: RawItem[];
 }): import("./types.ts").LevelData {
@@ -151,6 +160,23 @@ export function levelDataFromDocument(doc: {
     itemModels: doc.itemModels,
   };
   if (doc.meta.levelKind != null) data.levelKind = doc.meta.levelKind;
+  if (doc.meta.gameMode != null) data.gameMode = doc.meta.gameMode;
+  if (doc.meta.spawnIntervalSec != null) data.spawnIntervalSec = doc.meta.spawnIntervalSec;
+  if (doc.meta.spawnPool != null) data.spawnPool = doc.meta.spawnPool;
+  if (doc.meta.spawnWeightAdjust != null) {
+    data.spawnWeightAdjust = doc.meta.spawnWeightAdjust;
+  }
+  if (doc.meta.levelGoals != null) data.levelGoals = doc.meta.levelGoals;
+  if (doc.meta.boardShape === "custom") {
+    data.boardShape = "custom";
+    if (doc.meta.playableMask) data.playableMask = doc.meta.playableMask;
+  }
+  if (doc.meta.blackHoleRegions?.length) {
+    data.blackHoleRegions = doc.meta.blackHoleRegions;
+  }
+  if (doc.meta.invalidCellColors?.length) {
+    data.invalidCellColors = doc.meta.invalidCellColors;
+  }
   return data;
 }
 

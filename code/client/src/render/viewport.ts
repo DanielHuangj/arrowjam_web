@@ -1,5 +1,5 @@
 import type { BoardSize, Vec2 } from "../core/types.ts";
-import { boardPixelSize } from "./board-renderer.ts";
+import { boardPixelSize, gameBoardPixelSize } from "./board-renderer.ts";
 import { STEP, CELL } from "./colors.ts";
 
 export interface ViewportState {
@@ -49,6 +49,21 @@ export function zoomAt(
   };
 }
 
+/** 屏幕坐标 → 棋盘像素坐标（canvas 本地空间，未取整到格） */
+export function pointerToBoardPx(
+  clientX: number,
+  clientY: number,
+  canvas: HTMLCanvasElement,
+  vp: ViewportState,
+  contentOffsetPx = 0,
+): [number, number] {
+  const rect = canvas.getBoundingClientRect();
+  return [
+    (clientX - rect.left) / vp.scale - contentOffsetPx,
+    (clientY - rect.top) / vp.scale - contentOffsetPx,
+  ];
+}
+
 /** 屏幕坐标 → 棋盘格（考虑 canvas 的 translate + scale） */
 export function pointerToCell(
   clientX: number,
@@ -56,22 +71,32 @@ export function pointerToCell(
   canvas: HTMLCanvasElement,
   board: BoardSize,
   vp: ViewportState,
+  contentOffsetPx = 0,
+  playableCells?: Set<string>,
 ): Vec2 | null {
   const rect = canvas.getBoundingClientRect();
-  const x = (clientX - rect.left) / vp.scale;
-  const y = (clientY - rect.top) / vp.scale;
+  const x = (clientX - rect.left) / vp.scale - contentOffsetPx;
+  const y = (clientY - rect.top) / vp.scale - contentOffsetPx;
   const gx = Math.floor(x / STEP);
   const gy = Math.floor(y / STEP);
   if (gx < 0 || gy < 0 || gx >= board.width || gy >= board.height) return null;
   const lx = x - gx * STEP;
   const ly = y - gy * STEP;
   if (lx > CELL || ly > CELL) return null;
+  const key = `${gx},${gy}`;
+  if (playableCells && !playableCells.has(key)) return null;
   return [gx, gy];
 }
 
 /** 初始缩放：尽量完整显示棋盘，最大 100%，并在可视区域内居中 */
-export function resetViewport(wrap: HTMLElement, board: BoardSize): ViewportState {
-  const { width: bw, height: bh } = boardPixelSize(board);
+export function resetViewport(
+  wrap: HTMLElement,
+  board: BoardSize,
+  gameBorderPad = false,
+): ViewportState {
+  const { width: bw, height: bh } = gameBorderPad
+    ? gameBoardPixelSize(board)
+    : boardPixelSize(board);
   const pad = 16;
   const scale = Math.min(
     1,

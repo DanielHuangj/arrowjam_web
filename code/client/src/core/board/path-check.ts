@@ -20,6 +20,7 @@ export function simulateCanExit(
   pipes: PipeItem[] = [],
   curtainCells: Set<string> = new Set(),
   extraBlockerCells: Set<string> = new Set(),
+  blackHoleCells: Set<string> = new Set(),
 ): boolean {
   return simulateCanExitWithPipes(
     arrow,
@@ -29,6 +30,7 @@ export function simulateCanExit(
     pipes,
     curtainCells,
     extraBlockerCells,
+    blackHoleCells,
   );
 }
 

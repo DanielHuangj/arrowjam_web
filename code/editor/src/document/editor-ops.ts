@@ -1,11 +1,15 @@
-import type { EditorDocument, RawItem, Vec2 } from "@arrowjaw/shared";
+import type { EditorDocument, InvalidCellColorId, RawItem, Vec2 } from "@arrowjaw/shared";
 import {
+  buildInvalidCellColorMap,
+  compressCellsToRows,
   findItemById,
   findItemParentList,
   getEditableItems,
   nextInstanceId,
   hostMiddleCell,
   nextControllerCellForHost,
+  pruneInvalidCellColors,
+  serializeInvalidCellColors,
   vecKey,
 } from "@arrowjaw/shared";
 import {
@@ -248,7 +252,7 @@ export function removeItems(doc: EditorDocument, ids: number[]): EditorDocument 
     doc.editContext.zoneInstanceId != null &&
     idSet.has(doc.editContext.zoneInstanceId)
   ) {
-    next.editContext = { zoneInstanceId: null };
+    next.editContext = { zoneInstanceId: null, regionEditMode: null };
   }
   return next;
 }
@@ -426,7 +430,7 @@ export function findItemAtCell(doc: EditorDocument, cell: Vec2): RawItem | null 
 export function enterZone(doc: EditorDocument, zoneId: number): EditorDocument {
   return {
     ...doc,
-    editContext: { zoneInstanceId: zoneId },
+    editContext: { zoneInstanceId: zoneId, regionEditMode: null },
     selectedInstanceIds: [],
   };
 }
@@ -434,8 +438,111 @@ export function enterZone(doc: EditorDocument, zoneId: number): EditorDocument {
 export function exitZone(doc: EditorDocument): EditorDocument {
   return {
     ...doc,
-    editContext: { zoneInstanceId: null },
+    editContext: { zoneInstanceId: null, regionEditMode: null },
     selectedInstanceIds: [],
+  };
+}
+
+export function enterRegionEdit(
+  doc: EditorDocument,
+  mode: "playable" | "blackHole" | "invalidColor",
+): EditorDocument {
+  return {
+    ...doc,
+    editContext: { zoneInstanceId: null, regionEditMode: mode },
+    selectedInstanceIds: [],
+  };
+}
+
+export function exitRegionEdit(doc: EditorDocument): EditorDocument {
+  return {
+    ...doc,
+    editContext: { ...doc.editContext, regionEditMode: null },
+    selectedInstanceIds: [],
+  };
+}
+
+export function commitPlayableMask(
+  doc: EditorDocument,
+  cells: Set<string>,
+): EditorDocument {
+  const total = doc.meta.width * doc.meta.height;
+  const allFull = cells.size === total;
+  const playableMask = allFull
+    ? undefined
+    : { rows: compressCellsToRows(cells, doc.meta.width, doc.meta.height) };
+  let invalidCellColors = doc.meta.invalidCellColors;
+  if (allFull) {
+    invalidCellColors = undefined;
+  } else if (invalidCellColors?.length) {
+    const invalid = new Set<string>();
+    for (let y = 0; y < doc.meta.height; y++) {
+      for (let x = 0; x < doc.meta.width; x++) {
+        const key = vecKey([x, y]);
+        if (!cells.has(key)) invalid.add(key);
+      }
+    }
+    const draft = buildInvalidCellColorMap({
+      width: doc.meta.width,
+      height: doc.meta.height,
+      invalidCellColors,
+    });
+    invalidCellColors = serializeInvalidCellColors(
+      pruneInvalidCellColors(draft, invalid),
+      doc.meta.width,
+      doc.meta.height,
+    );
+  }
+
+  return {
+    ...doc,
+    meta: {
+      ...doc.meta,
+      boardShape: allFull ? undefined : "custom",
+      playableMask,
+      invalidCellColors,
+    },
+    editContext: { zoneInstanceId: null, regionEditMode: null },
+    dirty: true,
+  };
+}
+
+export function commitBlackHoleRegions(
+  doc: EditorDocument,
+  cells: Set<string>,
+): EditorDocument {
+  const blackHoleRegions =
+    cells.size === 0
+      ? undefined
+      : [{ rows: compressCellsToRows(cells, doc.meta.width, doc.meta.height) }];
+  return {
+    ...doc,
+    meta: {
+      ...doc.meta,
+      blackHoleRegions,
+    },
+    editContext: { ...doc.editContext, regionEditMode: null },
+    dirty: true,
+  };
+}
+
+export function commitInvalidCellColors(
+  doc: EditorDocument,
+  colorByCell: Map<string, InvalidCellColorId>,
+): EditorDocument {
+  const invalidCellColors = serializeInvalidCellColors(
+    colorByCell,
+    doc.meta.width,
+    doc.meta.height,
+  );
+  return {
+    ...doc,
+    meta: {
+      ...doc.meta,
+      invalidCellColors,
+    },
+    editContext: { zoneInstanceId: null, regionEditMode: null },
+    dirty: true,
   };
 }
 

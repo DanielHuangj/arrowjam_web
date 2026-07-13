@@ -144,6 +144,98 @@ export interface KeyArrowItem extends BaseItem {
   kind: 11;
 }
 
+export type GameMode = "classic" | "rush";
+
+export type SpawnPoolKind = 1 | 2 | 4 | 17 | 18 | 19 | 20 | 21 | 22 | 23;
+
+export interface SpawnPoolEntry {
+  kind: SpawnPoolKind;
+  /** 整数权重，1000 分制：1 = 0.1%，1000 = 100% */
+  weight: number;
+  colorId?: number;
+  bombRadius?: 1 | 2;
+  crossArm?: 2 | 5;
+}
+
+/** 按本周期消除格数选用的生成池动态权重调整段（1000 分制总量，均分给同类条目） */
+export interface SpawnWeightAdjustTier {
+  /** 达到该消除格数（含）起启用本段；多段按升序配置，取满足条件的最高段 */
+  minElimCells: number;
+  /** 增益道具权重总增量（均分给 spawnPool 中各增益条目） */
+  buffDelta: number;
+  /** 箭头条目权重总减量（均分） */
+  arrowDelta: number;
+  /** 机制物件（反射角等）权重总减量（均分） */
+  mechDelta: number;
+}
+
+export type LevelGoal =
+  | { type: "clearArrowCount"; count: number }
+  | {
+      type: "clearColorArrows";
+      targets: { colorId: number; count: number }[];
+    };
+
+export interface AreaBombItem extends BaseItem {
+  kind: 17;
+  bombRadius: 1 | 2;
+  zoneId: number | null;
+}
+
+export interface CrossBombItem extends BaseItem {
+  kind: 18;
+  crossArm: 2 | 5;
+  zoneId: number | null;
+}
+
+export interface FireBombItem extends BaseItem {
+  kind: 19;
+  zoneId: number | null;
+}
+
+export interface BalloonItem extends BaseItem {
+  kind: 20;
+  zoneId: number | null;
+}
+
+export interface BlackHoleItem extends BaseItem {
+  kind: 21;
+  zoneId: number | null;
+}
+
+export interface FlipButtonItem extends BaseItem {
+  kind: 22;
+  zoneId: number | null;
+}
+
+export interface CandyMachineItem extends BaseItem {
+  kind: 23;
+  zoneId: number | null;
+}
+
+export type BuffItem =
+  | AreaBombItem
+  | CrossBombItem
+  | FireBombItem
+  | BalloonItem
+  | BlackHoleItem
+  | FlipButtonItem
+  | CandyMachineItem;
+
+export interface MaskRows {
+  rows: [number, number, number][];
+}
+
+export type BoardShape = "full" | "custom";
+
+/** 无效格着色：0=白(默认不存)，1-8=箭色，9=黑 */
+export type InvalidCellColorId = 0 | 1 | 2 | 3 | 4 | 6 | 7 | 8 | 9;
+
+export interface ColoredMaskEntry {
+  color: InvalidCellColorId;
+  rows: [number, number, number][];
+}
+
 export interface LevelData {
   width: number;
   height: number;
@@ -151,6 +243,16 @@ export interface LevelData {
   durationInSec: number;
   difficulty: number;
   levelKind?: number;
+  boardShape?: BoardShape;
+  playableMask?: MaskRows;
+  blackHoleRegions?: MaskRows[];
+  /** 异形棋盘无效格着色（仅非白色） */
+  invalidCellColors?: ColoredMaskEntry[];
+  gameMode?: GameMode;
+  spawnIntervalSec?: number;
+  spawnPool?: SpawnPoolEntry[];
+  spawnWeightAdjust?: SpawnWeightAdjustTier[];
+  levelGoals?: LevelGoal[];
   itemModels: RawItem[];
 }
 
@@ -177,6 +279,8 @@ export interface RawItem {
   bindInstanceId?: number;
   spin?: 0 | 90 | 180 | 270;
   spinDirection?: 0 | 1;
+  bombRadius?: 1 | 2;
+  crossArm?: 2 | 5;
   items?: RawItem[];
   [key: string]: unknown;
 }
@@ -188,6 +292,16 @@ export interface GameLevel {
   name: string;
   durationInSec: number;
   difficulty: number;
+  gameMode: GameMode;
+  spawnIntervalSec?: number;
+  spawnPool?: SpawnPoolEntry[];
+  spawnWeightAdjust?: SpawnWeightAdjustTier[];
+  levelGoals?: LevelGoal[];
+  boardShape: BoardShape;
+  playableCells: Set<string>;
+  blackHoleCells: Set<string>;
+  /** 无效格着色 key→colorId（不含默认白） */
+  invalidCellColors: Map<string, InvalidCellColorId>;
   arrows: ArrowItem[];
   corners: CornerItem[];
   zones: ZoneItem[];
@@ -201,6 +315,7 @@ export interface GameLevel {
   shrinkPipes: ShrinkPipeItem[];
   toggles: ToggleItem[];
   controllers: ControllerItem[];
+  buffs: BuffItem[];
 }
 
 export type ValidationSeverity = "error" | "warning";
@@ -219,6 +334,20 @@ export interface EditorMeta {
   durationInSec: number;
   difficulty: number;
   levelKind?: number;
+  gameMode?: GameMode;
+  spawnIntervalSec?: number;
+  spawnPool?: SpawnPoolEntry[];
+  spawnWeightAdjust?: SpawnWeightAdjustTier[];
+  levelGoals?: LevelGoal[];
+  boardShape?: BoardShape;
+  playableMask?: MaskRows;
+  blackHoleRegions?: MaskRows[];
+  invalidCellColors?: ColoredMaskEntry[];
+}
+
+export interface EditorBackgroundImage {
+  dataUrl: string;
+  name: string;
 }
 
 export interface EditorDocument {
@@ -232,5 +361,9 @@ export interface EditorDocument {
   selectedInstanceIds: number[];
   editContext: {
     zoneInstanceId: number | null;
+    regionEditMode: null | "playable" | "blackHole" | "invalidColor";
+  };
+  editorOnly?: {
+    backgroundImage?: EditorBackgroundImage;
   };
 }

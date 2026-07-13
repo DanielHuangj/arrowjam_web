@@ -1,5 +1,6 @@
 import type { GameState } from "../core/game/game-state.ts";
-import { pointerToCell, type ViewportState } from "./viewport.ts";
+import { pointerToBoardPx, pointerToCell, type ViewportState } from "./viewport.ts";
+import { gameBoardContentOffsetPx } from "./board-renderer.ts";
 
 export class InputHandler {
   constructor(
@@ -31,6 +32,8 @@ export class InputHandler {
       this.canvas,
       state.level,
       this.getViewport(),
+      gameBoardContentOffsetPx(),
+      state.level.playableCells,
     );
   }
 
@@ -77,8 +80,18 @@ export class InputHandler {
     }
 
     const arrow = state.findOperableArrowAtCell(cell);
-    if (!arrow) return;
+    if (arrow) {
+      const boardPx = pointerToBoardPx(
+        e.clientX,
+        e.clientY,
+        this.canvas,
+        this.getViewport(),
+        gameBoardContentOffsetPx(),
+      );
+      state.tryLaunch(arrow.instanceId, performance.now(), { boardPx });
+      return;
+    }
 
-    state.tryLaunch(arrow.instanceId);
+    state.tryTriggerBuffAtCell(cell);
   };
 }

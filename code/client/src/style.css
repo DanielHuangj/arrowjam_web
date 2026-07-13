@@ -6,8 +6,8 @@
 
 body {
   font-family: "Segoe UI", system-ui, sans-serif;
-  background: #1a1b26;
-  color: #c0caf5;
+  background: #e8e3ee;
+  color: #4a3f55;
   min-height: 100vh;
 }
 
@@ -30,10 +30,11 @@ body {
 .level-select h1 {
   font-size: 2rem;
   margin-bottom: 8px;
+  color: #4a3f55;
 }
 
 .subtitle {
-  color: #565f89;
+  color: #9b8fa8;
   margin-bottom: 24px;
 }
 
@@ -46,7 +47,7 @@ body {
 
 .level-section-title {
   font-size: 1rem;
-  color: #7aa2f7;
+  color: #ff8ac2;
   margin: 0 0 12px;
   font-weight: 600;
 }
@@ -59,11 +60,11 @@ body {
 }
 
 .level-btn {
-  background: #24283b;
-  border: 1px solid #414868;
-  border-radius: 12px;
+  background: #f3eff6;
+  border: 1px solid #ddd4e8;
+  border-radius: 16px;
   padding: 0;
-  color: #c0caf5;
+  color: #4a3f55;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -71,22 +72,24 @@ body {
   position: relative;
   overflow: hidden;
   text-align: left;
+  box-shadow: 0 4px 14px rgba(255, 140, 190, 0.08);
 }
 
 .level-btn:hover {
-  border-color: #7aa2f7;
-  background: #2f3549;
+  border-color: #c9b8dc;
+  background: #f7f3fa;
+  box-shadow: 0 6px 18px rgba(130, 105, 150, 0.12);
 }
 
 .level-thumb-wrap {
   width: 100%;
   min-height: 96px;
-  background: #2a3148;
+  background: #e8e3ee;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 6px;
-  border-bottom: 1px solid #414868;
+  border-bottom: 1px solid #ddd4e8;
 }
 
 .level-thumb {
@@ -122,7 +125,7 @@ body {
 
 .level-meta {
   font-size: 0.72rem;
-  color: #565f89;
+  color: #9b8fa8;
   flex-shrink: 0;
 }
 
@@ -134,6 +137,7 @@ body {
   height: 100vh;
   min-height: 100vh;
   box-sizing: border-box;
+  background: #e8e3ee;
 }
 
 .hud {
@@ -144,16 +148,18 @@ body {
 }
 
 .btn-back {
-  background: #414868;
-  border: none;
-  color: #c0caf5;
+  background: #ffffff;
+  border: 1px solid #f0e4f8;
+  color: #4a3f55;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(120, 80, 140, 0.06);
 }
 
 .btn-back:hover {
-  background: #565f89;
+  background: #fffafd;
+  border-color: #ffb8da;
 }
 
 .hud-actions {
@@ -163,17 +169,17 @@ body {
 }
 
 .btn-auto-clear {
-  background: #3d3f5c;
-  border: 1px solid #7aa2f7;
-  color: #7aa2f7;
+  background: #f3f8ff;
+  border: 1px solid #5eb8ff;
+  color: #3d8fd9;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
 }
 
 .btn-auto-clear:hover:not(:disabled) {
-  background: #4a4d6e;
+  background: #e8f3ff;
 }
 
 .btn-auto-clear:disabled {
@@ -182,17 +188,17 @@ body {
 }
 
 .btn-random-vanish {
-  background: #4a3548;
-  border: 1px solid #e599f7;
-  color: #e599f7;
+  background: #faf2ff;
+  border: 1px solid #e58aff;
+  color: #b84fd9;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
 }
 
 .btn-random-vanish:hover:not(:disabled) {
-  background: #5a4258;
+  background: #f4e8ff;
 }
 
 .btn-random-vanish:disabled {
@@ -201,24 +207,24 @@ body {
 }
 
 .btn-target-vanish {
-  background: #3d3548;
-  border: 1px solid #f7768e;
-  color: #f7768e;
+  background: #fff0f4;
+  border: 1px solid #ff6b8a;
+  color: #e84d72;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
 }
 
 .btn-target-vanish:hover:not(:disabled) {
-  background: #4d4258;
+  background: #ffe6ed;
 }
 
 .btn-target-vanish.active {
-  background: #5a3548;
-  border-color: #ff9eaf;
-  color: #ff9eaf;
-  box-shadow: 0 0 0 2px rgba(247, 118, 142, 0.35);
+  background: #ffe0ea;
+  border-color: #ff8aa5;
+  color: #d93d62;
+  box-shadow: 0 0 0 2px rgba(255, 107, 138, 0.22);
 }
 
 .btn-target-vanish:disabled {
@@ -237,23 +243,23 @@ body {
 .board-wrap.target-vanish-mode.target-vanish-invalid,
 .board-wrap.target-vanish-mode.target-vanish-invalid #board {
   cursor:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath stroke='%23f7768e' stroke-width='2.5' stroke-linecap='round' d='M12 3v18M3 12h18'/%3E%3C/svg%3E")
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath stroke='%23ff6b8a' stroke-width='2.5' stroke-linecap='round' d='M12 3v18M3 12h18'/%3E%3C/svg%3E")
     12 12,
     crosshair;
 }
 
 .btn-add-time {
-  background: #2d4a3e;
-  border: 1px solid #9ece6a;
-  color: #9ece6a;
+  background: #edfff2;
+  border: 1px solid #5ae676;
+  color: #2ea855;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
 }
 
 .btn-add-time:hover {
-  background: #3d5a4e;
+  background: #e0fbe8;
 }
 
 .hud-info {
@@ -264,17 +270,19 @@ body {
 }
 
 .timer.urgent {
-  color: #f7768e;
+  color: #ff6b8a;
   font-weight: 700;
 }
 
 .board-wrap {
   flex: 1;
   min-height: 0;
-  background: #24283b;
-  border-radius: 12px;
+  background: #e8e3ee;
+  border-radius: 16px;
   overflow: hidden;
   position: relative;
+  border: 1px solid #ddd4e8;
+  box-shadow: 0 8px 24px rgba(130, 105, 150, 0.1);
 }
 
 #board {
@@ -285,7 +293,8 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(255, 248, 252, 0.72);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -297,21 +306,24 @@ body {
 }
 
 .modal {
-  background: #24283b;
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 20px;
   padding: 28px 32px;
   min-width: 280px;
   max-width: 90vw;
   text-align: center;
+  border: 1px solid #f0e4f8;
+  box-shadow: 0 12px 32px rgba(255, 140, 190, 0.16);
 }
 
 .modal h2 {
   margin-bottom: 12px;
   font-size: 1.5rem;
+  color: #4a3f55;
 }
 
 .modal p {
-  color: #a9b1d6;
+  color: #7a6f88;
   margin-bottom: 20px;
 }
 
@@ -323,25 +335,28 @@ body {
 }
 
 .btn {
-  background: #414868;
-  border: none;
-  color: #c0caf5;
+  background: #ffffff;
+  border: 1px solid #ebe4f2;
+  color: #4a3f55;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.95rem;
 }
 
 .btn:hover {
-  background: #565f89;
+  background: #fffafd;
+  border-color: #ffb8da;
 }
 
 .btn.primary {
-  background: #7aa2f7;
-  color: #1a1b26;
+  background: #ff8ac2;
+  border-color: #ff8ac2;
+  color: #ffffff;
   font-weight: 600;
 }
 
 .btn.primary:hover {
-  background: #89b4fa;
+  background: #ff9ece;
+  border-color: #ff9ece;
 }

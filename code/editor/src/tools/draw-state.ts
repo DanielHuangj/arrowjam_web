@@ -18,7 +18,14 @@ export type EditorTool =
   | "zone"
   | "shrinkPipe"
   | "toggle"
-  | "controller";
+  | "controller"
+  | "areaBomb"
+  | "crossBomb"
+  | "fireBomb"
+  | "balloon"
+  | "blackHole"
+  | "flipButton"
+  | "candyMachine";
 
 export interface DrawState {
   tool: EditorTool;
@@ -35,6 +42,8 @@ export interface DrawState {
   shrinkPipeBindCoord: Vec2 | null;
   shrinkPipeId: number | null;
   toggleGroupId: number;
+  bombRadius: 1 | 2;
+  crossArm: 2 | 5;
 }
 
 export function createDrawState(): DrawState {
@@ -53,6 +62,8 @@ export function createDrawState(): DrawState {
     shrinkPipeBindCoord: null,
     shrinkPipeId: null,
     toggleGroupId: 1,
+    bombRadius: 1,
+    crossArm: 2,
   };
 }
 
@@ -293,6 +304,70 @@ export function buildControllerItem(
     layer: 3,
     groupID,
     bindInstanceId,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildAreaBombItem(
+  cell: Vec2,
+  bombRadius: 1 | 2 = 1,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 17,
+    layer: 2,
+    bombRadius,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildCrossBombItem(
+  cell: Vec2,
+  crossArm: 2 | 5 = 2,
+): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 18,
+    layer: 2,
+    crossArm,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildFireBombItem(cell: Vec2): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 19,
+    layer: 2,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildBalloonItem(cell: Vec2): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 20,
+    layer: 2,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildBlackHoleItem(cell: Vec2): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 21,
+    layer: 2,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildFlipButtonItem(cell: Vec2): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 22,
+    layer: 2,
+    occupiedPositions: [[cell[0], cell[1]]],
+  };
+}
+
+export function buildCandyMachineItem(cell: Vec2): Omit<RawItem, "instanceId"> {
+  return {
+    kind: 23,
+    layer: 2,
     occupiedPositions: [[cell[0], cell[1]]],
   };
 }

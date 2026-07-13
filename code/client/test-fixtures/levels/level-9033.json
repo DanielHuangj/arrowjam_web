@@ -1,0 +1,2945 @@
+{
+  "width": 20,
+  "height": 20,
+  "name": "",
+  "durationInSec": 180,
+  "difficulty": 3,
+  "itemModels": [
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          17
+        ]
+      ],
+      "instanceId": 81,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          3,
+          17
+        ]
+      ],
+      "instanceId": 82,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          4,
+          17
+        ]
+      ],
+      "instanceId": 83,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          17
+        ]
+      ],
+      "instanceId": 84,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          6,
+          17
+        ]
+      ],
+      "instanceId": 85,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          7,
+          17
+        ]
+      ],
+      "instanceId": 86,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          8,
+          17
+        ]
+      ],
+      "instanceId": 87,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          9,
+          17
+        ]
+      ],
+      "instanceId": 88,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          10,
+          17
+        ]
+      ],
+      "instanceId": 89,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          11,
+          17
+        ]
+      ],
+      "instanceId": 90,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          12,
+          17
+        ]
+      ],
+      "instanceId": 91,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          13,
+          17
+        ]
+      ],
+      "instanceId": 92,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          17
+        ]
+      ],
+      "instanceId": 93,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          15,
+          17
+        ]
+      ],
+      "instanceId": 94,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          16,
+          17
+        ]
+      ],
+      "instanceId": 95,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          17
+        ]
+      ],
+      "instanceId": 96,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          2
+        ]
+      ],
+      "instanceId": 97,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          2
+        ]
+      ],
+      "instanceId": 99,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          3,
+          2
+        ]
+      ],
+      "instanceId": 100,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          4,
+          2
+        ]
+      ],
+      "instanceId": 101,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          2
+        ]
+      ],
+      "instanceId": 102,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          6,
+          2
+        ]
+      ],
+      "instanceId": 103,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          7,
+          2
+        ]
+      ],
+      "instanceId": 104,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          8,
+          2
+        ]
+      ],
+      "instanceId": 105,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          9,
+          2
+        ]
+      ],
+      "instanceId": 106,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          10,
+          2
+        ]
+      ],
+      "instanceId": 107,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          11,
+          2
+        ]
+      ],
+      "instanceId": 108,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          12,
+          2
+        ]
+      ],
+      "instanceId": 109,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          13,
+          2
+        ]
+      ],
+      "instanceId": 110,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          2
+        ]
+      ],
+      "instanceId": 111,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          15,
+          2
+        ]
+      ],
+      "instanceId": 112,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          16,
+          2
+        ]
+      ],
+      "instanceId": 113,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          4
+        ]
+      ],
+      "instanceId": 114,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          3
+        ]
+      ],
+      "instanceId": 115,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          5
+        ]
+      ],
+      "instanceId": 116,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          6
+        ]
+      ],
+      "instanceId": 117,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          7
+        ]
+      ],
+      "instanceId": 118,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          8
+        ]
+      ],
+      "instanceId": 119,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          9
+        ]
+      ],
+      "instanceId": 120,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          10
+        ]
+      ],
+      "instanceId": 121,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          11
+        ]
+      ],
+      "instanceId": 122,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          12
+        ]
+      ],
+      "instanceId": 123,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          13
+        ]
+      ],
+      "instanceId": 124,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          14
+        ]
+      ],
+      "instanceId": 125,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          5
+        ]
+      ],
+      "instanceId": 126,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          6
+        ]
+      ],
+      "instanceId": 127,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          7
+        ]
+      ],
+      "instanceId": 128,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          8
+        ]
+      ],
+      "instanceId": 129,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          9
+        ]
+      ],
+      "instanceId": 130,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          10
+        ]
+      ],
+      "instanceId": 131,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          11
+        ]
+      ],
+      "instanceId": 132,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          12
+        ]
+      ],
+      "instanceId": 133,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          13
+        ]
+      ],
+      "instanceId": 134,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          14
+        ]
+      ],
+      "instanceId": 135,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          15
+        ]
+      ],
+      "instanceId": 136,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          16
+        ]
+      ],
+      "instanceId": 137,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          3
+        ]
+      ],
+      "instanceId": 138,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          2,
+          4
+        ]
+      ],
+      "instanceId": 139,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          15
+        ]
+      ],
+      "instanceId": 140,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          17,
+          16
+        ]
+      ],
+      "instanceId": 141,
+      "layer": 2,
+      "bombRadius": 2
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          19,
+          2
+        ],
+        [
+          18,
+          2
+        ],
+        [
+          18,
+          3
+        ],
+        [
+          19,
+          3
+        ],
+        [
+          19,
+          4
+        ],
+        [
+          18,
+          4
+        ],
+        [
+          18,
+          5
+        ],
+        [
+          19,
+          5
+        ],
+        [
+          19,
+          6
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          18,
+          7
+        ],
+        [
+          19,
+          7
+        ],
+        [
+          19,
+          8
+        ],
+        [
+          18,
+          8
+        ],
+        [
+          18,
+          9
+        ]
+      ],
+      "instanceId": 146,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          19,
+          17
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          18,
+          16
+        ],
+        [
+          19,
+          16
+        ],
+        [
+          19,
+          15
+        ],
+        [
+          18,
+          15
+        ],
+        [
+          18,
+          14
+        ],
+        [
+          19,
+          14
+        ],
+        [
+          19,
+          13
+        ],
+        [
+          18,
+          13
+        ],
+        [
+          18,
+          12
+        ],
+        [
+          19,
+          12
+        ],
+        [
+          19,
+          11
+        ],
+        [
+          18,
+          11
+        ],
+        [
+          18,
+          10
+        ]
+      ],
+      "instanceId": 147,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          0,
+          6
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          0,
+          7
+        ],
+        [
+          0,
+          8
+        ],
+        [
+          1,
+          8
+        ],
+        [
+          1,
+          9
+        ]
+      ],
+      "instanceId": 148,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          17
+        ],
+        [
+          1,
+          17
+        ],
+        [
+          1,
+          16
+        ],
+        [
+          0,
+          16
+        ],
+        [
+          0,
+          15
+        ],
+        [
+          1,
+          15
+        ],
+        [
+          1,
+          14
+        ],
+        [
+          0,
+          14
+        ],
+        [
+          0,
+          13
+        ],
+        [
+          1,
+          13
+        ],
+        [
+          1,
+          12
+        ],
+        [
+          0,
+          12
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          1,
+          11
+        ],
+        [
+          1,
+          10
+        ]
+      ],
+      "instanceId": 149,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          19,
+          1
+        ],
+        [
+          19,
+          0
+        ],
+        [
+          18,
+          0
+        ],
+        [
+          18,
+          1
+        ]
+      ],
+      "instanceId": 150,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "instanceId": 151,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 4
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          9,
+          0
+        ]
+      ],
+      "instanceId": 152,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          10,
+          0
+        ]
+      ],
+      "instanceId": 153,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          19,
+          9
+        ]
+      ],
+      "instanceId": 154,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          19,
+          10
+        ]
+      ],
+      "instanceId": 155,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          0,
+          9
+        ]
+      ],
+      "instanceId": 156,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          0,
+          10
+        ]
+      ],
+      "instanceId": 157,
+      "layer": 2
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          7,
+          1
+        ],
+        [
+          7,
+          0
+        ],
+        [
+          8,
+          0
+        ],
+        [
+          8,
+          1
+        ],
+        [
+          9,
+          1
+        ]
+      ],
+      "instanceId": 158,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          17,
+          0
+        ],
+        [
+          17,
+          1
+        ],
+        [
+          16,
+          1
+        ],
+        [
+          16,
+          0
+        ],
+        [
+          15,
+          0
+        ],
+        [
+          15,
+          1
+        ],
+        [
+          14,
+          1
+        ],
+        [
+          14,
+          0
+        ],
+        [
+          13,
+          0
+        ],
+        [
+          13,
+          1
+        ],
+        [
+          12,
+          1
+        ],
+        [
+          12,
+          0
+        ],
+        [
+          11,
+          0
+        ],
+        [
+          11,
+          1
+        ],
+        [
+          10,
+          1
+        ]
+      ],
+      "instanceId": 159,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 7
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          9,
+          19
+        ]
+      ],
+      "instanceId": 160,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          10,
+          19
+        ]
+      ],
+      "instanceId": 161,
+      "layer": 2
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          18
+        ],
+        [
+          0,
+          19
+        ],
+        [
+          1,
+          19
+        ],
+        [
+          1,
+          18
+        ]
+      ],
+      "instanceId": 162,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          18,
+          19
+        ],
+        [
+          19,
+          19
+        ],
+        [
+          19,
+          18
+        ],
+        [
+          18,
+          18
+        ]
+      ],
+      "instanceId": 163,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          19
+        ],
+        [
+          2,
+          18
+        ],
+        [
+          3,
+          18
+        ],
+        [
+          3,
+          19
+        ],
+        [
+          4,
+          19
+        ],
+        [
+          4,
+          18
+        ],
+        [
+          5,
+          18
+        ],
+        [
+          5,
+          19
+        ],
+        [
+          6,
+          19
+        ],
+        [
+          6,
+          18
+        ],
+        [
+          7,
+          18
+        ],
+        [
+          7,
+          19
+        ],
+        [
+          8,
+          19
+        ],
+        [
+          8,
+          18
+        ],
+        [
+          9,
+          18
+        ]
+      ],
+      "instanceId": 164,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          17,
+          19
+        ],
+        [
+          17,
+          18
+        ],
+        [
+          16,
+          18
+        ],
+        [
+          16,
+          19
+        ],
+        [
+          15,
+          19
+        ],
+        [
+          15,
+          18
+        ],
+        [
+          14,
+          18
+        ],
+        [
+          14,
+          19
+        ],
+        [
+          13,
+          19
+        ],
+        [
+          13,
+          18
+        ],
+        [
+          12,
+          18
+        ],
+        [
+          12,
+          19
+        ],
+        [
+          11,
+          19
+        ],
+        [
+          11,
+          18
+        ],
+        [
+          10,
+          18
+        ]
+      ],
+      "instanceId": 165,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          5
+        ]
+      ],
+      "instanceId": 166,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          6
+        ]
+      ],
+      "instanceId": 167,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          7
+        ]
+      ],
+      "instanceId": 168,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          8
+        ]
+      ],
+      "instanceId": 169,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          9
+        ]
+      ],
+      "instanceId": 170,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          10
+        ]
+      ],
+      "instanceId": 171,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          11
+        ]
+      ],
+      "instanceId": 172,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          12
+        ]
+      ],
+      "instanceId": 173,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          13
+        ]
+      ],
+      "instanceId": 174,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          5,
+          14
+        ]
+      ],
+      "instanceId": 175,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          6,
+          14
+        ]
+      ],
+      "instanceId": 176,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          7,
+          14
+        ]
+      ],
+      "instanceId": 177,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          8,
+          14
+        ]
+      ],
+      "instanceId": 178,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          9,
+          14
+        ]
+      ],
+      "instanceId": 179,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          10,
+          14
+        ]
+      ],
+      "instanceId": 180,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          11,
+          14
+        ]
+      ],
+      "instanceId": 181,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          12,
+          14
+        ]
+      ],
+      "instanceId": 182,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          13,
+          14
+        ]
+      ],
+      "instanceId": 183,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          14
+        ]
+      ],
+      "instanceId": 184,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          13
+        ]
+      ],
+      "instanceId": 185,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          12
+        ]
+      ],
+      "instanceId": 186,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          11
+        ]
+      ],
+      "instanceId": 187,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          10
+        ]
+      ],
+      "instanceId": 188,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          9
+        ]
+      ],
+      "instanceId": 189,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          8
+        ]
+      ],
+      "instanceId": 190,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          7
+        ]
+      ],
+      "instanceId": 191,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          6
+        ]
+      ],
+      "instanceId": 192,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          14,
+          5
+        ]
+      ],
+      "instanceId": 193,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          13,
+          5
+        ]
+      ],
+      "instanceId": 194,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          12,
+          5
+        ]
+      ],
+      "instanceId": 195,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          11,
+          5
+        ]
+      ],
+      "instanceId": 196,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          10,
+          5
+        ]
+      ],
+      "instanceId": 197,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          9,
+          5
+        ]
+      ],
+      "instanceId": 198,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          8,
+          5
+        ]
+      ],
+      "instanceId": 199,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          7,
+          5
+        ]
+      ],
+      "instanceId": 200,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "occupiedPositions": [
+        [
+          6,
+          5
+        ]
+      ],
+      "instanceId": 201,
+      "layer": 2,
+      "bombRadius": 1
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          9,
+          4
+        ]
+      ],
+      "instanceId": 202,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          10,
+          4
+        ]
+      ],
+      "instanceId": 203,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          9,
+          15
+        ]
+      ],
+      "instanceId": 204,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          10,
+          15
+        ]
+      ],
+      "instanceId": 205,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          15,
+          9
+        ]
+      ],
+      "instanceId": 206,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          15,
+          10
+        ]
+      ],
+      "instanceId": 207,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          4,
+          9
+        ]
+      ],
+      "instanceId": 208,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          4,
+          10
+        ]
+      ],
+      "instanceId": 209,
+      "layer": 2,
+      "crossArm": 2
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          3,
+          5
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          4,
+          6
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          8
+        ],
+        [
+          3,
+          8
+        ],
+        [
+          3,
+          9
+        ]
+      ],
+      "instanceId": 210,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          3,
+          14
+        ],
+        [
+          4,
+          14
+        ],
+        [
+          4,
+          13
+        ],
+        [
+          3,
+          13
+        ],
+        [
+          3,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          11
+        ],
+        [
+          3,
+          11
+        ],
+        [
+          3,
+          10
+        ]
+      ],
+      "instanceId": 211,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          5,
+          16
+        ],
+        [
+          5,
+          15
+        ],
+        [
+          6,
+          15
+        ],
+        [
+          6,
+          16
+        ],
+        [
+          7,
+          16
+        ],
+        [
+          7,
+          15
+        ],
+        [
+          8,
+          15
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          9,
+          16
+        ]
+      ],
+      "instanceId": 212,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          14,
+          16
+        ],
+        [
+          14,
+          15
+        ],
+        [
+          13,
+          15
+        ],
+        [
+          13,
+          16
+        ],
+        [
+          12,
+          16
+        ],
+        [
+          12,
+          15
+        ],
+        [
+          11,
+          15
+        ],
+        [
+          11,
+          16
+        ],
+        [
+          10,
+          16
+        ]
+      ],
+      "instanceId": 213,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          16,
+          14
+        ],
+        [
+          15,
+          14
+        ],
+        [
+          15,
+          13
+        ],
+        [
+          16,
+          13
+        ],
+        [
+          16,
+          12
+        ],
+        [
+          15,
+          12
+        ],
+        [
+          15,
+          11
+        ],
+        [
+          16,
+          11
+        ],
+        [
+          16,
+          10
+        ]
+      ],
+      "instanceId": 214,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          16,
+          5
+        ],
+        [
+          15,
+          5
+        ],
+        [
+          15,
+          6
+        ],
+        [
+          16,
+          6
+        ],
+        [
+          16,
+          7
+        ],
+        [
+          15,
+          7
+        ],
+        [
+          15,
+          8
+        ],
+        [
+          16,
+          8
+        ],
+        [
+          16,
+          9
+        ]
+      ],
+      "instanceId": 215,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          14,
+          3
+        ],
+        [
+          14,
+          4
+        ],
+        [
+          13,
+          4
+        ],
+        [
+          13,
+          3
+        ],
+        [
+          12,
+          3
+        ],
+        [
+          12,
+          4
+        ],
+        [
+          11,
+          4
+        ],
+        [
+          11,
+          3
+        ],
+        [
+          10,
+          3
+        ]
+      ],
+      "instanceId": 216,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          5,
+          3
+        ],
+        [
+          5,
+          4
+        ],
+        [
+          6,
+          4
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          9,
+          3
+        ]
+      ],
+      "instanceId": 217,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          9,
+          9
+        ]
+      ],
+      "instanceId": 218,
+      "layer": 2,
+      "crossArm": 5
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          10,
+          9
+        ]
+      ],
+      "instanceId": 219,
+      "layer": 2,
+      "crossArm": 5
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          10,
+          10
+        ]
+      ],
+      "instanceId": 220,
+      "layer": 2,
+      "crossArm": 5
+    },
+    {
+      "kind": 18,
+      "occupiedPositions": [
+        [
+          9,
+          10
+        ]
+      ],
+      "instanceId": 221,
+      "layer": 2,
+      "crossArm": 5
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          15,
+          4
+        ],
+        [
+          15,
+          3
+        ],
+        [
+          16,
+          3
+        ],
+        [
+          16,
+          4
+        ]
+      ],
+      "instanceId": 222,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          4,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ],
+      "instanceId": 223,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          4,
+          15
+        ],
+        [
+          4,
+          16
+        ],
+        [
+          3,
+          16
+        ],
+        [
+          3,
+          15
+        ]
+      ],
+      "instanceId": 224,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          15,
+          15
+        ],
+        [
+          16,
+          15
+        ],
+        [
+          16,
+          16
+        ],
+        [
+          15,
+          16
+        ]
+      ],
+      "instanceId": 225,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          6
+        ],
+        [
+          9,
+          7
+        ],
+        [
+          9,
+          8
+        ]
+      ],
+      "instanceId": 226,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          10,
+          6
+        ],
+        [
+          10,
+          7
+        ],
+        [
+          10,
+          8
+        ]
+      ],
+      "instanceId": 227,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          13,
+          9
+        ],
+        [
+          12,
+          9
+        ],
+        [
+          11,
+          9
+        ]
+      ],
+      "instanceId": 228,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          13,
+          10
+        ],
+        [
+          12,
+          10
+        ],
+        [
+          11,
+          10
+        ]
+      ],
+      "instanceId": 229,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          10,
+          13
+        ],
+        [
+          10,
+          12
+        ],
+        [
+          10,
+          11
+        ]
+      ],
+      "instanceId": 230,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          13
+        ],
+        [
+          9,
+          12
+        ],
+        [
+          9,
+          11
+        ]
+      ],
+      "instanceId": 231,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          6,
+          10
+        ],
+        [
+          7,
+          10
+        ],
+        [
+          8,
+          10
+        ]
+      ],
+      "instanceId": 232,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          6,
+          9
+        ],
+        [
+          7,
+          9
+        ],
+        [
+          8,
+          9
+        ]
+      ],
+      "instanceId": 233,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          12
+        ],
+        [
+          7,
+          13
+        ],
+        [
+          6,
+          13
+        ],
+        [
+          6,
+          12
+        ],
+        [
+          6,
+          11
+        ],
+        [
+          7,
+          11
+        ],
+        [
+          8,
+          11
+        ],
+        [
+          8,
+          12
+        ],
+        [
+          8,
+          13
+        ]
+      ],
+      "instanceId": 238,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          12,
+          12
+        ],
+        [
+          11,
+          12
+        ],
+        [
+          11,
+          11
+        ],
+        [
+          12,
+          11
+        ],
+        [
+          13,
+          11
+        ],
+        [
+          13,
+          12
+        ],
+        [
+          13,
+          13
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          11,
+          13
+        ]
+      ],
+      "instanceId": 239,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          7
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          7,
+          8
+        ],
+        [
+          6,
+          8
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          8,
+          6
+        ]
+      ],
+      "instanceId": 240,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          12,
+          7
+        ],
+        [
+          12,
+          6
+        ],
+        [
+          13,
+          6
+        ],
+        [
+          13,
+          7
+        ],
+        [
+          13,
+          8
+        ],
+        [
+          12,
+          8
+        ],
+        [
+          11,
+          8
+        ],
+        [
+          11,
+          7
+        ],
+        [
+          11,
+          6
+        ]
+      ],
+      "instanceId": 241,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 6
+    }
+  ],
+  "levelKind": 1,
+  "gameMode": "rush",
+  "spawnIntervalSec": 5,
+  "spawnPool": [
+    {
+      "kind": 1,
+      "weight": 200,
+      "colorId": 1
+    },
+    {
+      "kind": 1,
+      "weight": 180,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "weight": 140,
+      "colorId": 8
+    },
+    {
+      "kind": 1,
+      "weight": 80,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "weight": 170,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "weight": 180,
+      "colorId": 7
+    },
+    {
+      "kind": 17,
+      "weight": 10,
+      "bombRadius": 1
+    },
+    {
+      "kind": 17,
+      "weight": 10,
+      "bombRadius": 2
+    },
+    {
+      "kind": 18,
+      "weight": 10,
+      "crossArm": 2
+    },
+    {
+      "kind": 18,
+      "weight": 10,
+      "crossArm": 5
+    },
+    {
+      "kind": 21,
+      "weight": 10
+    },
+    {
+      "kind": 20,
+      "weight": 0
+    }
+  ],
+  "levelGoals": [
+    {
+      "type": "clearColorArrows",
+      "targets": [
+        {
+          "colorId": 1,
+          "count": 150
+        }
+      ]
+    },
+    {
+      "type": "clearColorArrows",
+      "targets": [
+        {
+          "colorId": 4,
+          "count": 120
+        }
+      ]
+    },
+    {
+      "type": "clearColorArrows",
+      "targets": [
+        {
+          "colorId": 3,
+          "count": 90
+        }
+      ]
+    }
+  ]
+}

@@ -8,7 +8,11 @@ export function formatLevelKindLabel(kinds: number[] | undefined): string {
 
 export function renderLevelSelect(
   root: HTMLElement,
-  manifest: { levels: LevelManifestEntry[]; devTests?: LevelManifestEntry[] },
+  manifest: {
+    levels: LevelManifestEntry[];
+    devTests?: LevelManifestEntry[];
+    rushTests?: LevelManifestEntry[];
+  },
   onSelect: (id: number) => void,
 ): void {
   root.innerHTML = `
@@ -49,6 +53,7 @@ export function renderLevelSelect(
     prefetchLevelThumbnails(levels);
   };
 
+  addSection("爽快版测试", manifest.rushTests ?? []);
   addSection("机制测试", manifest.devTests ?? []);
   addSection("主线关卡", manifest.levels);
 }
@@ -98,6 +103,8 @@ export function updateHud(
     arrowCount: number;
     difficulty: number;
     bombRemaining?: number | null;
+    rushGoals?: { label: string; current: number; target: number; done: boolean }[];
+    spawnCountdownSec?: number | null;
   },
 ): void {
   hud.querySelector(".level-name")!.textContent =
@@ -108,10 +115,19 @@ export function updateHud(
     data.bombRemaining != null
       ? ` · 💣 ${Math.ceil(data.bombRemaining)}s`
       : "";
-  timerEl.textContent = `⏱ ${sec}s${bombPart}`;
+  const spawnPart =
+    data.spawnCountdownSec != null
+      ? ` · 生成 ${Math.max(0, Math.ceil(data.spawnCountdownSec))}s`
+      : "";
+  timerEl.textContent = `⏱ ${sec}s${bombPart}${spawnPart}`;
   timerEl.classList.toggle("urgent", sec <= 10 || (data.bombRemaining ?? 99) <= 5);
-  hud.querySelector(".arrow-count")!.textContent =
-    `🎯 剩余 ${data.arrowCount} 条箭`;
+  const goalText =
+    data.rushGoals && data.rushGoals.length > 0
+      ? data.rushGoals
+          .map((g) => `${g.label} ${g.current}/${g.target}`)
+          .join(" · ")
+      : `🎯 剩余 ${data.arrowCount} 条箭`;
+  hud.querySelector(".arrow-count")!.textContent = goalText;
 }
 
 export function showModal(

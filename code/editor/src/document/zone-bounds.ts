@@ -5,6 +5,11 @@ import {
   getEditableItems,
 } from "@arrowjaw/shared";
 import { findItemById, vecKey } from "@arrowjaw/shared";
+import {
+  arePositionsPlacementAllowed,
+  resolveBlackHoleCells,
+  resolvePlayableCells,
+} from "./board-region.ts";
 
 export function getActiveZone(doc: EditorDocument): RawItem | null {
   const zid = doc.editContext.zoneInstanceId;
@@ -26,11 +31,18 @@ export function positionsWithinZone(zone: RawItem, positions: Vec2[]): boolean {
 /** 顶层编辑时不限制；子区域编辑时所有占用格须在子区域矩形内 */
 export function canPlaceInEditContext(doc: EditorDocument, positions: Vec2[]): boolean {
   const zone = getActiveZone(doc);
-  if (!zone) return true;
-  return positionsWithinZone(zone, positions);
+  if (zone && !positionsWithinZone(zone, positions)) return false;
+  if (doc.editContext.regionEditMode != null) return false;
+  return arePositionsPlacementAllowed(doc, positions);
 }
 
-export type ArrowPlacementBlockReason = "zone" | "self" | "overlap" | "occupied";
+export type ArrowPlacementBlockReason =
+  | "zone"
+  | "self"
+  | "overlap"
+  | "occupied"
+  | "invalidBoard"
+  | "blackHole";
 
 /** 折线箭放置：子区域范围 + 不自交 + 不与其他箭同格 */
 export function getArrowPlacementBlockReason(
@@ -39,6 +51,13 @@ export function getArrowPlacementBlockReason(
   excludeInstanceId?: number | Set<number>,
 ): ArrowPlacementBlockReason | null {
   if (!canPlaceInEditContext(doc, positions)) return "zone";
+  if (!arePositionsPlacementAllowed(doc, positions)) {
+    const playable = resolvePlayableCells(doc);
+    const blackHole = resolveBlackHoleCells(doc);
+    if (positions.some((p) => blackHole.has(vecKey(p)))) return "blackHole";
+    if (positions.some((p) => !playable.has(vecKey(p)))) return "invalidBoard";
+    return "invalidBoard";
+  }
   if (arrowPathSelfOverlaps(positions)) return "self";
   if (arrowPositionsOverlapExisting(getEditableItems(doc), positions, excludeInstanceId)) {
     return "overlap";
@@ -64,5 +83,9 @@ export function arrowPlacementBlockMessage(reason: ArrowPlacementBlockReason): s
       return "折线箭不可与其他箭占用同一格";
     case "occupied":
       return "该格已被其它物件占用";
+    case "invalidBoard":
+      return "该格不在有效棋盘范围内";
+    case "blackHole":
+      return "黑洞区域不可放置物件";
   }
 }

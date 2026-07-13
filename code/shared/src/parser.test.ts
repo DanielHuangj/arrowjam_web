@@ -341,4 +341,49 @@ describe("shared serializer roundtrip", () => {
     expect(reparsed.arrows.length).toBe(parseLevelData(25, data).arrows.length);
     expect(reparsed.corners.length).toBe(parseLevelData(25, data).corners.length);
   });
+
+  it("rush level with buff items roundtrips", () => {
+    const data: LevelData = {
+      width: 10,
+      height: 10,
+      name: "rush-buff",
+      durationInSec: 60,
+      difficulty: 1,
+      gameMode: "rush",
+      spawnIntervalSec: 20,
+      spawnPool: [
+        { kind: 1, weight: 700, colorId: 7 },
+        { kind: 17, weight: 150, bombRadius: 1 },
+        { kind: 20, weight: 150 },
+      ],
+      levelGoals: [{ type: "clearArrowCount", count: 12 }],
+      itemModels: [
+        {
+          kind: 17,
+          instanceId: 1,
+          layer: 2,
+          bombRadius: 2,
+          occupiedPositions: [[3, 3]],
+        },
+        {
+          kind: 20,
+          instanceId: 2,
+          layer: 2,
+          occupiedPositions: [[5, 5]],
+        },
+      ],
+    };
+    const { doc } = createDocumentFromJson("level-9001.json", data);
+    expect(doc.meta.gameMode).toBe("rush");
+    expect(doc.meta.spawnPool?.length).toBe(3);
+    const json = serializeLevelData(doc);
+    const reparsed = parseLevelData(9001, JSON.parse(json));
+    expect(reparsed.gameMode).toBe("rush");
+    expect(reparsed.spawnIntervalSec).toBe(20);
+    expect(reparsed.buffs.length).toBe(2);
+    expect(reparsed.buffs[0]?.kind).toBe(17);
+    expect(reparsed.buffs[1]?.kind).toBe(20);
+    const issues = validateLevelData(JSON.parse(json));
+    expect(hasBlockingErrors(issues)).toBe(false);
+  });
 });

@@ -45,6 +45,10 @@ function serializeRawItem(item: RawItem): Record<string, unknown> {
   } else if (item.kind === 16) {
     out.groupID = item.groupID;
     out.bindInstanceId = item.bindInstanceId;
+  } else if (item.kind === 17) {
+    out.bombRadius = item.bombRadius;
+  } else if (item.kind === 18) {
+    out.crossArm = item.crossArm;
   } else if (item.kind === 12 && item.items) {
     out.items = item.items.map(serializeRawItem);
   }
@@ -63,6 +67,17 @@ export function serializeLevelData(doc: Pick<EditorDocument, "meta" | "itemModel
     itemModels: data.itemModels.map(serializeRawItem),
   };
   if (data.levelKind != null) obj.levelKind = data.levelKind;
+  if (data.gameMode != null) obj.gameMode = data.gameMode;
+  if (data.spawnIntervalSec != null) obj.spawnIntervalSec = data.spawnIntervalSec;
+  if (data.spawnPool != null) obj.spawnPool = data.spawnPool;
+  if (data.spawnWeightAdjust != null) obj.spawnWeightAdjust = data.spawnWeightAdjust;
+  if (data.levelGoals != null) obj.levelGoals = data.levelGoals;
+  if (data.boardShape === "custom") {
+    obj.boardShape = "custom";
+    if (data.playableMask?.rows?.length) obj.playableMask = data.playableMask;
+  }
+  if (data.blackHoleRegions?.length) obj.blackHoleRegions = data.blackHoleRegions;
+  if (data.invalidCellColors?.length) obj.invalidCellColors = data.invalidCellColors;
   return JSON.stringify(obj, null, 2);
 }
 

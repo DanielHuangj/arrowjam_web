@@ -20,10 +20,24 @@ export type {
   LevelData,
   RawItem,
   GameLevel,
+  GameMode,
+  SpawnPoolEntry,
+  SpawnWeightAdjustTier,
+  LevelGoal,
+  BuffItem,
+  AreaBombItem,
+  CrossBombItem,
+  FireBombItem,
+  BalloonItem,
+  BlackHoleItem,
+  FlipButtonItem,
+  CandyMachineItem,
   ValidationIssue,
   ValidationSeverity,
   EditorMeta,
   EditorDocument,
+  BoardShape,
+  MaskRows,
 } from "@arrowjaw/shared";
 
 export {
@@ -55,11 +69,14 @@ export interface LevelManifestEntry {
   p2Playable: boolean;
   p3Playable: boolean;
   p4Playable: boolean;
+  gameMode?: GameMode;
+  spawnIntervalSec?: number;
 }
 
 export interface LevelManifest {
   levels: LevelManifestEntry[];
   devTests?: LevelManifestEntry[];
+  rushTests?: LevelManifestEntry[];
 }
 
 export type GamePhase =
@@ -102,6 +119,10 @@ export interface LaunchAnimation {
   pipesCrossedById: Record<number, number[]>;
   /** 飞出消除动画中穿过、待箭消除后结算的拨动杆 instanceId */
   togglesCrossedIds: number[];
+  /** 飞行途中穿过、待箭消除或反弹回原位后结算的翻转按钮 buff instanceId */
+  flipButtonsCrossedIds: number[];
+  /** 永久黑洞区域吞噬进度 0~1（箭头继续飞行同时渐隐） */
+  blackHoleRegionSwallowById?: Record<number, number>;
 }
 
 export interface GameSnapshot {
@@ -118,4 +139,5 @@ import type {
   Direction,
   GameLevel,
   Vec2,
+  GameMode,
 } from "@arrowjaw/shared";

@@ -32,6 +32,13 @@ function simpleLevel() {
           [7, 3],
         ],
       },
+      {
+        kind: 17,
+        instanceId: 99,
+        layer: 2,
+        occupiedPositions: [[4, 0]],
+        bombRadius: 1,
+      },
     ],
   });
 }
@@ -75,6 +82,13 @@ describe("GameState launch click cooldown", () => {
             [2, 3],
             [3, 3],
           ],
+        },
+        {
+          kind: 17,
+          instanceId: 99,
+          layer: 2,
+          occupiedPositions: [[4, 0]],
+          bombRadius: 1,
         },
       ],
     });

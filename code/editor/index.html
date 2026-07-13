@@ -18,11 +18,15 @@
             <div id="play-hud" class="play-hud"></div>
             <div id="play-controls" class="play-controls"></div>
           </div>
-          <div id="canvas-wrap" class="canvas-wrap">
-            <canvas id="board-canvas"></canvas>
-            <canvas id="overlay-canvas" class="overlay-canvas"></canvas>
-            <div id="hover-tooltip" class="hover-tooltip hidden"></div>
-            <div id="play-result-overlay" class="play-result-overlay hidden"></div>
+          <div id="play-stage" class="play-stage">
+            <div id="canvas-wrap" class="canvas-wrap">
+              <canvas id="board-canvas"></canvas>
+              <canvas id="overlay-canvas" class="overlay-canvas"></canvas>
+              <div id="hover-tooltip" class="hover-tooltip hidden"></div>
+              <div id="play-result-overlay" class="play-result-overlay hidden"></div>
+            </div>
+            <aside id="board-region-tools" class="board-region-tools"></aside>
+            <aside id="play-timing-panel" class="play-timing-panel hidden"></aside>
           </div>
         </div>
         <aside id="props-panel" class="props-panel"></aside>
@@ -30,6 +34,7 @@
       <footer id="status-bar" class="status-bar"></footer>
       <div id="modal-root" class="modal-root hidden"></div>
       <input id="file-input" type="file" accept=".json,application/json" multiple hidden />
+      <input id="bg-image-input" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png" hidden />
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

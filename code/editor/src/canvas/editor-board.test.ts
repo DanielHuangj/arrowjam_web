@@ -5,7 +5,7 @@ import { collectMechanicsDrawOptions } from "./editor-board.ts";
 const baseDoc: EditorDocument = {
   meta: { width: 10, height: 10, name: "t", durationInSec: 120, difficulty: 1 },
   itemModels: [],
-  editContext: { zoneInstanceId: null },
+  editContext: { zoneInstanceId: null, regionEditMode: null },
   source: { name: "level-1.json", handle: null },
 };
 
@@ -73,7 +73,7 @@ describe("collectMechanicsDrawOptions", () => {
   });
 
   it("shows zone bombs while editing that zone", () => {
-    const doc = { ...baseDoc, editContext: { zoneInstanceId: 100 } };
+    const doc = { ...baseDoc, editContext: { zoneInstanceId: 100, regionEditMode: null } };
     const opts = collectMechanicsDrawOptions(doc, levelWithZoneBomb);
     expect(opts.bombStates.map((b) => b.bomb.instanceId)).toEqual([5]);
   });

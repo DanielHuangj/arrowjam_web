@@ -1,11 +1,13 @@
-import { defineConfig } from "vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite";
+import { saveAnimTimingPlugin } from "./vite-plugins/save-anim-timing.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 export default defineConfig({
+  plugins: [saveAnimTimingPlugin()],
   resolve: {
     alias: {
       "@arrowjaw/shared": path.resolve(__dirname, "../shared/src/index.ts"),

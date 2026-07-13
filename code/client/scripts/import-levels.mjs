@@ -2,7 +2,8 @@
  * 从 levels-inbox/ 导入新关卡到 public/levels/，并更新 manifest.json。
  *
  * levels-inbox/levels/     → 主线（id 自增，接 manifest.levels 最大 id）
- * levels-inbox/devTests/   → 测试（id 自增，接 manifest.devTests 最大 id，首关从 9001 起）
+ * levels-inbox/devTests/   → 机制测试（id 自增，9000 段，与 rushTests 共用 id 池）
+ * levels-inbox/rushTests/  → 爽快版测试（同上，写入 manifest.rushTests）
  *
  * 导入成功后删除 inbox 中的源文件。inbox 为空时仅刷新 manifest 中的 kinds 字段。
  */
@@ -22,6 +23,7 @@ const clientRoot = join(__dirname, "..");
 const inboxRoot = join(clientRoot, "levels-inbox");
 const inboxMain = join(inboxRoot, "levels");
 const inboxDev = join(inboxRoot, "devTests");
+const inboxRush = join(inboxRoot, "rushTests");
 const destDir = join(clientRoot, "public", "levels");
 const manifestPath = join(destDir, "manifest.json");
 
@@ -61,7 +63,7 @@ function buildManifestEntry(id, data) {
     throw new Error(`关卡 ${id} 缺少 itemModels 数组`);
   }
   const kindList = collectKinds(data.itemModels);
-  return {
+  const entry = {
     id,
     file: `level-${id}.json`,
     name: data.name || `Level ${id}`,
@@ -72,26 +74,31 @@ function buildManifestEntry(id, data) {
     kinds: kindList,
     ...buildPlayabilityFlags(kindList),
   };
+  if (data.gameMode) entry.gameMode = data.gameMode;
+  if (data.spawnIntervalSec != null) entry.spawnIntervalSec = data.spawnIntervalSec;
+  return entry;
 }
 
 function loadManifest() {
   if (!existsSync(manifestPath)) {
-    return { devTests: [], levels: [] };
+    return { devTests: [], rushTests: [], levels: [] };
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
   manifest.devTests = manifest.devTests ?? [];
+  manifest.rushTests = manifest.rushTests ?? [];
   manifest.levels = manifest.levels ?? [];
   return manifest;
 }
 
 function saveManifest(manifest) {
   manifest.devTests.sort((a, b) => a.id - b.id);
+  manifest.rushTests.sort((a, b) => a.id - b.id);
   manifest.levels.sort((a, b) => a.id - b.id);
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
 }
 
 function refreshManifestKinds(manifest) {
-  for (const list of [manifest.levels, manifest.devTests]) {
+  for (const list of [manifest.levels, manifest.devTests, manifest.rushTests]) {
     for (const entry of list) {
       const levelPath = join(destDir, entry.file);
       if (!existsSync(levelPath)) continue;
@@ -110,9 +117,16 @@ function listInboxJson(dir) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-function nextId(entries, devTest) {
-  if (entries.length === 0) return devTest ? 9001 : 1;
-  return Math.max(...entries.map((e) => e.id)) + 1;
+function nextMainId(manifest) {
+  if (manifest.levels.length === 0) return 1;
+  return Math.max(...manifest.levels.map((e) => e.id)) + 1;
+}
+
+/** devTests 与 rushTests 共用 9000 段 id，避免 level 文件冲突 */
+function nextTestId(manifest) {
+  const tests = [...manifest.devTests, ...manifest.rushTests];
+  if (tests.length === 0) return 9001;
+  return Math.max(...tests.map((e) => e.id)) + 1;
 }
 
 function parseLevelFile(filePath) {
@@ -124,12 +138,12 @@ function parseLevelFile(filePath) {
   }
 }
 
-function importFromInbox(manifest, inboxDir, targetList, devTest) {
+function importFromInbox(manifest, inboxDir, targetList, idAllocator) {
   const files = listInboxJson(inboxDir);
   if (files.length === 0) return 0;
 
   const pending = [];
-  let next = nextId(targetList, devTest);
+  let next = idAllocator(manifest);
 
   for (const file of files) {
     const srcPath = join(inboxDir, file);
@@ -155,18 +169,25 @@ function importFromInbox(manifest, inboxDir, targetList, devTest) {
 mkdirSync(destDir, { recursive: true });
 mkdirSync(inboxMain, { recursive: true });
 mkdirSync(inboxDev, { recursive: true });
+mkdirSync(inboxRush, { recursive: true });
 
 const manifest = loadManifest();
-const importedMain = importFromInbox(manifest, inboxMain, manifest.levels, false);
-const importedDev = importFromInbox(manifest, inboxDev, manifest.devTests, true);
+const importedMain = importFromInbox(manifest, inboxMain, manifest.levels, nextMainId);
+const importedDev = importFromInbox(manifest, inboxDev, manifest.devTests, nextTestId);
+const importedRush = importFromInbox(
+  manifest,
+  inboxRush,
+  manifest.rushTests,
+  nextTestId,
+);
 refreshManifestKinds(manifest);
 saveManifest(manifest);
 
-const total = importedMain + importedDev;
+const total = importedMain + importedDev + importedRush;
 if (total === 0) {
   console.log("levels-inbox 为空，已刷新 manifest kinds");
 } else {
   console.log(
-    `已导入 ${total} 个关卡（主线 ${importedMain}，测试 ${importedDev}），源文件已删除`,
+    `已导入 ${total} 个关卡（主线 ${importedMain}，机制测试 ${importedDev}，爽快版测试 ${importedRush}），源文件已删除`,
   );
 }

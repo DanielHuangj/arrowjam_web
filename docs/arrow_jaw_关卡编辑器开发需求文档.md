@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-15  
 > **状态**：待开发  
-> **关联文档**：[Arrow Jam 关卡编辑器需求.md](Arrow%20Jam%20关卡编辑器需求.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_关卡编辑器开发步骤拆解.md](arrow_jaw_关卡编辑器开发步骤拆解.md)
+> **关联文档**：[Arrow Jam 关卡编辑器需求.md](Arrow%20Jam%20关卡编辑器需求.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md) · [arrow_jaw_开发需求文档.md](arrow_jaw_开发需求文档.md) · [arrow_jaw_关卡编辑器开发步骤拆解.md](arrow_jaw_关卡编辑器开发步骤拆解.md) · [arrow_jaw_爽快版开发需求文档.md](arrow_jaw_爽快版开发需求文档.md) · [arrow_jaw_爽快版开发步骤拆解.md](arrow_jaw_爽快版开发步骤拆解.md)（V2 编辑器扩展见步骤附录 A）
 
 ---
 

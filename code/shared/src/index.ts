@@ -1,4 +1,7 @@
+export * from "./board-mask.ts";
+export * from "./invalid-cell-colors.ts";
 export * from "./types.ts";
+export * from "./spawn-weight.ts";
 export * from "./zone-builder.ts";
 export * from "./items.ts";
 export * from "./parser.ts";

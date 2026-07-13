@@ -2,6 +2,7 @@ import type {
   ArrowItem,
   BoardSize,
   BombItem,
+  BuffItem,
   BundleItem,
   ControllerItem,
   CornerItem,
@@ -15,7 +16,6 @@ import type {
   Vec2,
   ZoneItem,
 } from "../core/types.ts";
-import { vecKey } from "../core/types.ts";
 import {
   BUNDLE_COLORS,
   BUNDLE_LINE_W,
@@ -25,27 +25,46 @@ import {
   GAP,
   STEP,
   THEME,
-  TRACE_DOT_COLOR,
-  TRACE_DOT_RADIUS,
+  GAME_BOARD_BORDER_PAD_CELLS,
   ZONE_FILL,
   ZONE_STROKE,
+  invalidCellColorHex,
+  EDITOR_BLACK_HOLE_FILL,
+  EDITOR_BLACK_HOLE_STROKE,
 } from "./colors.ts";
-import { drawArrowEditor, drawArrowGame } from "./arrow-drawer.ts";
+import { drawArrowEditor, drawArrowGame, type BalloonArrowFx } from "./arrow-drawer.ts";
 import { drawCornerInCell } from "./corner-drawer.ts";
 import { drawCurtainInBoard } from "./curtain-drawer.ts";
 import { drawKeyInCell } from "./key-drawer.ts";
 import { drawPipeInBoard } from "./pipe-drawer.ts";
-import { drawBomb, drawBombExplosion, drawController, drawFrozenOverlay, drawMovingWall, drawShrinkPipe, drawToggle } from "./mechanics-drawer.ts";
+import { drawBomb, drawBombExplosion, drawBuff, drawController, drawFrozenOverlay, drawMovingWall, drawShrinkPipe, drawToggle } from "./mechanics-drawer.ts";
+import { drawAreaBombEffect, drawCrossBombEffect, drawFireBombEffect, drawBalloonEffect, drawCandyMachineEffect, drawAutoRefreshEffect, type AreaBombEffectDrawState, type AutoRefreshEffectDrawState, type BalloonEffectDrawState, type CandyMachineEffectDrawState, type CrossBombEffectDrawState, type FireBombEffectDrawState } from "./buff-effects-drawer.ts";
+import {
+  drawEmptyCellDotsWithPulse,
+  drawLaunchClickEffects,
+  type DotPulseFxState,
+  type LaunchClickFxState,
+} from "./flight-fx.ts";
+import { drawBlackHoleRegions, splitBlackHoleComponents } from "./black-hole-region-drawer.ts";
+import {
+  fillRoundedRegionCells,
+  strokeRoundedRegionOutline,
+  REGION_OUTER_CORNER_RADIUS,
+} from "./region-outline.ts";
+import type { SpawnEmergence } from "../core/mechanics/spawn.ts";
 
 export type BoardRenderStyle = "editor" | "game";
 
 export interface BoardDrawOptions {
   style?: BoardRenderStyle;
-  clearedTraces?: Vec2[];
-  /** 不绘制痕迹的格（仍有箭占用） */
+  /** 不绘制空余格圆点的占用格 */
   occupiedCells?: Set<string>;
   /** 随机消除湮灭进度 0~1，按 instanceId */
   vanishProgressById?: ReadonlyMap<number, number>;
+  /** 定向气球同色箭膨胀/爆破 */
+  balloonArrowFxById?: ReadonlyMap<number, BalloonArrowFx>;
+  /** 黑洞吞噬旋转（instanceId → 弧度） */
+  blackHoleFxById?: ReadonlyMap<number, { rotation: number; vanishProgress: number }>;
   movingWalls?: MovingWallItem[];
   frozenOverlays?: FrozenOverlayItem[];
   bombStates?: { bomb: BombItem; remaining: number | null }[];
@@ -56,6 +75,34 @@ export interface BoardDrawOptions {
   toggles?: ToggleItem[];
   controllers?: ControllerItem[];
   toggleFlashGroupIds?: Set<number>;
+  buffs?: BuffItem[];
+  /** 生成浮现（alpha + scale），按 instanceId */
+  spawnEmergenceById?: ReadonlyMap<number, SpawnEmergence>;
+  areaBombEffects?: AreaBombEffectDrawState[];
+  crossBombEffects?: CrossBombEffectDrawState[];
+  fireBombEffects?: FireBombEffectDrawState[];
+  balloonEffects?: BalloonEffectDrawState[];
+  candyMachineEffects?: CandyMachineEffectDrawState[];
+  /** 排队等待引爆的定向气球（白色静止） */
+  waitingBalloonEffects?: BalloonEffectDrawState[];
+  /** 排队气球 buff id，buff 层跳过绘制以免被炸弹特效遮挡 */
+  pendingBalloonBuffIds?: ReadonlySet<number>;
+  playableCells?: Set<string>;
+  blackHoleCells?: Set<string>;
+  blackHoleRegionPhase?: number;
+  /** 编辑器：无效格置灰 */
+  invalidCells?: Set<string>;
+  /** 无效格着色（不含默认白） */
+  invalidCellColors?: ReadonlyMap<string, number>;
+  /** 编辑器背景图（仅会话内） */
+  editorBackgroundImage?: CanvasImageSource | null;
+  /** @deprecated 单气球，优先使用 balloonEffects */
+  balloonEffect?: BalloonEffectDrawState | null;
+  autoRefreshEffect?: AutoRefreshEffectDrawState | null;
+  /** 点击发射时的彩色烟尘 */
+  launchClickEffects?: readonly LaunchClickFxState[];
+  /** 箭头经过后格点圆点呼吸 */
+  dotPulseEffects?: readonly DotPulseFxState[];
 }
 
 const DEFAULT_DRAW_OPTIONS: BoardDrawOptions = { style: "editor" };
@@ -64,6 +111,19 @@ export function boardPixelSize(board: BoardSize): { width: number; height: numbe
   return {
     width: board.width * STEP - GAP,
     height: board.height * STEP - GAP,
+  };
+}
+
+export function gameBoardContentOffsetPx(): number {
+  return GAME_BOARD_BORDER_PAD_CELLS * STEP;
+}
+
+export function gameBoardPixelSize(board: BoardSize): { width: number; height: number } {
+  const pad = gameBoardContentOffsetPx();
+  const inner = boardPixelSize(board);
+  return {
+    width: inner.width + pad * 2,
+    height: inner.height + pad * 2,
   };
 }
 
@@ -84,9 +144,11 @@ export class BoardRenderer {
     this.ctx = ctx;
   }
 
-  resize(board: BoardSize): void {
+  resize(board: BoardSize, gameBorderPad = false): void {
     this.dpr = window.devicePixelRatio || 1;
-    const { width, height } = boardPixelSize(board);
+    const { width, height } = gameBorderPad
+      ? gameBoardPixelSize(board)
+      : boardPixelSize(board);
     this.canvas.width = Math.ceil(width * this.dpr);
     this.canvas.height = Math.ceil(height * this.dpr);
     this.canvas.style.width = `${width}px`;
@@ -128,14 +190,47 @@ export class BoardRenderer {
       options.controllers,
     );
 
-    this.resize(board);
-    const { width, height } = boardPixelSize(board);
+    this.resize(board, isGame);
+    const { width, height } = isGame
+      ? gameBoardPixelSize(board)
+      : boardPixelSize(board);
+    const contentPad = isGame ? gameBoardContentOffsetPx() : 0;
     this.ctx.fillStyle = isGame ? THEME.gamePanel : THEME.panel;
     this.ctx.fillRect(0, 0, width, height);
+
+    if (!isGame && options.editorBackgroundImage) {
+      this.ctx.drawImage(options.editorBackgroundImage, 0, 0, width, height);
+    }
+
+    if (isGame) this.ctx.save();
+    if (contentPad > 0) this.ctx.translate(contentPad, contentPad);
+
+    if (isGame && options.playableCells && options.invalidCellColors?.size) {
+      for (const [key, colorId] of options.invalidCellColors) {
+        if (!options.playableCells.has(key)) {
+          const [xs, ys] = key.split(",");
+          const x = Number(xs);
+          const y = Number(ys);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+          const gx = x * STEP;
+          const gy = y * STEP;
+          this.ctx.fillStyle = invalidCellColorHex(colorId);
+          roundRect(this.ctx, gx, gy, CELL, CELL, 4);
+          this.ctx.fill();
+        }
+      }
+    }
 
     if (!isGame) {
       for (let y = 0; y < board.height; y++) {
         for (let x = 0; x < board.width; x++) {
+          const key = `${x},${y}`;
+          const invalid = options.invalidCells?.has(key);
+          const playable =
+            !options.playableCells || options.playableCells.has(key);
+          if (invalid || !playable) {
+            continue;
+          }
           const gx = x * STEP;
           const gy = y * STEP;
           this.ctx.fillStyle = THEME.gridCell;
@@ -146,10 +241,67 @@ export class BoardRenderer {
           this.ctx.stroke();
         }
       }
+      if (options.invalidCells) {
+        for (let y = 0; y < board.height; y++) {
+          for (let x = 0; x < board.width; x++) {
+            const key = `${x},${y}`;
+            if (!options.invalidCells.has(key)) continue;
+            const gx = x * STEP;
+            const gy = y * STEP;
+            const colorId = options.invalidCellColors?.get(key);
+            this.ctx.fillStyle =
+              colorId != null ? invalidCellColorHex(colorId) : "#FFFFFF";
+            roundRect(this.ctx, gx, gy, CELL, CELL, 4);
+            this.ctx.fill();
+            if (colorId != null) {
+              this.ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
+              this.ctx.lineWidth = 1;
+              this.ctx.stroke();
+            }
+          }
+        }
+      }
+      if (options.blackHoleCells && options.blackHoleCells.size > 0) {
+        for (const region of splitBlackHoleComponents(options.blackHoleCells)) {
+          fillRoundedRegionCells(
+            this.ctx,
+            region,
+            EDITOR_BLACK_HOLE_FILL,
+            CELL,
+            STEP,
+            REGION_OUTER_CORNER_RADIUS,
+          );
+          strokeRoundedRegionOutline(
+            this.ctx,
+            region,
+            EDITOR_BLACK_HOLE_STROKE,
+            1,
+            CELL,
+            STEP,
+            REGION_OUTER_CORNER_RADIUS,
+          );
+        }
+      }
     }
 
-    if (isGame && options.clearedTraces?.length) {
-      this.drawClearedTraces(options.clearedTraces, options.occupiedCells);
+    if (isGame && options.blackHoleCells && options.blackHoleCells.size > 0) {
+      drawBlackHoleRegions(
+        this.ctx,
+        board,
+        options.blackHoleCells,
+        options.blackHoleRegionPhase ?? 0,
+      );
+    }
+
+    if (isGame) {
+      drawEmptyCellDotsWithPulse(
+        this.ctx,
+        board,
+        options.occupiedCells,
+        options.dotPulseEffects,
+        options.playableCells,
+        options.blackHoleCells,
+      );
     }
 
     for (const zone of zones) {
@@ -168,6 +320,8 @@ export class BoardRenderer {
         launchableIds.has(arrow.instanceId),
         isGame,
         options.vanishProgressById?.get(arrow.instanceId) ?? 0,
+        options.spawnEmergenceById?.get(arrow.instanceId),
+        options.balloonArrowFxById?.get(arrow.instanceId),
       );
     }
     for (const pipe of zonePipes) {
@@ -187,6 +341,8 @@ export class BoardRenderer {
         launchableIds.has(arrow.instanceId),
         isGame,
         options.vanishProgressById?.get(arrow.instanceId) ?? 0,
+        options.spawnEmergenceById?.get(arrow.instanceId),
+        options.balloonArrowFxById?.get(arrow.instanceId),
       );
     }
     for (const pipe of topPipes) {
@@ -200,6 +356,20 @@ export class BoardRenderer {
     if (options.movingWalls) {
       for (const wall of options.movingWalls) {
         drawMovingWall(this.ctx, wall);
+      }
+    }
+
+    if (options.buffs) {
+      const pendingBalloons = options.pendingBalloonBuffIds;
+      for (const buff of options.buffs) {
+        if (buff.kind === 20 && pendingBalloons?.has(buff.instanceId)) continue;
+        const emergence = options.spawnEmergenceById?.get(buff.instanceId);
+        const holeFx = options.blackHoleFxById?.get(buff.instanceId);
+        drawBuff(this.ctx, buff, STEP, emergence?.alpha ?? 1, {
+          spawnScale: emergence?.scale,
+          blackHoleRotation: holeFx?.rotation,
+          blackHoleVanishProgress: holeFx?.vanishProgress,
+        });
       }
     }
 
@@ -247,22 +417,59 @@ export class BoardRenderer {
       );
     }
 
+    for (const areaBombEffect of options.areaBombEffects ?? []) {
+      drawAreaBombEffect(this.ctx, areaBombEffect, STEP);
+    }
+
+    for (const crossBombEffect of options.crossBombEffects ?? []) {
+      drawCrossBombEffect(this.ctx, crossBombEffect, STEP);
+    }
+
+    for (const fireBombEffect of options.fireBombEffects ?? []) {
+      drawFireBombEffect(this.ctx, fireBombEffect, STEP);
+    }
+
+    for (const waitingBalloon of options.waitingBalloonEffects ?? []) {
+      drawBalloonEffect(this.ctx, waitingBalloon, STEP);
+    }
+
+    const balloonEffects =
+      options.balloonEffects ??
+      (options.balloonEffect ? [options.balloonEffect] : []);
+    for (const balloonEffect of balloonEffects) {
+      drawBalloonEffect(this.ctx, balloonEffect, STEP);
+    }
+
+    for (const candyEffect of options.candyMachineEffects ?? []) {
+      drawCandyMachineEffect(this.ctx, candyEffect, STEP);
+    }
+
+    if (options.autoRefreshEffect) {
+      drawAutoRefreshEffect(this.ctx, options.autoRefreshEffect, STEP);
+    }
+
+    if (isGame && options.launchClickEffects?.length) {
+      drawLaunchClickEffects(this.ctx, options.launchClickEffects);
+    }
+
     for (const curtain of curtains) {
       drawCurtainInBoard(this.ctx, curtain, STEP);
     }
+
+    if (isGame) this.ctx.restore();
+
+    if (isGame) {
+      this.drawGameBoardBorder(width, height);
+    }
   }
 
-  private drawClearedTraces(traces: Vec2[], occupied?: Set<string>): void {
+  private drawGameBoardBorder(width: number, height: number): void {
     const ctx = this.ctx;
-    ctx.fillStyle = TRACE_DOT_COLOR;
-    for (const [x, y] of traces) {
-      const key = vecKey([x, y]);
-      if (occupied?.has(key)) continue;
-      const [cx, cy] = cellCenter(x, y);
-      ctx.beginPath();
-      ctx.arc(cx, cy, TRACE_DOT_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.save();
+    ctx.strokeStyle = THEME.gameBoardBorder;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, width - 2, height - 2);
+    ctx.restore();
   }
 
   private drawZone(zone: ZoneItem): void {
@@ -305,13 +512,17 @@ export class BoardRenderer {
     cornerControllers: Map<number, ControllerItem>,
   ): void {
     const [x, y] = corner.occupiedPositions[0] ?? [0, 0];
+    const [cx, cy] = cellCenter(x, y);
     const boundController = cornerControllers.get(corner.instanceId);
     const controllerFlash =
       boundController != null &&
       (options.toggleFlashGroupIds?.has(boundController.groupID) ?? false);
-    drawCornerInCell(this.ctx, x, y, corner, STEP, {
-      boundController,
-      controllerFlash,
+    const emergence = options.spawnEmergenceById?.get(corner.instanceId);
+    this.withSpawnEmergence(cx, cy, emergence, () => {
+      drawCornerInCell(this.ctx, x, y, corner, STEP, {
+        boundController,
+        controllerFlash,
+      });
     });
   }
 
@@ -367,12 +578,40 @@ export class BoardRenderer {
     launchable: boolean,
     gameStyle: boolean,
     vanishProgress = 0,
+    emergence?: SpawnEmergence,
+    balloonFx?: BalloonArrowFx,
   ): void {
-    if (gameStyle) {
-      drawArrowGame(this.ctx, arrow, launchable, vanishProgress);
-    } else {
-      drawArrowEditor(this.ctx, arrow, launchable);
+    const pos = arrow.occupiedPositions;
+    if (pos.length === 0) return;
+    const points = pos.map(([x, y]) => cellCenter(x, y));
+    const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+    const cy = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+    this.withSpawnEmergence(cx, cy, emergence, () => {
+      if (gameStyle) {
+        drawArrowGame(this.ctx, arrow, launchable, vanishProgress, balloonFx);
+      } else {
+        drawArrowEditor(this.ctx, arrow, launchable);
+      }
+    });
+  }
+
+  private withSpawnEmergence(
+    cx: number,
+    cy: number,
+    emergence: SpawnEmergence | undefined,
+    draw: () => void,
+  ): void {
+    this.ctx.save();
+    if (emergence) {
+      this.ctx.globalAlpha = emergence.alpha;
+      if (emergence.scale !== 1) {
+        this.ctx.translate(cx, cy);
+        this.ctx.scale(emergence.scale, emergence.scale);
+        this.ctx.translate(-cx, -cy);
+      }
     }
+    draw();
+    this.ctx.restore();
   }
 
   canvasToCell(board: BoardSize, clientX: number, clientY: number): [number, number] | null {

@@ -93,7 +93,7 @@ export function attachBoardViewport(
   return {
     getState: () => vp,
     reset: (board: BoardSize) => {
-      vp = resetViewport(wrap, board);
+      vp = resetViewport(wrap, board, true);
       apply();
     },
     consumePanClick: () => {

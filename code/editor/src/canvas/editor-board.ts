@@ -1,11 +1,23 @@
 import type { EditorDocument, GameLevel, RawItem, Vec2 } from "@arrowjaw/shared";
-import { parseLevelData, parseLevelIdFromFilename } from "@arrowjaw/shared";
+import { parseLevelData, parseLevelIdFromFilename, vecKey } from "@arrowjaw/shared";
+import { drawBomb, drawBombExplosion, drawBuff, drawController, drawFrozenOverlay, drawMovingWall, drawShrinkPipe, drawToggle } from "@arrowjaw/client/render/mechanics-drawer.ts";
 import { BoardRenderer } from "@arrowjaw/client/render/board-renderer.ts";
-import { STEP, CELL } from "@arrowjaw/client/render/colors.ts";
+import { STEP, CELL, EDITOR_BLACK_HOLE_FILL, EDITOR_BLACK_HOLE_STROKE } from "@arrowjaw/client/render/colors.ts";
+import { splitBlackHoleComponents } from "@arrowjaw/client/render/black-hole-region-drawer.ts";
+import {
+  fillRoundedRegionCells,
+  strokeRoundedRegionOutline,
+  REGION_OUTER_CORNER_RADIUS,
+} from "@arrowjaw/client/render/region-outline.ts";
 import type { CurtainItem } from "@arrowjaw/shared";
 import { drawCornerRefractionPreview } from "./corner-preview.ts";
 import { drawFlipArrowPreview, drawFlipPolylinePreview } from "./flip-preview.ts";
 import { drawWallPathPreview } from "./wall-path-preview.ts";
+import {
+  loadRegionDraftCells,
+  resolveBlackHoleCells,
+  resolvePlayableCells,
+} from "../document/board-region.ts";
 
 export interface EditorBoardOverlayState {
   wallPathDraft?: Vec2[];
@@ -13,6 +25,23 @@ export interface EditorBoardOverlayState {
   flipPolyline?: Vec2[];
   flipDirection1?: number;
   flipDirection2?: number;
+  regionDraftCells?: Set<string>;
+  regionEditMode?: null | "playable" | "blackHole" | "invalidColor";
+  regionColorDraft?: Map<string, number>;
+  regionColorSelection?: Set<string>;
+  boldRulers?: boolean;
+}
+
+function computeInvalidCells(level: GameLevel): Set<string> | undefined {
+  if (level.boardShape !== "custom") return undefined;
+  const invalid = new Set<string>();
+  for (let y = 0; y < level.height; y++) {
+    for (let x = 0; x < level.width; x++) {
+      const key = vecKey([x, y]);
+      if (!level.playableCells.has(key)) invalid.add(key);
+    }
+  }
+  return invalid;
 }
 
 export interface CornerPreview {
@@ -43,6 +72,7 @@ function collectMechanicsDrawOptions(doc: EditorDocument, level: GameLevel) {
     shrinkPipes: zoneMechanicsVisible(level.shrinkPipes, activeZone),
     toggles: zoneMechanicsVisible(level.toggles, activeZone),
     controllers: zoneMechanicsVisible(level.controllers, activeZone),
+    buffs: zoneMechanicsVisible(level.buffs, activeZone),
   };
 }
 
@@ -91,15 +121,24 @@ function editorVisibleLayers(doc: EditorDocument, level: GameLevel) {
 
 export function documentToGameLevel(doc: EditorDocument): GameLevel {
   const id = parseLevelIdFromFilename(doc.source.name);
+  const m = doc.meta;
   return parseLevelData(
     id,
     {
-      width: doc.meta.width,
-      height: doc.meta.height,
-      name: doc.meta.name,
-      durationInSec: doc.meta.durationInSec,
-      difficulty: doc.meta.difficulty,
-      levelKind: doc.meta.levelKind,
+      width: m.width,
+      height: m.height,
+      name: m.name,
+      durationInSec: m.durationInSec,
+      difficulty: m.difficulty,
+      levelKind: m.levelKind,
+      gameMode: m.gameMode,
+      spawnIntervalSec: m.spawnIntervalSec,
+      spawnPool: m.spawnPool,
+      levelGoals: m.levelGoals,
+      boardShape: m.boardShape,
+      playableMask: m.playableMask,
+      blackHoleRegions: m.blackHoleRegions,
+      invalidCellColors: m.invalidCellColors,
       itemModels: doc.itemModels,
     },
     { allowIncompleteMovingWalls: true },
@@ -123,6 +162,8 @@ export function curtainWithBounds(c: CurtainItem) {
 export class EditorBoardView {
   private renderer: BoardRenderer;
   private overlayCtx: CanvasRenderingContext2D;
+  private backgroundImage: HTMLImageElement | null = null;
+  private backgroundImageUrl: string | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -147,6 +188,40 @@ export class EditorBoardView {
     const launchable = new Set<number>();
     const layers = editorVisibleLayers(doc, level);
     const mechanics = collectMechanicsDrawOptions(doc, level);
+    const regionMode = doc.editContext.regionEditMode;
+    const editingRegion = regionMode != null;
+    const playableCells = editingRegion
+      ? regionMode === "playable"
+        ? overlayState.regionDraftCells ?? loadRegionDraftCells(doc, "playable")
+        : resolvePlayableCells(doc)
+      : level.boardShape === "custom"
+        ? level.playableCells
+        : undefined;
+    const blackHoleCells = editingRegion
+      ? regionMode === "blackHole"
+        ? overlayState.regionDraftCells ?? loadRegionDraftCells(doc, "blackHole")
+        : resolveBlackHoleCells(doc)
+      : level.blackHoleCells;
+    const invalidCells =
+      editingRegion && regionMode === "playable"
+        ? (() => {
+            const draft =
+              overlayState.regionDraftCells ?? loadRegionDraftCells(doc, "playable");
+            const invalid = new Set<string>();
+            for (let y = 0; y < level.height; y++) {
+              for (let x = 0; x < level.width; x++) {
+                const key = vecKey([x, y]);
+                if (!draft.has(key)) invalid.add(key);
+              }
+            }
+            return invalid;
+          })()
+        : computeInvalidCells(level);
+    const invalidCellColors =
+      overlayState.regionEditMode === "invalidColor" && overlayState.regionColorDraft
+        ? overlayState.regionColorDraft
+        : level.invalidCellColors;
+    const bgImage = this.resolveBackgroundImage(doc);
 
     this.renderer.drawBoard(
       { width: level.width, height: level.height },
@@ -170,6 +245,12 @@ export class EditorBoardView {
         shrinkPipes: mechanics.shrinkPipes,
         toggles: mechanics.toggles,
         controllers: mechanics.controllers,
+        buffs: mechanics.buffs,
+        playableCells,
+        blackHoleCells,
+        invalidCells,
+        invalidCellColors,
+        editorBackgroundImage: bgImage,
       },
     );
 
@@ -185,6 +266,23 @@ export class EditorBoardView {
       cornerHover,
       overlayState,
     );
+  }
+
+  private resolveBackgroundImage(doc: EditorDocument): HTMLImageElement | null {
+    const bg = doc.editorOnly?.backgroundImage;
+    if (!bg?.dataUrl) {
+      this.backgroundImage = null;
+      this.backgroundImageUrl = null;
+      return null;
+    }
+    if (this.backgroundImageUrl === bg.dataUrl && this.backgroundImage) {
+      return this.backgroundImage.complete ? this.backgroundImage : null;
+    }
+    const img = new Image();
+    img.src = bg.dataUrl;
+    this.backgroundImage = img;
+    this.backgroundImageUrl = bg.dataUrl;
+    return img.complete ? img : null;
   }
 
   private syncOverlay(width: number, height: number): void {
@@ -218,8 +316,9 @@ export class EditorBoardView {
     ctx.scale(dpr, dpr);
 
     // Rulers
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = "10px sans-serif";
+    const boldRulers = overlayState.boldRulers ?? false;
+    ctx.fillStyle = boldRulers ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.5)";
+    ctx.font = boldRulers ? "bold 11px sans-serif" : "10px sans-serif";
     for (let x = 0; x < width; x++) {
       ctx.fillText(String(x), x * STEP + 4, 10);
     }
@@ -242,6 +341,62 @@ export class EditorBoardView {
       ctx.strokeStyle = "#4dabf7";
       ctx.strokeRect(x * STEP + 1, y * STEP + 1, CELL - 2, CELL - 2);
       ctx.setLineDash([]);
+    }
+
+    if (overlayState.regionEditMode && overlayState.regionDraftCells) {
+      if (overlayState.regionEditMode === "blackHole") {
+        for (const region of splitBlackHoleComponents(overlayState.regionDraftCells)) {
+          fillRoundedRegionCells(
+            ctx,
+            region,
+            EDITOR_BLACK_HOLE_FILL,
+            CELL,
+            STEP,
+            REGION_OUTER_CORNER_RADIUS,
+          );
+          strokeRoundedRegionOutline(
+            ctx,
+            region,
+            EDITOR_BLACK_HOLE_STROKE,
+            2,
+            CELL,
+            STEP,
+            REGION_OUTER_CORNER_RADIUS,
+          );
+        }
+      } else {
+        const fill =
+          overlayState.regionEditMode === "playable"
+            ? "rgba(72, 187, 120, 0.45)"
+            : "rgba(255, 255, 255, 0.75)";
+        const stroke =
+          overlayState.regionEditMode === "playable" ? "#40c057" : "#dee2e6";
+        for (const key of overlayState.regionDraftCells) {
+          const [xs, ys] = key.split(",");
+          const x = Number(xs);
+          const y = Number(ys);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+          ctx.fillStyle = fill;
+          ctx.fillRect(x * STEP, y * STEP, CELL, CELL);
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x * STEP + 1, y * STEP + 1, CELL - 2, CELL - 2);
+        }
+      }
+    }
+
+    if (overlayState.regionColorSelection && overlayState.regionColorSelection.size > 0) {
+      for (const key of overlayState.regionColorSelection) {
+        const [xs, ys] = key.split(",");
+        const x = Number(xs);
+        const y = Number(ys);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        ctx.fillStyle = "rgba(252, 196, 25, 0.35)";
+        ctx.fillRect(x * STEP, y * STEP, CELL, CELL);
+        ctx.strokeStyle = "#fcc419";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x * STEP + 1, y * STEP + 1, CELL - 2, CELL - 2);
+      }
     }
 
     if (marquee) {

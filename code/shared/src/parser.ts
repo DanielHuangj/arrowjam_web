@@ -1,6 +1,7 @@
 import type {
   ArrowItem,
   BombItem,
+  BuffItem,
   BundleItem,
   ControllerItem,
   CornerItem,
@@ -9,16 +10,20 @@ import type {
   GameLevel,
   KeyArrowItem,
   LevelData,
+  LevelGoal,
   MovingWallItem,
   PipeItem,
   RawItem,
   ShrinkPipeItem,
+  SpawnPoolEntry,
   ToggleItem,
   Vec2,
   ZoneItem,
 } from "./types.ts";
 import type { Direction } from "./types.ts";
 import { buildZoneItem } from "./zone-builder.ts";
+import { buildBoardMaskFromLevel } from "./board-mask.ts";
+import { buildInvalidCellColorMap } from "./invalid-cell-colors.ts";
 import { vecKey } from "./types.ts";
 
 function clonePositions(positions: Vec2[]): Vec2[] {
@@ -326,6 +331,77 @@ function getHostPositions(
   return ctx.shrinkPipes.find((s) => s.instanceId === id)?.occupiedPositions ?? [];
 }
 
+function parseBuff(item: RawItem, zoneId: number | null): BuffItem {
+  if (item.occupiedPositions.length !== 1) {
+    throw new Error(`Buff #${item.instanceId} must occupy one cell`);
+  }
+  const base = {
+    instanceId: item.instanceId,
+    layer: item.layer,
+    occupiedPositions: clonePositions(item.occupiedPositions),
+    zoneId,
+  };
+  if (item.kind === 17) {
+    const bombRadius = item.bombRadius as 1 | 2 | undefined;
+    if (bombRadius !== 1 && bombRadius !== 2) {
+      throw new Error(`Area bomb #${item.instanceId} missing bombRadius`);
+    }
+    return { kind: 17, bombRadius, ...base };
+  }
+  if (item.kind === 18) {
+    const crossArm = item.crossArm as 2 | 5 | undefined;
+    if (crossArm !== 2 && crossArm !== 5) {
+      throw new Error(`Cross bomb #${item.instanceId} missing crossArm`);
+    }
+    return { kind: 18, crossArm, ...base };
+  }
+  if (item.kind === 19) {
+    return { kind: 19, ...base };
+  }
+  if (item.kind === 20) {
+    return { kind: 20, ...base };
+  }
+  if (item.kind === 21) {
+    return { kind: 21, ...base };
+  }
+  if (item.kind === 22) {
+    return { kind: 22, ...base };
+  }
+  if (item.kind === 23) {
+    return { kind: 23, ...base };
+  }
+  throw new Error(`Unknown buff kind ${item.kind}`);
+}
+
+function parseRushFields(data: LevelData): {
+  gameMode: "classic" | "rush";
+  spawnIntervalSec?: number;
+  spawnPool?: SpawnPoolEntry[];
+  spawnWeightAdjust?: import("./types.ts").SpawnWeightAdjustTier[];
+  levelGoals?: LevelGoal[];
+} {
+  const explicitMode = data.gameMode;
+  const hasRushConfig =
+    data.spawnIntervalSec != null ||
+    (data.spawnPool != null && data.spawnPool.length > 0) ||
+    (data.spawnWeightAdjust != null && data.spawnWeightAdjust.length > 0) ||
+    (data.levelGoals != null && data.levelGoals.length > 0);
+  const gameMode =
+    explicitMode === "rush" || (explicitMode !== "classic" && hasRushConfig)
+      ? "rush"
+      : "classic";
+  if (gameMode !== "rush") {
+    return { gameMode: "classic" };
+  }
+  return {
+    gameMode: "rush",
+    spawnIntervalSec: data.spawnIntervalSec,
+    spawnPool: data.spawnPool,
+    spawnWeightAdjust: data.spawnWeightAdjust,
+    levelGoals: data.levelGoals,
+  };
+}
+
 interface CollectCtx {
   arrows: ArrowItem[];
   corners: CornerItem[];
@@ -338,6 +414,7 @@ interface CollectCtx {
   toggles: ToggleItem[];
   controllers: ControllerItem[];
   movingWalls: MovingWallItem[];
+  buffs: BuffItem[];
 }
 
 function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectCtx): void {
@@ -402,6 +479,16 @@ function collectFromItems(items: RawItem[], zoneId: number | null, ctx: CollectC
       ctx.toggles.push(parseToggle(item, zoneId));
     } else if (item.kind === 16) {
       ctx.controllers.push(parseController(item, zoneId, ctx));
+    } else if (
+      item.kind === 17 ||
+      item.kind === 18 ||
+      item.kind === 19 ||
+      item.kind === 20 ||
+      item.kind === 21 ||
+      item.kind === 22 ||
+      item.kind === 23
+    ) {
+      ctx.buffs.push(parseBuff(item, zoneId));
     } else if (item.kind === 12) {
       if (item.items) {
         collectFromItems(item.items, item.instanceId, ctx);
@@ -436,6 +523,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
   const shrinkPipes: ShrinkPipeItem[] = [];
   const toggles: ToggleItem[] = [];
   const controllers: ControllerItem[] = [];
+  const buffs: BuffItem[] = [];
 
   const topCtx: CollectCtx = {
     arrows,
@@ -449,6 +537,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     toggles,
     controllers,
     movingWalls,
+    buffs,
   };
 
   for (const item of data.itemModels) {
@@ -467,6 +556,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
           toggles,
           controllers,
           movingWalls,
+          buffs,
         });
       }
     } else if (item.kind === 1 || item.kind === 2) {
@@ -534,8 +624,22 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
       topCtx.toggles.push(parseToggle(item, null));
     } else if (item.kind === 16) {
       topCtx.controllers.push(parseController(item, null, topCtx));
+    } else if (
+      item.kind === 17 ||
+      item.kind === 18 ||
+      item.kind === 19 ||
+      item.kind === 20 ||
+      item.kind === 21 ||
+      item.kind === 22 ||
+      item.kind === 23
+    ) {
+      buffs.push(parseBuff(item, null));
     }
   }
+
+  const rush = parseRushFields(data);
+  const boardMask = buildBoardMaskFromLevel(data);
+  const invalidCellColors = buildInvalidCellColorMap(data);
 
   const seen = new Set<number>();
   for (const obj of [
@@ -552,6 +656,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     ...shrinkPipes,
     ...toggles,
     ...controllers,
+    ...buffs,
   ]) {
     if (seen.has(obj.instanceId)) {
       throw new Error(`Duplicate instanceId ${obj.instanceId}`);
@@ -566,6 +671,15 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     name: data.name || `Level ${id}`,
     durationInSec: data.durationInSec ?? 120,
     difficulty: data.difficulty ?? 1,
+    gameMode: rush.gameMode,
+    spawnIntervalSec: rush.spawnIntervalSec,
+    spawnPool: rush.spawnPool,
+    spawnWeightAdjust: rush.spawnWeightAdjust,
+    levelGoals: rush.levelGoals,
+    boardShape: boardMask.boardShape,
+    playableCells: boardMask.playableCells,
+    blackHoleCells: boardMask.blackHoleCells,
+    invalidCellColors,
     arrows,
     corners,
     zones,
@@ -579,6 +693,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     shrinkPipes,
     toggles,
     controllers,
+    buffs,
   };
 }
 

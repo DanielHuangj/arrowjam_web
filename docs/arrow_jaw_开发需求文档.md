@@ -3,7 +3,7 @@
 > **版本**：v0.1  
 > **日期**：2026-06-10  
 > **状态**：待开发  
-> **关联文档**：[Arrow玩法规则详解.md](Arrow玩法规则详解.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md) · [arrow_jaw_开发步骤拆解.md](arrow_jaw_开发步骤拆解.md)
+> **关联文档**：[Arrow玩法规则详解.md](Arrow玩法规则详解.md) · [Arrow 关卡结构说明.md](Arrow%20关卡结构说明.md) · [arrow_jaw_开发步骤拆解.md](arrow_jaw_开发步骤拆解.md) · [arrow_jaw_爽快版开发需求文档.md](arrow_jaw_爽快版开发需求文档.md)（V2 核心循环改版）
 
 ---
 

@@ -1,25 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { parseLevelData } from "../level/parser.ts";
 import {
   ANIM_BASE_INTERVAL_MS,
   ANIM_MAX_SPEED_MULTIPLIER,
   getAnimStepIntervalMs,
+  getAnimTimingConfig,
+  resetAnimTimingConfig,
   tickGameAnimation,
 } from "./anim-timing.ts";
 import { GameState } from "./game-state.ts";
 
 describe("getAnimStepIntervalMs", () => {
+  beforeEach(() => {
+    resetAnimTimingConfig();
+  });
+
   it("uses base interval at flight start", () => {
     expect(getAnimStepIntervalMs(0, "exit", false)).toBe(ANIM_BASE_INTERVAL_MS);
   });
 
   it("accelerates linearly and caps at max speed", () => {
-    const mid = getAnimStepIntervalMs(6, "exit", false);
-    const max = getAnimStepIntervalMs(12, "exit", false);
-    const over = getAnimStepIntervalMs(99, "exit", false);
+    const cfg = getAnimTimingConfig();
+    const mid = getAnimStepIntervalMs(Math.floor(cfg.accelSteps / 2), "exit", false);
+    const max = getAnimStepIntervalMs(cfg.accelSteps, "exit", false);
+    const over = getAnimStepIntervalMs(cfg.accelSteps + 50, "exit", false);
 
-    expect(mid).toBeLessThan(ANIM_BASE_INTERVAL_MS);
-    expect(max).toBe(ANIM_BASE_INTERVAL_MS / ANIM_MAX_SPEED_MULTIPLIER);
+    expect(mid).toBeLessThan(cfg.baseIntervalMs);
+    expect(max).toBeCloseTo(cfg.baseIntervalMs / cfg.maxSpeedMultiplier, 5);
     expect(over).toBe(max);
   });
 

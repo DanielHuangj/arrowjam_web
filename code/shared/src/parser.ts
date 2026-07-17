@@ -379,6 +379,7 @@ function parseRushFields(data: LevelData): {
   spawnPool?: SpawnPoolEntry[];
   spawnWeightAdjust?: import("./types.ts").SpawnWeightAdjustTier[];
   levelGoals?: LevelGoal[];
+  comboEnabled?: boolean;
 } {
   const explicitMode = data.gameMode;
   const hasRushConfig =
@@ -399,6 +400,7 @@ function parseRushFields(data: LevelData): {
     spawnPool: data.spawnPool,
     spawnWeightAdjust: data.spawnWeightAdjust,
     levelGoals: data.levelGoals,
+    comboEnabled: data.comboEnabled,
   };
 }
 
@@ -676,6 +678,7 @@ export function parseLevelData(id: number, data: LevelData, options?: ParseLevel
     spawnPool: rush.spawnPool,
     spawnWeightAdjust: rush.spawnWeightAdjust,
     levelGoals: rush.levelGoals,
+    comboEnabled: rush.comboEnabled,
     boardShape: boardMask.boardShape,
     playableCells: boardMask.playableCells,
     blackHoleCells: boardMask.blackHoleCells,

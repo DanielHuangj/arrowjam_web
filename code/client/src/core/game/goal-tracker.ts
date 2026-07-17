@@ -2,6 +2,8 @@ import type { ArrowItem, LevelGoal } from "../types.ts";
 
 export interface GoalProgress {
   label: string;
+  /** 多色目标：用色块展示，不用 label 中的颜色编号 */
+  colorId?: number;
   current: number;
   target: number;
   done: boolean;
@@ -72,7 +74,8 @@ export class GoalTracker {
         for (const t of goal.targets) {
           const current = this.colorCounts.get(t.colorId) ?? 0;
           out.push({
-            label: `颜色${t.colorId}箭`,
+            label: "",
+            colorId: t.colorId,
             current,
             target: t.count,
             done: current >= t.count,

@@ -351,6 +351,7 @@ describe("shared serializer roundtrip", () => {
       difficulty: 1,
       gameMode: "rush",
       spawnIntervalSec: 20,
+      comboEnabled: false,
       spawnPool: [
         { kind: 1, weight: 700, colorId: 7 },
         { kind: 17, weight: 150, bombRadius: 1 },
@@ -375,10 +376,12 @@ describe("shared serializer roundtrip", () => {
     };
     const { doc } = createDocumentFromJson("level-9001.json", data);
     expect(doc.meta.gameMode).toBe("rush");
+    expect(doc.meta.comboEnabled).toBe(false);
     expect(doc.meta.spawnPool?.length).toBe(3);
     const json = serializeLevelData(doc);
     const reparsed = parseLevelData(9001, JSON.parse(json));
     expect(reparsed.gameMode).toBe("rush");
+    expect(reparsed.comboEnabled).toBe(false);
     expect(reparsed.spawnIntervalSec).toBe(20);
     expect(reparsed.buffs.length).toBe(2);
     expect(reparsed.buffs[0]?.kind).toBe(17);

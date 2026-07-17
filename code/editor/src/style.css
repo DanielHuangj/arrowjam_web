@@ -183,6 +183,73 @@ body,
   min-width: 0;
 }
 
+.combo-overlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+}
+
+.combo-overlay.hidden {
+  display: none;
+}
+
+.combo-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transform-origin: center center;
+}
+
+.combo-text {
+  font-family: "Press Start 2P", "Courier New", monospace;
+  font-size: 28px;
+  letter-spacing: 0.1em;
+  color: #ff9f1a;
+  text-shadow:
+    3px 0 0 #c45f00,
+    -3px 0 0 #c45f00,
+    0 3px 0 #c45f00,
+    0 -3px 0 #c45f00,
+    4px 4px 0 rgba(120, 50, 0, 0.35);
+  white-space: nowrap;
+  min-width: 250px;
+  image-rendering: pixelated;
+  font-weight: 700;
+}
+
+.combo-bar {
+  width: 160px;
+  height: 8px;
+  background: #3a3d45;
+  border: 2px solid #6a6e78;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.combo-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(180deg, #ffc14d 0%, #ff9f1a 55%, #f08500 100%);
+  transform-origin: left center;
+  transform: scaleX(1);
+}
+
+.combo-badge.combo-pulse {
+  animation: combo-pulse-bounce var(--combo-pulse-ms, 400ms) ease-out;
+}
+
+@keyframes combo-pulse-bounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.55); }
+  70% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
 .play-stage {
   flex: 1;
   display: flex;
@@ -575,6 +642,43 @@ body,
 
 .play-hud .timer.urgent {
   color: #f7768e;
+  font-weight: 600;
+}
+
+.play-hud .rush-goals,
+.play-result-body .rush-goals {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 0;
+}
+
+.play-hud .rush-goal,
+.play-result-body .rush-goal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.play-hud .rush-goal.done,
+.play-result-body .rush-goal.done {
+  opacity: 0.55;
+}
+
+.play-hud .rush-goal-swatch,
+.play-result-body .rush-goal-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  vertical-align: middle;
+}
+
+.play-hud .rush-goal-progress,
+.play-result-body .rush-goal-progress {
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 

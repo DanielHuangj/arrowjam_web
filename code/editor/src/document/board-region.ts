@@ -4,7 +4,6 @@ import {
   buildInvalidCellColorMap,
   compressCellsToRows,
   expandMaskRows,
-  isOrthogonallyConnected,
   vecKey,
 } from "@arrowjaw/shared";
 import { getEditableItems } from "@arrowjaw/shared";
@@ -127,7 +126,6 @@ export function findItemsOnBlackHoleCells(
 
 export type PlayableCommitError =
   | "empty"
-  | "disconnected"
   | "itemsOutside"
   | "blackHolesOutside";
 
@@ -136,7 +134,6 @@ export function validatePlayableCommit(
   cells: Set<string>,
 ): PlayableCommitError | null {
   if (cells.size === 0) return "empty";
-  if (!isOrthogonallyConnected(cells)) return "disconnected";
   if (findItemsOutsidePlayable(doc, cells).length > 0) return "itemsOutside";
   for (const key of resolveBlackHoleCells(doc)) {
     if (!cells.has(key)) return "blackHolesOutside";
@@ -193,8 +190,6 @@ export function playableCommitErrorMessage(err: PlayableCommitError): string {
   switch (err) {
     case "empty":
       return "有效格不能为空";
-    case "disconnected":
-      return "有效格须四邻连通成片";
     case "itemsOutside":
       return "有物件位于无效格，请先移出再完成编辑";
     case "blackHolesOutside":

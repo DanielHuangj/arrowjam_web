@@ -257,8 +257,9 @@ describe("SpawnManager countdown deferral", () => {
   it("marks spawn due at zero while blocked by animation", () => {
     const mgr = new SpawnManager(20, true);
     mgr.spawnCountdownSec = 0;
-    expect(mgr.tickCountdown(0.1, true)).toBe(false);
+    expect(mgr.tickCountdown(0.1, true)).toBe(true);
     expect(mgr.spawnDuePending).toBe(true);
+    expect(mgr.spawnCountdownSec).toBe(0);
   });
 
   it("fires pending spawn once unblocked", () => {
@@ -269,12 +270,13 @@ describe("SpawnManager countdown deferral", () => {
     expect(mgr.spawnDuePending).toBe(true);
   });
 
-  it("keeps ticking countdown below zero once due", () => {
+  it("clamps countdown at zero once due", () => {
     const mgr = new SpawnManager(20, true);
     mgr.spawnCountdownSec = 0.2;
     expect(mgr.tickCountdown(0.5, false)).toBe(true);
-    expect(mgr.spawnCountdownSec).toBeCloseTo(-0.3, 5);
+    expect(mgr.spawnCountdownSec).toBe(0);
     expect(mgr.spawnDuePending).toBe(true);
+    expect(mgr.isSpawnDue()).toBe(true);
   });
 });
 

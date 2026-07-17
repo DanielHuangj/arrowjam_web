@@ -1,5 +1,22 @@
 import type { GameLevel } from "../core/types.ts";
-import { CELL, GAP, STEP, THEME, ZONE_FILL, ZONE_STROKE, colorForId } from "./colors.ts";
+import { splitBlackHoleComponents } from "./black-hole-region-drawer.ts";
+import {
+  CELL,
+  EDITOR_BLACK_HOLE_FILL,
+  EDITOR_BLACK_HOLE_STROKE,
+  GAP,
+  STEP,
+  THEME,
+  ZONE_FILL,
+  ZONE_STROKE,
+  colorForId,
+  invalidCellColorHex,
+} from "./colors.ts";
+import {
+  REGION_OUTER_CORNER_RADIUS,
+  fillRoundedRegionCells,
+  strokeRoundedRegionOutline,
+} from "./region-outline.ts";
 
 export const THUMB_CSS_WIDTH = 156;
 
@@ -25,6 +42,47 @@ function strokePolyline(
     ctx.lineTo(points[i]![0], points[i]![1]);
   }
   ctx.stroke();
+}
+
+function drawColoredInvalidCells(
+  ctx: CanvasRenderingContext2D,
+  colors: ReadonlyMap<string, number>,
+): void {
+  for (const [key, colorId] of colors) {
+    const [xs, ys] = key.split(",");
+    const x = Number(xs);
+    const y = Number(ys);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    ctx.fillStyle = invalidCellColorHex(colorId);
+    ctx.fillRect(x * STEP, y * STEP, CELL, CELL);
+  }
+}
+
+function drawBlackHoleRegionsThumb(
+  ctx: CanvasRenderingContext2D,
+  cells: Set<string>,
+  scale: number,
+): void {
+  if (cells.size === 0) return;
+  for (const region of splitBlackHoleComponents(cells)) {
+    fillRoundedRegionCells(
+      ctx,
+      region,
+      EDITOR_BLACK_HOLE_FILL,
+      CELL,
+      STEP,
+      REGION_OUTER_CORNER_RADIUS,
+    );
+    strokeRoundedRegionOutline(
+      ctx,
+      region,
+      EDITOR_BLACK_HOLE_STROKE,
+      Math.max(0.8, 1.2 / scale),
+      CELL,
+      STEP,
+      REGION_OUTER_CORNER_RADIUS,
+    );
+  }
 }
 
 /** 将关卡绘制到 canvas，用于选关缩略图 */
@@ -60,6 +118,13 @@ export function drawLevelThumbnail(
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
+
+  if (level.invalidCellColors?.size) {
+    drawColoredInvalidCells(ctx, level.invalidCellColors);
+  }
+  if (level.blackHoleCells?.size) {
+    drawBlackHoleRegionsThumb(ctx, level.blackHoleCells, scale);
+  }
 
   for (const zone of level.zones) {
     const { minX, minY, maxX, maxY } = zone.bounds;

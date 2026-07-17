@@ -31,6 +31,13 @@ describe("invalid cell colors", () => {
     expect(next.has("1,0")).toBe(false);
   });
 
+  it("accepts light gray color id", () => {
+    const draft = applyInvalidCellColor(new Map(), ["2,2"], 10);
+    expect(draft.get("2,2")).toBe(10);
+    const out = serializeInvalidCellColors(draft, 5, 5);
+    expect(out?.[0]?.color).toBe(10);
+  });
+
   it("prune keeps only invalid keys", () => {
     const draft = new Map([
       ["1,0", 3 as const],

@@ -561,6 +561,84 @@ export function runSpawnWave(
   return result;
 }
 
+/** 从生成池增益条目中均分抽取，并投放到随机空格（combo 奖励） */
+export function trySpawnComboRewardBuff(
+  pool: readonly SpawnPoolEntry[] | undefined,
+  ctx: SpawnBlockContext,
+  nextInstanceId: () => number,
+  rng: Rng = Math.random,
+): BuffItem | null {
+  const buffEntries = (pool ?? []).filter((e) => e.kind >= 17);
+  if (buffEntries.length === 0) return null;
+  const cell = pickRandomCell(ctx, rng);
+  if (!cell) return null;
+  const entry = buffEntries[Math.floor(rng() * buffEntries.length)]!;
+  const id = nextInstanceId();
+  if (entry.kind === 17) {
+    return {
+      kind: 17,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      bombRadius: entry.bombRadius === 2 ? 2 : 1,
+      zoneId: null,
+    };
+  }
+  if (entry.kind === 18) {
+    return {
+      kind: 18,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      crossArm: entry.crossArm === 5 ? 5 : 2,
+      zoneId: null,
+    };
+  }
+  if (entry.kind === 19) {
+    return {
+      kind: 19,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      zoneId: null,
+    };
+  }
+  if (entry.kind === 21) {
+    return {
+      kind: 21,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      zoneId: null,
+    };
+  }
+  if (entry.kind === 22) {
+    return {
+      kind: 22,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      zoneId: null,
+    };
+  }
+  if (entry.kind === 23) {
+    return {
+      kind: 23,
+      instanceId: id,
+      layer: 2,
+      occupiedPositions: [cell],
+      zoneId: null,
+    };
+  }
+  return {
+    kind: 20,
+    instanceId: id,
+    layer: 2,
+    occupiedPositions: [cell],
+    zoneId: null,
+  };
+}
+
 export class SpawnManager {
   spawnCountdownSec: number;
   cycleElimCells = 0;
@@ -591,14 +669,24 @@ export class SpawnManager {
     return this.enabled && !this.spawnPhase && !hasBlockingAnimation;
   }
 
+  /** 倒计时已到期、等待执行刷盘 */
+  isSpawnDue(): boolean {
+    return this.enabled && (this.spawnDuePending || this.spawnCountdownSec <= 0);
+  }
+
   tickCountdown(deltaSec: number, hasBlockingAnimation: boolean): boolean {
     if (!this.enabled || this.spawnPhase) return false;
     if (hasBlockingAnimation) {
-      if (this.spawnCountdownSec <= 0) this.spawnDuePending = true;
-      return false;
+      if (this.spawnCountdownSec <= 0) {
+        this.spawnCountdownSec = 0;
+        this.spawnDuePending = true;
+      }
+      // 已到期时即便动画阻塞也报告 due，由调用方在合适时机刷盘
+      return this.spawnDuePending;
     }
     this.spawnCountdownSec -= deltaSec;
-    if (!this.spawnDuePending && this.spawnCountdownSec <= 0) {
+    if (this.spawnCountdownSec <= 0) {
+      this.spawnCountdownSec = 0;
       this.spawnDuePending = true;
     }
     return this.spawnDuePending;

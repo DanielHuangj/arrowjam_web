@@ -112,8 +112,23 @@ import { GoalTracker } from "./goal-tracker.ts";
 import {
   runSpawnWave,
   SpawnManager,
+  trySpawnComboRewardBuff,
   type SpawnBlockContext,
 } from "../mechanics/spawn.ts";
+import {
+  clearComboDeferFlag,
+  comboProgress,
+  comboPulseDurationSec,
+  createComboState,
+  interruptCombo,
+  isComboActive,
+  registerComboHit,
+  tickCombo,
+  type ComboHudState,
+  type ComboRewardFlight,
+  type ComboState,
+} from "../mechanics/combo.ts";
+import { CELL, STEP } from "../../render/colors.ts";
 import {
   getAnimStepIntervalMs as computeAnimStepIntervalMs,
 } from "./anim-timing.ts";
@@ -227,6 +242,9 @@ export class GameState {
   private chainTriggerScheduled = new Set<number>();
   private launchClickEffects: LaunchClickFxState[] = [];
   private dotPulseEffects: DotPulseFxState[] = [];
+  private comboState: ComboState = createComboState();
+  /** combo 奖励飞入：落地前 buff 尚未加入棋盘 */
+  private comboRewardFlights: ComboRewardFlight[] = [];
 
   /** 兼容单动画测试与快照：返回首个活跃动画 */
   get animation(): LaunchAnimation | null {
@@ -280,6 +298,11 @@ export class GameState {
 
   private isRushMode(): boolean {
     return this.level.gameMode === "rush";
+  }
+
+  /** 爽快版且关卡未显式关闭 combo */
+  private isComboEnabled(): boolean {
+    return this.isRushMode() && this.level.comboEnabled !== false;
   }
 
   private checkWinCondition(): boolean {
@@ -862,18 +885,17 @@ export class GameState {
     if (this.spawnManager.tickSpawnFade(dt * 1000)) {
       this.rebuildCellMap();
     }
+    // 先推进 combo，再判刷盘：连消刚结束的同一帧就能触发到期刷新
+    this.tickComboSystem(dt);
+    this.tickComboRewardFlights(dt);
+
+    const comboActive = isComboActive(this.comboState);
+    // 连消期间：生成倒计时不受飞行动画阻塞，继续倒数；归 0 后停在 0
     const countdownBlocked =
-      hasBlockingAnim || this.spawnManager.spawnPhase;
-    const countdownReady = this.spawnManager.tickCountdown(dt, countdownBlocked);
-    const propBlocksSpawn = this.hasActivePropEffect();
-    const immediateOnEmpty = this.shouldTriggerImmediateSpawn(countdownBlocked);
-    if (
-      !propBlocksSpawn &&
-      !countdownBlocked &&
-      (countdownReady || immediateOnEmpty)
-    ) {
-      this.executeSpawnWave();
-    }
+      this.spawnManager.spawnPhase || (!comboActive && hasBlockingAnim);
+    this.spawnManager.tickCountdown(dt, countdownBlocked);
+    this.tryExecuteSpawnWaveIfReady(hasBlockingAnim);
+
     this.bombManager.updateActivation((bomb) => this.isBombCoveredForActivation(bomb));
     const explodedCells = this.bombManager.tick(dt);
     this.toggleManager.tickFlash(dt);
@@ -887,6 +909,21 @@ export class GameState {
     if (this.phase === "playing") {
       this.checkAndAutoRefreshBoard();
     }
+  }
+
+  /** 倒计时到期且（无连消 / 连消已结束）时刷盘；有动画或道具效果则下一帧重试 */
+  private tryExecuteSpawnWaveIfReady(hasBlockingAnim: boolean): void {
+    if (!this.spawnManager.isEnabled()) return;
+    if (isComboActive(this.comboState)) return;
+    const immediateOnEmpty = this.shouldTriggerImmediateSpawn(
+      hasBlockingAnim || this.spawnManager.spawnPhase,
+    );
+    if (!this.spawnManager.isSpawnDue() && !immediateOnEmpty) return;
+    if (this.spawnManager.spawnPhase) return;
+    if (hasBlockingAnim) return;
+    if (this.hasActivePropEffect()) return;
+    this.executeSpawnWave();
+    this.comboState = clearComboDeferFlag(this.comboState);
   }
 
   private startBombExplosion(cells: Vec2[]): void {
@@ -951,7 +988,10 @@ export class GameState {
           this.getWallBlockerCells(),
           this.level.blackHoleCells,
         );
-    if (!canExit) this.mistakeCount++;
+    if (!canExit) {
+      this.mistakeCount++;
+      this.interruptComboIfActive();
+    }
 
     this.animations.push({
       instanceId,
@@ -1043,6 +1083,7 @@ export class GameState {
     this.onArrowEliminationBatch(removedArrows, anim.originalPositionsById, {
       skipFlipArrowToggle: anim.flipButtonsCrossedIds.length > 0,
     });
+    this.applyComboHitFromElimination();
 
     this.commitPendingFlipButtons(anim);
 
@@ -1177,6 +1218,7 @@ export class GameState {
     if (idx === -1) return false;
     const buff = this.buffs[idx]!;
     if (!this.isMechanicDrawable(buff.zoneId)) return false;
+    if (buff.kind !== 21) this.interruptComboIfActive();
 
     const chainRegionKeys = isChainTriggerBuffKind(buff.kind)
       ? new Set(regionForBuff(buff).map(vecKey))
@@ -1873,6 +1915,7 @@ export class GameState {
       anim: LaunchAnimation | null;
     },
   ): void {
+    this.interruptComboIfActive();
     const affected = this.collectBalloonAffectedArrows(buff, colorId);
     if (
       opts.requireArrowReturn &&
@@ -1938,6 +1981,7 @@ export class GameState {
     if (buff.kind !== 22) return false;
     const idx = this.buffs.findIndex((b) => b.instanceId === buff.instanceId);
     if (idx === -1) return false;
+    this.interruptComboIfActive();
     this.buffs.splice(idx, 1);
     const pickIds = pickAutoRefreshArrowIds(
       this.arrows,
@@ -1998,6 +2042,7 @@ export class GameState {
     if (!this.isMechanicDrawable(buff.zoneId)) return false;
     const machineCell = buff.occupiedPositions[0];
     if (!machineCell) return false;
+    this.interruptComboIfActive();
     this.buffs.splice(idx, 1);
     const cell: Vec2 = [machineCell[0], machineCell[1]];
     this.candyMachineEffects.push({
@@ -2351,6 +2396,7 @@ export class GameState {
       [removed],
       orig ? { [id]: orig } : undefined,
     );
+    this.applyComboHitFromElimination();
     this.recordClearedTraceCells(orig ?? removed.occupiedPositions);
 
     this.arrows = this.arrows.filter((a) => a.instanceId !== id);
@@ -2426,6 +2472,7 @@ export class GameState {
       [removed],
       orig ? { [id]: orig } : undefined,
     );
+    this.applyComboHitFromElimination();
     this.recordClearedTraceCells(orig ?? removed.occupiedPositions);
 
     this.arrows = this.arrows.filter((a) => a.instanceId !== id);
@@ -3571,6 +3618,86 @@ export class GameState {
 
   getGoalProgress() {
     return this.goalTracker.getProgress();
+  }
+
+  getComboHudState(): ComboHudState | null {
+    if (!this.isComboEnabled() || this.comboState.count <= 0) return null;
+    return {
+      count: this.comboState.count,
+      progress: comboProgress(this.comboState),
+      pulseToken: this.comboState.pulseToken,
+      pulseDurationSec: comboPulseDurationSec(this.comboState.lastHitIntervalSec),
+    };
+  }
+
+  getComboRewardFlightsForRender(): ComboRewardFlight[] {
+    return this.comboRewardFlights.map((f) => ({ ...f }));
+  }
+
+  private tickComboSystem(dt: number): void {
+    if (!this.isComboEnabled()) return;
+    const { state, timedOut } = tickCombo(this.comboState, dt);
+    this.comboState = state;
+    // 刷盘统一由 tryExecuteSpawnWaveIfReady 在本帧/后续帧重试，避免动画中途清标记后漏刷
+    if (timedOut) {
+      this.comboState = clearComboDeferFlag(this.comboState);
+    }
+  }
+
+  private applyComboHitFromElimination(): void {
+    if (!this.isComboEnabled()) return;
+    const result = registerComboHit(this.comboState);
+    this.comboState = result.state;
+    if (result.shouldSpawnReward) this.beginComboRewardFlight();
+  }
+
+  private interruptComboIfActive(): void {
+    if (!this.isComboEnabled()) return;
+    if (this.comboState.count === 0 && !this.comboState.deferSpawn) return;
+    this.comboState = interruptCombo(this.comboState);
+    this.comboState = clearComboDeferFlag(this.comboState);
+    this.tryExecuteSpawnWaveIfReady(
+      this.animations.length > 0 || this.hasVanishAnimation(),
+    );
+  }
+
+  private beginComboRewardFlight(): void {
+    const buff = trySpawnComboRewardBuff(
+      this.level.spawnPool,
+      this.buildSpawnBlockContext(),
+      () => this.nextInstanceId(),
+    );
+    if (!buff) return;
+    const cell = buff.occupiedPositions[0];
+    if (!cell) return;
+    const boardW = this.level.width * STEP;
+    this.comboRewardFlights.push({
+      buff,
+      fromX: boardW * 0.5,
+      fromY: -STEP * 0.35,
+      toX: cell[0] * STEP + CELL * 0.5,
+      toY: cell[1] * STEP + CELL * 0.5,
+      elapsed: 0,
+      duration: 0.55,
+    });
+  }
+
+  private tickComboRewardFlights(dt: number): void {
+    if (this.comboRewardFlights.length === 0) return;
+    const done: ComboRewardFlight[] = [];
+    for (const flight of this.comboRewardFlights) {
+      flight.elapsed += dt;
+      if (flight.elapsed >= flight.duration) done.push(flight);
+    }
+    if (done.length === 0) return;
+    this.comboRewardFlights = this.comboRewardFlights.filter(
+      (f) => f.elapsed < f.duration,
+    );
+    for (const flight of done) {
+      this.buffs.push(flight.buff);
+      if (flight.buff.kind === 21) this.registerBlackHole(flight.buff.instanceId);
+    }
+    this.rebuildCellMap();
   }
 
   getSpawnCountdownSec(): number {

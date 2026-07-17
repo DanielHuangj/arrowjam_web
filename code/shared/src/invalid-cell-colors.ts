@@ -5,8 +5,11 @@ import { compressCellsToRows, expandMaskRows } from "./board-mask.ts";
 export const INVALID_CELL_COLOR_WHITE = 0 as const;
 /** 无效格黑色 */
 export const INVALID_CELL_COLOR_BLACK = 9 as const;
+/** 无效格浅灰色 */
+export const INVALID_CELL_COLOR_GRAY = 10 as const;
 
 export const INVALID_CELL_PAINT_COLOR_IDS = [
+  INVALID_CELL_COLOR_GRAY,
   1, 2, 3, 4, 6, 7, 8, INVALID_CELL_COLOR_BLACK,
 ] as const;
 

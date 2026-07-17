@@ -228,8 +228,8 @@ export interface MaskRows {
 
 export type BoardShape = "full" | "custom";
 
-/** 无效格着色：0=白(默认不存)，1-8=箭色，9=黑 */
-export type InvalidCellColorId = 0 | 1 | 2 | 3 | 4 | 6 | 7 | 8 | 9;
+/** 无效格着色：0=白(默认不存)，1-8=箭色，9=黑，10=浅灰 */
+export type InvalidCellColorId = 0 | 1 | 2 | 3 | 4 | 6 | 7 | 8 | 9 | 10;
 
 export interface ColoredMaskEntry {
   color: InvalidCellColorId;
@@ -253,6 +253,8 @@ export interface LevelData {
   spawnPool?: SpawnPoolEntry[];
   spawnWeightAdjust?: SpawnWeightAdjustTier[];
   levelGoals?: LevelGoal[];
+  /** 爽快版连消；缺省视为开启 */
+  comboEnabled?: boolean;
   itemModels: RawItem[];
 }
 
@@ -297,6 +299,8 @@ export interface GameLevel {
   spawnPool?: SpawnPoolEntry[];
   spawnWeightAdjust?: SpawnWeightAdjustTier[];
   levelGoals?: LevelGoal[];
+  /** 爽快版连消；缺省视为开启 */
+  comboEnabled?: boolean;
   boardShape: BoardShape;
   playableCells: Set<string>;
   blackHoleCells: Set<string>;
@@ -339,6 +343,8 @@ export interface EditorMeta {
   spawnPool?: SpawnPoolEntry[];
   spawnWeightAdjust?: SpawnWeightAdjustTier[];
   levelGoals?: LevelGoal[];
+  /** 爽快版连消；缺省视为开启 */
+  comboEnabled?: boolean;
   boardShape?: BoardShape;
   playableMask?: MaskRows;
   blackHoleRegions?: MaskRows[];

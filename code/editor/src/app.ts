@@ -1,6 +1,7 @@
 import {
   applyInvalidCellColor,
   INVALID_CELL_COLOR_BLACK,
+  INVALID_CELL_COLOR_GRAY,
   INVALID_CELL_COLOR_WHITE,
   INVALID_CELL_PAINT_COLOR_IDS,
 } from "@arrowjaw/shared";
@@ -110,6 +111,7 @@ import {
   showPlayResultModal,
   updatePlayHud,
 } from "./ui/play-mode-ui.ts";
+import { updateComboOverlay } from "@arrowjaw/client/ui/combo-overlay.ts";
 import {
   mountAnimTimingTuner,
   type AnimTimingTunerHandle,
@@ -408,9 +410,11 @@ export class EditorApp {
       swatch.title =
         colorId === INVALID_CELL_COLOR_WHITE
           ? "白色（默认）"
-          : colorId === INVALID_CELL_COLOR_BLACK
-            ? "黑色"
-            : `箭色 ${colorId}`;
+          : colorId === INVALID_CELL_COLOR_GRAY
+            ? "浅灰色"
+            : colorId === INVALID_CELL_COLOR_BLACK
+              ? "黑色"
+              : `箭色 ${colorId}`;
       swatch.addEventListener("click", () => this.pickInvalidCellColor(colorId));
       colorPalette.appendChild(swatch);
     }
@@ -1938,6 +1942,7 @@ export class EditorApp {
     this.animTimingTuner?.dispose();
     this.animTimingTuner = null;
     hidePlayResultModal(this.els.playResultOverlay);
+    updateComboOverlay(this.els.wrap, null);
     this.playInput?.dispose();
     this.playInput = null;
     this.gameState = null;
@@ -2072,6 +2077,7 @@ export class EditorApp {
           balloonEffects: gs.getBalloonEffectsForRender(),
           candyMachineEffects: gs.getCandyMachineEffectsForRender(),
           autoRefreshEffect: gs.getAutoRefreshEffectForRender(),
+          comboRewardFlights: gs.getComboRewardFlightsForRender(),
           balloonArrowFxById: gs.getBalloonArrowFxForRender(),
           blackHoleFxById: gs.getBlackHoleFxForRender(),
           launchClickEffects: gs.getLaunchClickEffectsForRender(),
@@ -2083,6 +2089,10 @@ export class EditorApp {
         },
       );
       updatePlayHud(this.els.playHud, gs);
+      updateComboOverlay(
+        this.els.wrap,
+        gs.isRushLevel() ? gs.getComboHudState() : null,
+      );
     };
 
     const tick = (now: number) => {

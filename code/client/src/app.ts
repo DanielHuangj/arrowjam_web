@@ -14,6 +14,7 @@ import { loadLevel, loadManifest } from "./core/level/loader.ts";
 import type { LevelManifestEntry } from "./core/types.ts";
 import { tickGameAnimation } from "./core/game/anim-timing.ts";
 import type { SpawnEmergence } from "./core/mechanics/spawn.ts";
+import { updateComboOverlay } from "./ui/combo-overlay.ts";
 
 export class App {
   private root: HTMLElement;
@@ -50,6 +51,7 @@ export class App {
   private showLevelSelect(): void {
     this.stopLoop();
     this.disposeGame();
+    if (this.boardWrapEl) updateComboOverlay(this.boardWrapEl, null);
     renderLevelSelect(
       this.root,
       { levels: this.levels, devTests: this.devTests, rushTests: this.rushTests },
@@ -189,6 +191,10 @@ export class App {
         ? this.state.getSpawnCountdownSec()
         : null,
     });
+    updateComboOverlay(
+      this.boardWrapEl,
+      this.state.isRushLevel() ? this.state.getComboHudState() : null,
+    );
 
     const autoBtn = this.hudEl.querySelector(".btn-auto-clear") as HTMLButtonElement | null;
     if (autoBtn) {
@@ -287,6 +293,7 @@ export class App {
         balloonEffects: this.state.getBalloonEffectsForRender(),
         candyMachineEffects: this.state.getCandyMachineEffectsForRender(),
         autoRefreshEffect: this.state.getAutoRefreshEffectForRender(),
+        comboRewardFlights: this.state.getComboRewardFlightsForRender(),
         balloonArrowFxById: this.state.getBalloonArrowFxForRender(),
         blackHoleFxById: this.state.getBlackHoleFxForRender(),
         launchClickEffects: this.state.getLaunchClickEffectsForRender(),

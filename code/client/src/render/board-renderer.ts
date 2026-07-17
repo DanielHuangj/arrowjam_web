@@ -46,6 +46,8 @@ import {
   type LaunchClickFxState,
 } from "./flight-fx.ts";
 import { drawBlackHoleRegions, splitBlackHoleComponents } from "./black-hole-region-drawer.ts";
+import { drawComboRewardFlights } from "./combo-reward-drawer.ts";
+import type { ComboRewardFlight } from "../core/mechanics/combo.ts";
 import {
   fillRoundedRegionCells,
   strokeRoundedRegionOutline,
@@ -99,6 +101,7 @@ export interface BoardDrawOptions {
   /** @deprecated 单气球，优先使用 balloonEffects */
   balloonEffect?: BalloonEffectDrawState | null;
   autoRefreshEffect?: AutoRefreshEffectDrawState | null;
+  comboRewardFlights?: ComboRewardFlight[];
   /** 点击发射时的彩色烟尘 */
   launchClickEffects?: readonly LaunchClickFxState[];
   /** 箭头经过后格点圆点呼吸 */
@@ -446,6 +449,10 @@ export class BoardRenderer {
 
     if (options.autoRefreshEffect) {
       drawAutoRefreshEffect(this.ctx, options.autoRefreshEffect, STEP);
+    }
+
+    if (options.comboRewardFlights?.length) {
+      drawComboRewardFlights(this.ctx, options.comboRewardFlights);
     }
 
     if (isGame && options.launchClickEffects?.length) {

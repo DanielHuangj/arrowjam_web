@@ -110,11 +110,22 @@ function refreshManifestKinds(manifest) {
   }
 }
 
+/** 从文件名提取数字（默认仅含一个）；无数字时排到末尾 */
+function numberFromFilename(name) {
+  const m = name.match(/\d+/);
+  return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+}
+
 function listInboxJson(dir) {
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    .sort((a, b) => {
+      const na = numberFromFilename(a);
+      const nb = numberFromFilename(b);
+      if (na !== nb) return na - nb;
+      return a.localeCompare(b);
+    });
 }
 
 function nextMainId(manifest) {

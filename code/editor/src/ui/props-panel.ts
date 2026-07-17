@@ -296,6 +296,7 @@ function renderLevelMeta(
         spawnPool: m.spawnPool ?? defaultRushSpawnPool(),
         spawnWeightAdjust: m.spawnWeightAdjust ?? defaultSpawnWeightAdjustTiers(),
         levelGoals: m.levelGoals ?? defaultRushGoals(),
+        comboEnabled: m.comboEnabled ?? true,
       });
     } else {
       onMeta({ gameMode: "classic" });
@@ -365,6 +366,9 @@ function renderRushMetaSection(
 
   el.innerHTML = `
     <h3>爽快版配置</h3>
+    <label><span>开启 Combo</span>
+      <input type="checkbox" id="meta-combo-enabled" ${meta.comboEnabled !== false ? "checked" : ""} />
+    </label>
     <label><span>生成周期（秒）</span>
       <input type="number" id="meta-spawn-interval" min="1" value="${meta.spawnIntervalSec ?? 25}" />
     </label>
@@ -406,6 +410,10 @@ function renderRushMetaSection(
       <button type="button" id="goal-add-color">+多色目标</button>
     </div>
   `;
+
+  el.querySelector("#meta-combo-enabled")?.addEventListener("change", (e) => {
+    onMeta({ comboEnabled: (e.target as HTMLInputElement).checked });
+  });
 
   el.querySelector("#meta-spawn-interval")?.addEventListener("change", (e) => {
     onMeta({ spawnIntervalSec: parseInt((e.target as HTMLInputElement).value, 10) });

@@ -1,4 +1,6 @@
 import type { LevelManifestEntry } from "../core/types.ts";
+import type { GoalProgress } from "../core/game/goal-tracker.ts";
+import { renderRushGoalsHost } from "./rush-goals-display.ts";
 import { attachLevelThumbnails, prefetchLevelThumbnails } from "./level-thumbnails.ts";
 
 export function formatLevelKindLabel(kinds: number[] | undefined): string {
@@ -103,7 +105,7 @@ export function updateHud(
     arrowCount: number;
     difficulty: number;
     bombRemaining?: number | null;
-    rushGoals?: { label: string; current: number; target: number; done: boolean }[];
+    rushGoals?: GoalProgress[];
     spawnCountdownSec?: number | null;
   },
 ): void {
@@ -121,13 +123,11 @@ export function updateHud(
       : "";
   timerEl.textContent = `⏱ ${sec}s${bombPart}${spawnPart}`;
   timerEl.classList.toggle("urgent", sec <= 10 || (data.bombRemaining ?? 99) <= 5);
-  const goalText =
-    data.rushGoals && data.rushGoals.length > 0
-      ? data.rushGoals
-          .map((g) => `${g.label} ${g.current}/${g.target}`)
-          .join(" · ")
-      : `🎯 剩余 ${data.arrowCount} 条箭`;
-  hud.querySelector(".arrow-count")!.textContent = goalText;
+  renderRushGoalsHost(
+    hud.querySelector(".arrow-count")! as HTMLElement,
+    data.rushGoals,
+    data.arrowCount,
+  );
 }
 
 export function showModal(

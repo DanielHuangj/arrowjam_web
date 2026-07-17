@@ -65,10 +65,11 @@ export function colorForId(colorId: number): string {
   return COLORS[colorId] ?? FALLBACK_COLOR;
 }
 
-/** 无效格着色：0=白，9=黑，其余同箭色 */
+/** 无效格着色：0=白，9=黑，10=浅灰，其余同箭色 */
 export function invalidCellColorHex(colorId: number): string {
   if (colorId === 0) return "#FFFFFF";
   if (colorId === 9) return "#000000";
+  if (colorId === 10) return "#B8B8B8";
   return colorForId(colorId);
 }
 

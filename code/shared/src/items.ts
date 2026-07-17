@@ -144,6 +144,7 @@ export function levelDataFromDocument(doc: {
     spawnPool?: import("./types.ts").SpawnPoolEntry[];
     spawnWeightAdjust?: import("./types.ts").SpawnWeightAdjustTier[];
     levelGoals?: import("./types.ts").LevelGoal[];
+    comboEnabled?: boolean;
     boardShape?: import("./types.ts").BoardShape;
     playableMask?: import("./types.ts").MaskRows;
     blackHoleRegions?: import("./types.ts").MaskRows[];
@@ -167,6 +168,7 @@ export function levelDataFromDocument(doc: {
     data.spawnWeightAdjust = doc.meta.spawnWeightAdjust;
   }
   if (doc.meta.levelGoals != null) data.levelGoals = doc.meta.levelGoals;
+  if (doc.meta.comboEnabled != null) data.comboEnabled = doc.meta.comboEnabled;
   if (doc.meta.boardShape === "custom") {
     data.boardShape = "custom";
     if (doc.meta.playableMask) data.playableMask = doc.meta.playableMask;

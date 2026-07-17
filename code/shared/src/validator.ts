@@ -688,8 +688,6 @@ function validateBoardMaskFields(
       push(issues, "V-BOARD-01", "error", "异形棋盘缺少 playableMask");
     } else if (playableCells.size === 0) {
       push(issues, "V-BOARD-01", "error", "有效格不能为空");
-    } else if (!isOrthogonallyConnected(playableCells)) {
-      push(issues, "V-BOARD-01", "error", "有效格须四邻连通成片");
     }
   }
 

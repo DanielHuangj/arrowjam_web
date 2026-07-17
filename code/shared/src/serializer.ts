@@ -72,6 +72,7 @@ export function serializeLevelData(doc: Pick<EditorDocument, "meta" | "itemModel
   if (data.spawnPool != null) obj.spawnPool = data.spawnPool;
   if (data.spawnWeightAdjust != null) obj.spawnWeightAdjust = data.spawnWeightAdjust;
   if (data.levelGoals != null) obj.levelGoals = data.levelGoals;
+  if (data.comboEnabled != null) obj.comboEnabled = data.comboEnabled;
   if (data.boardShape === "custom") {
     obj.boardShape = "custom";
     if (data.playableMask?.rows?.length) obj.playableMask = data.playableMask;

@@ -1,5 +1,6 @@
 import type { GameState } from "@arrowjaw/client/core/game/game-state.ts";
 import { updateHud } from "@arrowjaw/client/ui/screens.ts";
+import { rushGoalsSummaryHtml } from "@arrowjaw/client/ui/rush-goals-display.ts";
 
 export function mountPlayHud(root: HTMLElement): void {
   root.innerHTML = `
@@ -37,10 +38,7 @@ export function showPlayResultModal(
     title = "胜利！";
     const sec = Math.ceil(gs.remainingSeconds);
     if (gs.isRushLevel()) {
-      const goals = gs
-        .getGoalProgress()
-        .map((g) => `${g.label} ${g.current}/${g.target}`)
-        .join(" · ");
+      const goals = rushGoalsSummaryHtml(gs.getGoalProgress());
       body = `目标达成 · 剩余时间 ${sec}s${goals ? ` · ${goals}` : ""}`;
     } else {
       body = `剩余时间 ${sec}s · 误操作 ${gs.mistakeCount} 次`;
@@ -49,11 +47,9 @@ export function showPlayResultModal(
     const reason = gs.getLostReason();
     title = reason === "bomb" ? "炸弹爆炸！" : "时间到";
     if (gs.isRushLevel() && reason !== "bomb") {
-      const pending = gs
-        .getGoalProgress()
-        .filter((g) => !g.done)
-        .map((g) => `${g.label} ${g.current}/${g.target}`)
-        .join(" · ");
+      const pending = rushGoalsSummaryHtml(
+        gs.getGoalProgress().filter((g) => !g.done),
+      );
       body = pending ? `未达成目标：${pending}` : `还有 ${gs.arrows.length} 条箭未清除`;
     } else {
       body =
@@ -67,7 +63,7 @@ export function showPlayResultModal(
   overlay.innerHTML = `
     <div class="play-result-modal">
       <h2>${title}</h2>
-      <p>${body}</p>
+      <p class="play-result-body">${body}</p>
       <div class="play-result-actions"></div>
     </div>
   `;

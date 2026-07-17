@@ -32,6 +32,10 @@ describe("GoalTracker", () => {
     expect(gt.isMet()).toBe(false);
     gt.onEliminationBatch([arrow(2, 7), arrow(3, 7)]);
     expect(gt.isMet()).toBe(true);
+    const progress = gt.getProgress()[0]!;
+    expect(progress.colorId).toBe(7);
+    expect(progress.current).toBe(2);
+    expect(progress.target).toBe(2);
   });
 
   it("disabled when not rush", () => {

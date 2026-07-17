@@ -15,6 +15,7 @@ export function createEmptyDocument(meta: Partial<EditorMeta> = {}): EditorDocum
       spawnIntervalSec: meta.spawnIntervalSec,
       spawnPool: meta.spawnPool,
       levelGoals: meta.levelGoals,
+      comboEnabled: meta.comboEnabled,
       boardShape: meta.boardShape,
       playableMask: meta.playableMask,
       blackHoleRegions: meta.blackHoleRegions,
@@ -68,6 +69,7 @@ export function createDocumentFromJson(
             }
           : { ...g },
       ),
+      comboEnabled: data.comboEnabled,
       boardShape: data.boardShape,
       playableMask: data.playableMask
         ? { rows: data.playableMask.rows.map(([y, a, b]) => [y, a, b] as [number, number, number]) }

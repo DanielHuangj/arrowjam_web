@@ -1,0 +1,655 @@
+{
+  "width": 10,
+  "height": 10,
+  "name": "",
+  "durationInSec": 150,
+  "difficulty": 2,
+  "itemModels": [
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          4,
+          4
+        ]
+      ],
+      "instanceId": 1,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          5,
+          4
+        ]
+      ],
+      "instanceId": 2,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          5,
+          5
+        ]
+      ],
+      "instanceId": 3,
+      "layer": 2
+    },
+    {
+      "kind": 21,
+      "occupiedPositions": [
+        [
+          4,
+          5
+        ]
+      ],
+      "instanceId": 4,
+      "layer": 2
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          3,
+          1
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          0
+        ],
+        [
+          4,
+          1
+        ],
+        [
+          4,
+          2
+        ],
+        [
+          4,
+          3
+        ]
+      ],
+      "instanceId": 5,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          3,
+          8
+        ],
+        [
+          3,
+          9
+        ],
+        [
+          4,
+          9
+        ],
+        [
+          4,
+          8
+        ],
+        [
+          4,
+          7
+        ],
+        [
+          4,
+          6
+        ]
+      ],
+      "instanceId": 7,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          6,
+          8
+        ],
+        [
+          6,
+          9
+        ],
+        [
+          5,
+          9
+        ],
+        [
+          5,
+          8
+        ],
+        [
+          5,
+          7
+        ],
+        [
+          5,
+          6
+        ]
+      ],
+      "instanceId": 9,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          6,
+          1
+        ],
+        [
+          6,
+          0
+        ],
+        [
+          5,
+          0
+        ],
+        [
+          5,
+          1
+        ],
+        [
+          5,
+          2
+        ],
+        [
+          5,
+          3
+        ]
+      ],
+      "instanceId": 12,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "instanceId": 14,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          9
+        ],
+        [
+          2,
+          8
+        ]
+      ],
+      "instanceId": 18,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          1,
+          3
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ]
+      ],
+      "instanceId": 26,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          2,
+          7
+        ],
+        [
+          3,
+          7
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          1,
+          6
+        ],
+        [
+          0,
+          6
+        ],
+        [
+          0,
+          5
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          5
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "instanceId": 27,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          7
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          6,
+          6
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          8,
+          6
+        ],
+        [
+          9,
+          6
+        ],
+        [
+          9,
+          5
+        ],
+        [
+          8,
+          5
+        ],
+        [
+          7,
+          5
+        ],
+        [
+          6,
+          5
+        ]
+      ],
+      "instanceId": 29,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 7
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          2
+        ],
+        [
+          6,
+          2
+        ],
+        [
+          6,
+          3
+        ],
+        [
+          7,
+          3
+        ],
+        [
+          8,
+          3
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          9,
+          4
+        ],
+        [
+          8,
+          4
+        ],
+        [
+          7,
+          4
+        ],
+        [
+          6,
+          4
+        ]
+      ],
+      "instanceId": 30,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          0
+        ],
+        [
+          7,
+          1
+        ]
+      ],
+      "instanceId": 31,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          7,
+          9
+        ],
+        [
+          7,
+          8
+        ]
+      ],
+      "instanceId": 33,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "instanceId": 35,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          2
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "instanceId": 36,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          0
+        ],
+        [
+          8,
+          0
+        ]
+      ],
+      "instanceId": 37,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          2
+        ],
+        [
+          8,
+          2
+        ],
+        [
+          8,
+          1
+        ]
+      ],
+      "instanceId": 38,
+      "layer": 2,
+      "direction": 2,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          9
+        ],
+        [
+          8,
+          9
+        ]
+      ],
+      "instanceId": 39,
+      "layer": 2,
+      "direction": 4,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          9,
+          7
+        ],
+        [
+          8,
+          7
+        ],
+        [
+          8,
+          8
+        ]
+      ],
+      "instanceId": 40,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          9
+        ],
+        [
+          1,
+          9
+        ]
+      ],
+      "instanceId": 41,
+      "layer": 2,
+      "direction": 3,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "occupiedPositions": [
+        [
+          0,
+          7
+        ],
+        [
+          1,
+          7
+        ],
+        [
+          1,
+          8
+        ]
+      ],
+      "instanceId": 42,
+      "layer": 2,
+      "direction": 1,
+      "colorId": 4
+    }
+  ],
+  "levelKind": 1,
+  "gameMode": "rush",
+  "spawnIntervalSec": 8,
+  "spawnPool": [
+    {
+      "kind": 1,
+      "weight": 220,
+      "colorId": 6
+    },
+    {
+      "kind": 1,
+      "weight": 220,
+      "colorId": 4
+    },
+    {
+      "kind": 1,
+      "weight": 240,
+      "colorId": 3
+    },
+    {
+      "kind": 1,
+      "weight": 180,
+      "colorId": 7
+    },
+    {
+      "kind": 17,
+      "weight": 30,
+      "bombRadius": 1
+    },
+    {
+      "kind": 18,
+      "weight": 30,
+      "crossArm": 2
+    },
+    {
+      "kind": 21,
+      "weight": 80
+    }
+  ],
+  "levelGoals": [
+    {
+      "type": "clearArrowCount",
+      "count": 60
+    },
+    {
+      "type": "clearColorArrows",
+      "targets": [
+        {
+          "colorId": 7,
+          "count": 20
+        }
+      ]
+    }
+  ]
+}

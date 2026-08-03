@@ -110,8 +110,15 @@ import {
   mountPlayHud,
   showPlayResultModal,
   updatePlayHud,
+  clearPlayBoardStatus,
 } from "./ui/play-mode-ui.ts";
 import { updateComboOverlay } from "@arrowjaw/client/ui/combo-overlay.ts";
+import { clearBingoOverlay, updateBingoOverlay } from "@arrowjaw/client/ui/bingo-overlay.ts";
+import {
+  clearEnergyOrb,
+  getEnergyOrbBoardOrigin,
+  updateEnergyOrb,
+} from "@arrowjaw/client/ui/energy-orb.ts";
 import {
   mountAnimTimingTuner,
   type AnimTimingTunerHandle,
@@ -1943,6 +1950,9 @@ export class EditorApp {
     this.animTimingTuner = null;
     hidePlayResultModal(this.els.playResultOverlay);
     updateComboOverlay(this.els.wrap, null);
+    clearBingoOverlay(this.els.wrap);
+    clearEnergyOrb(this.els.wrap);
+    clearPlayBoardStatus();
     this.playInput?.dispose();
     this.playInput = null;
     this.gameState = null;
@@ -2078,6 +2088,7 @@ export class EditorApp {
           candyMachineEffects: gs.getCandyMachineEffectsForRender(),
           autoRefreshEffect: gs.getAutoRefreshEffectForRender(),
           comboRewardFlights: gs.getComboRewardFlightsForRender(),
+          confetti: gs.getConfettiStateForRender(),
           balloonArrowFxById: gs.getBalloonArrowFxForRender(),
           blackHoleFxById: gs.getBlackHoleFxForRender(),
           launchClickEffects: gs.getLaunchClickEffectsForRender(),
@@ -2093,6 +2104,14 @@ export class EditorApp {
         this.els.wrap,
         gs.isRushLevel() ? gs.getComboHudState() : null,
       );
+      updateEnergyOrb(this.els.wrap, gs.getEnergyOrbHud());
+      updateBingoOverlay(this.els.wrap, gs.getBingoHudState());
+      const origin = getEnergyOrbBoardOrigin(
+        this.els.wrap,
+        this.els.canvas,
+        this.activeTab().viewport,
+      );
+      if (origin) gs.setCelebrationOrbOrigin(origin.x, origin.y);
     };
 
     const tick = (now: number) => {
@@ -2104,7 +2123,7 @@ export class EditorApp {
 
       gs.tick(dt);
 
-      if (gs.phase === "animating") {
+      if (gs.phase === "animating" || gs.phase === "celebrating") {
         tickGameAnimation(gs, dt * 1000);
       }
 

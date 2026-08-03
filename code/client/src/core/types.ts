@@ -85,6 +85,7 @@ export type GamePhase =
   | "playing"
   | "animating"
   | "exploding"
+  | "celebrating"
   | "won"
   | "lost";
 

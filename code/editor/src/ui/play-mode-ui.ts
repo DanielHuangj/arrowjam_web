@@ -1,14 +1,16 @@
 import type { GameState } from "@arrowjaw/client/core/game/game-state.ts";
 import { updateHud } from "@arrowjaw/client/ui/screens.ts";
-import { rushGoalsSummaryHtml } from "@arrowjaw/client/ui/rush-goals-display.ts";
+import {
+  clearBoardStatusBar,
+  rushGoalsSummaryHtml,
+  updateBoardStatusBar,
+} from "@arrowjaw/client/ui/rush-goals-display.ts";
 
 export function mountPlayHud(root: HTMLElement): void {
   root.innerHTML = `
     <div class="play-hud-inner">
       <div class="play-hud-info">
         <span class="level-name"></span>
-        <span class="timer"></span>
-        <span class="arrow-count"></span>
       </div>
     </div>
   `;
@@ -24,6 +26,24 @@ export function updatePlayHud(root: HTMLElement, gs: GameState): void {
     rushGoals: gs.isRushLevel() ? gs.getGoalProgress() : undefined,
     spawnCountdownSec: gs.isRushLevel() ? gs.getSpawnCountdownSec() : null,
   });
+
+  const canvasWrap = document.getElementById("canvas-wrap");
+  if (canvasWrap) {
+    const rush = gs.isRushLevel();
+    updateBoardStatusBar(canvasWrap, {
+      remainingSeconds: gs.remainingSeconds,
+      spawnCountdownSec: rush ? gs.getSpawnCountdownSec() : null,
+      rushGoals: rush ? gs.getGoalProgress() : undefined,
+      bombRemaining: gs.getUrgentBombRemaining(),
+      arrowCount: gs.arrows.length,
+      isRush: rush,
+    });
+  }
+}
+
+export function clearPlayBoardStatus(): void {
+  const canvasWrap = document.getElementById("canvas-wrap");
+  if (canvasWrap) clearBoardStatusBar(canvasWrap);
 }
 
 export function showPlayResultModal(

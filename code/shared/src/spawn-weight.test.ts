@@ -3,7 +3,9 @@ import {
   adjustSpawnPoolWeights,
   applyEvenCategoryWeightDelta,
   defaultSpawnWeightAdjustTiers,
+  isSpawnWeightAdjustTierBalanced,
   resolveSpawnWeightAdjustTier,
+  spawnWeightAdjustTierBalance,
   SPAWN_WEIGHT_TOTAL,
 } from "./spawn-weight.ts";
 import type { SpawnPoolEntry } from "./types.ts";
@@ -21,6 +23,26 @@ describe("resolveSpawnWeightAdjustTier", () => {
 
   it("uses high tier above 60 cells", () => {
     expect(resolveSpawnWeightAdjustTier(tiers, 80).buffDelta).toBe(200);
+  });
+});
+
+describe("spawnWeightAdjustTierBalance", () => {
+  it("is balanced when buffDelta equals arrow+mech", () => {
+    const tier = { buffDelta: 150, arrowDelta: 80, mechDelta: 70 };
+    expect(spawnWeightAdjustTierBalance(tier)).toBe(0);
+    expect(isSpawnWeightAdjustTierBalanced(tier)).toBe(true);
+  });
+
+  it("reports imbalance when conservation breaks", () => {
+    const tier = { buffDelta: 200, arrowDelta: 50, mechDelta: 50 };
+    expect(spawnWeightAdjustTierBalance(tier)).toBe(100);
+    expect(isSpawnWeightAdjustTierBalanced(tier)).toBe(false);
+  });
+
+  it("default tiers are all balanced", () => {
+    expect(defaultSpawnWeightAdjustTiers().every(isSpawnWeightAdjustTierBalanced)).toBe(
+      true,
+    );
   });
 });
 

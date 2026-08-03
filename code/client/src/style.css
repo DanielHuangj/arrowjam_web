@@ -297,6 +297,10 @@ body {
   flex-shrink: 0;
 }
 
+.rush-goal-swatch.generic {
+  background: linear-gradient(135deg, #ff6b6b 0%, #4dabf7 50%, #51cf66 100%);
+}
+
 .rush-goal-progress {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -307,15 +311,218 @@ body {
   font-weight: 700;
 }
 
+.board-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  position: relative;
+  overflow: visible;
+  padding-right: 74px;
+  padding-top: 40px;
+  box-sizing: border-box;
+}
+
+.board-status-bar {
+  position: absolute;
+  z-index: 16;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  font-size: 0.95rem;
+  color: #4a3f55;
+  font-variant-numeric: tabular-nums;
+  /* left / top / width 由 layoutBoardStatusBar 按 canvas 定位 */
+}
+
+.board-status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.board-status-item.hidden {
+  display: none;
+}
+
+.board-status-val {
+  font-weight: 700;
+  min-width: 1.5em;
+}
+
+.board-status-val.urgent {
+  color: #ff6b8a;
+}
+
+.board-status-goals-host {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .board-wrap {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   background: #e8e3ee;
   border-radius: 16px;
   overflow: hidden;
   position: relative;
   border: 1px solid #ddd4e8;
   box-shadow: 0 8px 24px rgba(130, 105, 150, 0.1);
+}
+
+.energy-orb-host {
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  pointer-events: none;
+  z-index: 15;
+  /* left/top 由 layoutEnergyOrb 按 canvas 右侧定位 */
+}
+
+.energy-orb-host.hidden {
+  display: none;
+}
+
+.energy-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.energy-orb-glass {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(180, 150, 220, 0.65);
+  background: radial-gradient(
+    circle at 30% 25%,
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(120, 80, 180, 0.12) 100%
+  );
+  box-shadow:
+    inset 0 -8px 16px rgba(100, 60, 160, 0.15),
+    0 4px 12px rgba(100, 70, 140, 0.2);
+  overflow: hidden;
+  position: relative;
+}
+
+.energy-orb-liquid {
+  --energy-fill: 0;
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: calc(var(--energy-fill) * 100%);
+  background: linear-gradient(180deg, #c084fc 0%, #9b5de5 45%, #7b2cbf 100%);
+  transition: height 0.25s ease-out;
+  overflow: hidden;
+}
+
+.energy-orb-wave {
+  position: absolute;
+  top: -6px;
+  left: -20%;
+  width: 140%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 40%;
+  opacity: 0.7;
+}
+
+.energy-orb-wave-2 {
+  top: -3px;
+  left: -30%;
+  opacity: 0.4;
+  background: rgba(255, 220, 255, 0.45);
+}
+
+.energy-orb-host.energy-ripple .energy-orb-wave {
+  animation: energy-wave-ripple 0.55s ease-out;
+}
+
+.energy-orb-host.energy-ripple .energy-orb-wave-2 {
+  animation: energy-wave-ripple 0.55s ease-out 0.08s;
+}
+
+@keyframes energy-wave-ripple {
+  0% {
+    transform: translateX(0) scaleY(1);
+  }
+  40% {
+    transform: translateX(8%) scaleY(1.8);
+  }
+  100% {
+    transform: translateX(-6%) scaleY(1);
+  }
+}
+
+.bingo-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bingo-overlay.hidden {
+  display: none;
+}
+
+.bingo-text {
+  font-family: "Press Start 2P", "Courier New", monospace;
+  font-size: 56px;
+  color: #ff4d6d;
+  text-shadow:
+    4px 0 0 #9b1b30,
+    -4px 0 0 #9b1b30,
+    0 4px 0 #9b1b30,
+    0 -4px 0 #9b1b30,
+    6px 6px 0 rgba(80, 10, 20, 0.35);
+  transform: scale(0.2);
+  opacity: 0;
+  image-rendering: pixelated;
+}
+
+.bingo-text.bingo-breathe {
+  animation: bingo-breathe 1.05s ease-in-out forwards;
+}
+
+@keyframes bingo-breathe {
+  0% {
+    transform: scale(0.15);
+    opacity: 0;
+  }
+  25% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+  45% {
+    transform: scale(0.92);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(0.85);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
 }
 
 .combo-overlay {

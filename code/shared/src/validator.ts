@@ -9,7 +9,12 @@ import {
 import {
   isValidInvalidCellColorId,
 } from "./invalid-cell-colors.ts";
-import { isSpawnWeightTotalValid, SPAWN_WEIGHT_TOTAL } from "./spawn-weight.ts";
+import {
+  isSpawnWeightAdjustTierBalanced,
+  isSpawnWeightTotalValid,
+  spawnWeightAdjustTierBalance,
+  SPAWN_WEIGHT_TOTAL,
+} from "./spawn-weight.ts";
 import { collectAllItems, findArrowCellOverlaps, findCornerArrowCellOverlaps, findPipeArrowCellOverlaps, findArrowHostingCell, findArrowHostingPositions, findItemParentList, isPolylineContinuous, isRectangular, CONTROLLER_HOST_KINDS, validateShrinkStripAgainstPipe } from "./items.ts";
 
 function push(
@@ -639,6 +644,19 @@ function validateRushFields(data: import("./types.ts").LevelData, issues: Valida
             `spawnWeightAdjust.${key} 须为有效数字`,
           );
         }
+      }
+      if (
+        Number.isFinite(tier.buffDelta) &&
+        Number.isFinite(tier.arrowDelta) &&
+        Number.isFinite(tier.mechDelta) &&
+        !isSpawnWeightAdjustTierBalanced(tier)
+      ) {
+        push(
+          issues,
+          "V-V2-007",
+          "error",
+          `spawnWeightAdjust（≥${tier.minElimCells}）须满足 增益+ = 箭头− + 机制−（保持总分 ${SPAWN_WEIGHT_TOTAL}），当前差额 ${spawnWeightAdjustTierBalance(tier).toFixed(1)}`,
+        );
       }
     }
     const first = data.spawnWeightAdjust.reduce(

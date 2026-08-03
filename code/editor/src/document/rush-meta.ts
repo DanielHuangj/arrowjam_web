@@ -1,16 +1,20 @@
 import type { LevelGoal, SpawnPoolEntry, SpawnPoolKind } from "@arrowjaw/shared";
 import {
+  isSpawnWeightAdjustTierBalanced,
   isSpawnWeightTotalValid,
   normalizeSpawnPoolWeights,
   spawnPoolWeightSum,
+  spawnWeightAdjustTierBalance,
   spawnWeightSumPercent,
   defaultSpawnWeightAdjustTiers,
 } from "@arrowjaw/shared";
 
 export {
+  isSpawnWeightAdjustTierBalanced,
   isSpawnWeightTotalValid,
   normalizeSpawnPoolWeights,
   spawnPoolWeightSum,
+  spawnWeightAdjustTierBalance,
   spawnWeightSumPercent,
   defaultSpawnWeightAdjustTiers,
 };

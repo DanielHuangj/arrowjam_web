@@ -65,7 +65,9 @@ export class GoalTracker {
     for (const goal of this.goals) {
       if (goal.type === "clearArrowCount") {
         out.push({
-          label: "消除箭头",
+          label: "",
+          /** 0 = 通用色 icon */
+          colorId: 0,
           current: this.clearArrowCount,
           target: goal.count,
           done: this.clearArrowCount >= goal.count,
@@ -84,5 +86,16 @@ export class GoalTracker {
       }
     }
     return out;
+  }
+
+  /** 首个「消除箭数」目标；无则 null（能量球不显示） */
+  getClearArrowCountGoal(): { current: number; target: number } | null {
+    if (!this.enabled) return null;
+    for (const goal of this.goals) {
+      if (goal.type === "clearArrowCount") {
+        return { current: this.clearArrowCount, target: goal.count };
+      }
+    }
+    return null;
   }
 }

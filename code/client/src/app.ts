@@ -15,6 +15,16 @@ import type { LevelManifestEntry } from "./core/types.ts";
 import { tickGameAnimation } from "./core/game/anim-timing.ts";
 import type { SpawnEmergence } from "./core/mechanics/spawn.ts";
 import { updateComboOverlay } from "./ui/combo-overlay.ts";
+import { clearBingoOverlay, updateBingoOverlay } from "./ui/bingo-overlay.ts";
+import {
+  clearEnergyOrb,
+  getEnergyOrbBoardOrigin,
+  updateEnergyOrb,
+} from "./ui/energy-orb.ts";
+import {
+  clearBoardStatusBar,
+  updateBoardStatusBar,
+} from "./ui/rush-goals-display.ts";
 
 export class App {
   private root: HTMLElement;
@@ -51,7 +61,12 @@ export class App {
   private showLevelSelect(): void {
     this.stopLoop();
     this.disposeGame();
-    if (this.boardWrapEl) updateComboOverlay(this.boardWrapEl, null);
+    if (this.boardWrapEl) {
+      updateComboOverlay(this.boardWrapEl, null);
+      clearBingoOverlay(this.boardWrapEl);
+      clearEnergyOrb(this.boardWrapEl);
+      clearBoardStatusBar(this.boardWrapEl);
+    }
     renderLevelSelect(
       this.root,
       { levels: this.levels, devTests: this.devTests, rushTests: this.rushTests },
@@ -152,7 +167,7 @@ export class App {
       if (this.state) {
         this.state.tick(dt);
 
-        if (this.state.phase === "animating") {
+        if (this.state.phase === "animating" || this.state.phase === "celebrating") {
           tickGameAnimation(this.state, dt * 1000);
         }
 
@@ -191,10 +206,33 @@ export class App {
         ? this.state.getSpawnCountdownSec()
         : null,
     });
+    if (this.boardWrapEl) {
+      const rush = this.state.isRushLevel();
+      updateBoardStatusBar(this.boardWrapEl, {
+        remainingSeconds: this.state.remainingSeconds,
+        spawnCountdownSec: rush ? this.state.getSpawnCountdownSec() : null,
+        rushGoals: rush ? this.state.getGoalProgress() : undefined,
+        bombRemaining: this.state.getUrgentBombRemaining(),
+        arrowCount: this.state.arrows.length,
+        isRush: rush,
+      });
+    }
     updateComboOverlay(
       this.boardWrapEl,
       this.state.isRushLevel() ? this.state.getComboHudState() : null,
     );
+    if (this.boardWrapEl) {
+      updateEnergyOrb(this.boardWrapEl, this.state.getEnergyOrbHud());
+      updateBingoOverlay(this.boardWrapEl, this.state.getBingoHudState());
+      if (this.canvas && this.boardViewport) {
+        const origin = getEnergyOrbBoardOrigin(
+          this.boardWrapEl,
+          this.canvas,
+          this.boardViewport.getState(),
+        );
+        if (origin) this.state.setCelebrationOrbOrigin(origin.x, origin.y);
+      }
+    }
 
     const autoBtn = this.hudEl.querySelector(".btn-auto-clear") as HTMLButtonElement | null;
     if (autoBtn) {
@@ -294,6 +332,7 @@ export class App {
         candyMachineEffects: this.state.getCandyMachineEffectsForRender(),
         autoRefreshEffect: this.state.getAutoRefreshEffectForRender(),
         comboRewardFlights: this.state.getComboRewardFlightsForRender(),
+        confetti: this.state.getConfettiStateForRender(),
         balloonArrowFxById: this.state.getBalloonArrowFxForRender(),
         blackHoleFxById: this.state.getBlackHoleFxForRender(),
         launchClickEffects: this.state.getLaunchClickEffectsForRender(),

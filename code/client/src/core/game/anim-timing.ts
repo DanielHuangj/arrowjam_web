@@ -101,7 +101,7 @@ export function getAnimStepIntervalMs(
 
 /** 按真实时间推进发射动画（每条箭独立累积步进时间） */
 export function tickGameAnimation(gs: GameState, dtMs: number): void {
-  if (gs.phase !== "animating") return;
+  if (gs.phase !== "animating" && gs.phase !== "celebrating") return;
 
   const maxStepsPerAnim = 256;
 
@@ -112,7 +112,7 @@ export function tickGameAnimation(gs: GameState, dtMs: number): void {
     let steps = 0;
     while (
       steps < maxStepsPerAnim &&
-      gs.phase === "animating" &&
+      (gs.phase === "animating" || gs.phase === "celebrating") &&
       gs.animations.includes(anim)
     ) {
       const interval = getAnimStepIntervalMs(

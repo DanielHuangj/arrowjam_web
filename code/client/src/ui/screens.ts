@@ -1,6 +1,5 @@
 import type { LevelManifestEntry } from "../core/types.ts";
 import type { GoalProgress } from "../core/game/goal-tracker.ts";
-import { renderRushGoalsHost } from "./rush-goals-display.ts";
 import { attachLevelThumbnails, prefetchLevelThumbnails } from "./level-thumbnails.ts";
 
 export function formatLevelKindLabel(kinds: number[] | undefined): string {
@@ -72,8 +71,6 @@ export function renderGameShell(root: HTMLElement): {
         <button class="btn-back" type="button">← 选关</button>
         <div class="hud-info">
           <span class="level-name"></span>
-          <span class="timer"></span>
-          <span class="arrow-count"></span>
         </div>
         <div class="hud-actions">
           <button class="btn-auto-clear" type="button" title="自动消除一条当前无阻挡、可立即出界的箭">自动消除</button>
@@ -82,8 +79,10 @@ export function renderGameShell(root: HTMLElement): {
           <button class="btn-add-time" type="button" title="测试用：增加 100 秒">+100s</button>
         </div>
       </header>
-      <div class="board-wrap">
-        <canvas id="board"></canvas>
+      <div class="board-stage">
+        <div class="board-wrap">
+          <canvas id="board"></canvas>
+        </div>
       </div>
       <div class="overlay hidden"></div>
     </div>
@@ -111,23 +110,6 @@ export function updateHud(
 ): void {
   hud.querySelector(".level-name")!.textContent =
     `${data.name} · 难度 ${data.difficulty}`;
-  const sec = Math.ceil(data.remainingSeconds);
-  const timerEl = hud.querySelector(".timer")!;
-  const bombPart =
-    data.bombRemaining != null
-      ? ` · 💣 ${Math.ceil(data.bombRemaining)}s`
-      : "";
-  const spawnPart =
-    data.spawnCountdownSec != null
-      ? ` · 生成 ${Math.max(0, Math.ceil(data.spawnCountdownSec))}s`
-      : "";
-  timerEl.textContent = `⏱ ${sec}s${bombPart}${spawnPart}`;
-  timerEl.classList.toggle("urgent", sec <= 10 || (data.bombRemaining ?? 99) <= 5);
-  renderRushGoalsHost(
-    hud.querySelector(".arrow-count")! as HTMLElement,
-    data.rushGoals,
-    data.arrowCount,
-  );
 }
 
 export function showModal(

@@ -10,6 +10,8 @@ import {
   spawnPoolWeightSum,
   spawnWeightSumPercent,
   isSpawnWeightTotalValid,
+  isSpawnWeightAdjustTierBalanced,
+  spawnWeightAdjustTierBalance,
 } from "../document/rush-meta.ts";
 
 const KIND_LABELS: Record<number, string> = {
@@ -314,15 +316,20 @@ function renderRushMetaSection(
   const adjustTiers = meta.spawnWeightAdjust ?? defaultSpawnWeightAdjustTiers();
   const weightSum = spawnPoolWeightSum(pool);
   const weightClass = isSpawnWeightTotalValid(weightSum) ? "weight-ok" : "weight-bad";
+  const adjustBalanced = adjustTiers.every(isSpawnWeightAdjustTierBalanced);
+  const adjustClass = adjustBalanced ? "weight-ok" : "weight-bad";
 
   let adjustRows = "";
   for (let i = 0; i < adjustTiers.length; i++) {
     const tier = adjustTiers[i]!;
-    adjustRows += `<tr data-adjust-idx="${i}">
+    const bal = spawnWeightAdjustTierBalance(tier);
+    const rowOk = isSpawnWeightAdjustTierBalanced(tier);
+    adjustRows += `<tr data-adjust-idx="${i}" class="${rowOk ? "" : "adjust-unbalanced"}">
       <td><input type="number" class="adjust-min" min="0" step="1" value="${tier.minElimCells}" /></td>
       <td><input type="number" class="adjust-buff" step="1" value="${tier.buffDelta}" /></td>
       <td><input type="number" class="adjust-arrow" min="0" step="1" value="${tier.arrowDelta}" /></td>
       <td><input type="number" class="adjust-mech" min="0" step="1" value="${tier.mechDelta}" /></td>
+      <td class="adjust-balance ${rowOk ? "weight-ok" : "weight-bad"}" title="增益+ − (箭头− + 机制−)">${rowOk ? "✓" : bal.toFixed(0)}</td>
       <td><button type="button" class="adjust-del" data-idx="${i}">删</button></td>
     </tr>`;
   }
@@ -394,9 +401,9 @@ function renderRushMetaSection(
       </select>
       <button type="button" id="spawn-pool-add">添加</button>
     </div>
-    <h4>动态权重调整 <span style="color:var(--muted);font-size:11px;font-weight:normal">1000 分制，增量/减量均分给同类条目</span></h4>
+    <h4>动态权重调整 <span class="${adjustClass}">须 增益+ = 箭头− + 机制−（守恒总分 1000）</span></h4>
     <table class="spawn-pool-table spawn-adjust-table">
-      <thead><tr><th>≥消除格</th><th>增益+</th><th>箭头−</th><th>机制−</th><th></th></tr></thead>
+      <thead><tr><th>≥消除格</th><th>增益+</th><th>箭头−</th><th>机制−</th><th>差额</th><th></th></tr></thead>
       <tbody>${adjustRows}</tbody>
     </table>
     <div class="spawn-pool-actions">
@@ -427,14 +434,19 @@ function renderRushMetaSection(
     onMeta({ spawnWeightAdjust: next });
   };
 
+  // 面板展示了默认段时同步进文档，避免「看见默认值但未写入、保存丢失」
+  if (meta.spawnWeightAdjust == null) {
+    queueMicrotask(() => updateAdjustTiers(defaultSpawnWeightAdjustTiers()));
+  }
+
   const readAdjustTiersFromDom = (): SpawnWeightAdjustTier[] => {
     const rows = el.querySelectorAll<HTMLTableRowElement>("tr[data-adjust-idx]");
-    return [...rows].map((row) => ({
-      minElimCells: parseInt(
-        row.querySelector<HTMLInputElement>(".adjust-min")?.value ?? "0",
-        10,
-      ),
-      buffDelta: parseFloat(row.querySelector<HTMLInputElement>(".adjust-buff")?.value ?? "0") || 0,
+    return Array.from(rows).map((row) => ({
+      minElimCells:
+        parseInt(row.querySelector<HTMLInputElement>(".adjust-min")?.value ?? "0", 10) ||
+        0,
+      buffDelta:
+        parseFloat(row.querySelector<HTMLInputElement>(".adjust-buff")?.value ?? "0") || 0,
       arrowDelta:
         parseFloat(row.querySelector<HTMLInputElement>(".adjust-arrow")?.value ?? "0") || 0,
       mechDelta:

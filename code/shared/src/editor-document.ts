@@ -1,6 +1,18 @@
 import type { EditorDocument, EditorMeta, LevelData } from "./types.ts";
 import { assertLoadableLevelData } from "./parser.ts";
 import { findDuplicateInstanceIds, reassignDuplicateIds } from "./items.ts";
+import { defaultSpawnWeightAdjustTiers } from "./spawn-weight.ts";
+
+function isRushLikeLevel(data: LevelData): boolean {
+  if (data.gameMode === "rush") return true;
+  if (data.gameMode === "classic") return false;
+  return (
+    data.spawnIntervalSec != null ||
+    (data.spawnPool != null && data.spawnPool.length > 0) ||
+    (data.spawnWeightAdjust != null && data.spawnWeightAdjust.length > 0) ||
+    (data.levelGoals != null && data.levelGoals.length > 0)
+  );
+}
 
 export function createEmptyDocument(meta: Partial<EditorMeta> = {}): EditorDocument {
   return {
@@ -14,6 +26,7 @@ export function createEmptyDocument(meta: Partial<EditorMeta> = {}): EditorDocum
       gameMode: meta.gameMode ?? "classic",
       spawnIntervalSec: meta.spawnIntervalSec,
       spawnPool: meta.spawnPool,
+      spawnWeightAdjust: meta.spawnWeightAdjust,
       levelGoals: meta.levelGoals,
       comboEnabled: meta.comboEnabled,
       boardShape: meta.boardShape,
@@ -61,6 +74,8 @@ export function createDocumentFromJson(
       gameMode: data.gameMode ?? "classic",
       spawnIntervalSec: data.spawnIntervalSec,
       spawnPool: data.spawnPool?.map((e) => ({ ...e })),
+      spawnWeightAdjust: data.spawnWeightAdjust?.map((t) => ({ ...t }))
+        ?? (isRushLikeLevel(data) ? defaultSpawnWeightAdjustTiers() : undefined),
       levelGoals: data.levelGoals?.map((g) =>
         g.type === "clearColorArrows"
           ? {

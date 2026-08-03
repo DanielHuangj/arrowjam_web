@@ -47,7 +47,9 @@ import {
 } from "./flight-fx.ts";
 import { drawBlackHoleRegions, splitBlackHoleComponents } from "./black-hole-region-drawer.ts";
 import { drawComboRewardFlights } from "./combo-reward-drawer.ts";
+import { drawConfetti } from "./confetti-drawer.ts";
 import type { ComboRewardFlight } from "../core/mechanics/combo.ts";
+import type { ConfettiState } from "../core/mechanics/win-celebration.ts";
 import {
   fillRoundedRegionCells,
   strokeRoundedRegionOutline,
@@ -102,6 +104,7 @@ export interface BoardDrawOptions {
   balloonEffect?: BalloonEffectDrawState | null;
   autoRefreshEffect?: AutoRefreshEffectDrawState | null;
   comboRewardFlights?: ComboRewardFlight[];
+  confetti?: ConfettiState | null;
   /** 点击发射时的彩色烟尘 */
   launchClickEffects?: readonly LaunchClickFxState[];
   /** 箭头经过后格点圆点呼吸 */
@@ -453,6 +456,10 @@ export class BoardRenderer {
 
     if (options.comboRewardFlights?.length) {
       drawComboRewardFlights(this.ctx, options.comboRewardFlights);
+    }
+
+    if (options.confetti) {
+      drawConfetti(this.ctx, options.confetti);
     }
 
     if (isGame && options.launchClickEffects?.length) {

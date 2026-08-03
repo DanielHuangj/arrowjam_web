@@ -112,6 +112,7 @@ import { GoalTracker } from "./goal-tracker.ts";
 import {
   runSpawnWave,
   SpawnManager,
+  spawnCelebrationBuffs,
   trySpawnComboRewardBuff,
   type SpawnBlockContext,
 } from "../mechanics/spawn.ts";
@@ -128,6 +129,18 @@ import {
   type ComboRewardFlight,
   type ComboState,
 } from "../mechanics/combo.ts";
+import {
+  BINGO_DURATION_SEC,
+  CELEBRATION_FLIGHT_DURATION_SEC,
+  CELEBRATION_TRIGGER_STAGGER_SEC,
+  createConfettiState,
+  isPlayerTriggerableBuffKind,
+  tickConfettiState,
+  type BingoHudState,
+  type ConfettiState,
+  type EnergyOrbHudState,
+  type WinCelebrationStep,
+} from "../mechanics/win-celebration.ts";
 import { CELL, STEP } from "../../render/colors.ts";
 import {
   getAnimStepIntervalMs as computeAnimStepIntervalMs,
@@ -245,6 +258,19 @@ export class GameState {
   private comboState: ComboState = createComboState();
   /** combo 奖励飞入：落地前 buff 尚未加入棋盘 */
   private comboRewardFlights: ComboRewardFlight[] = [];
+  private celebrationStep: WinCelebrationStep | null = null;
+  private celebrationElapsed = 0;
+  private celebrationFlights: ComboRewardFlight[] = [];
+  private pendingCelebrationTriggers: { buffId: number; remainingSec: number }[] =
+    [];
+  private celebrationBuffIds = new Set<number>();
+  private confettiState: ConfettiState | null = null;
+  private bingoToken = 0;
+  private energyRippleToken = 0;
+  private lastEnergyClearCount = 0;
+  private celebrationFinished = false;
+  /** 能量球中心在棋盘内容坐标系中的位置（由 UI 每帧同步） */
+  private celebrationOrbOrigin: { x: number; y: number } | null = null;
 
   /** 兼容单动画测试与快照：返回首个活跃动画 */
   get animation(): LaunchAnimation | null {
@@ -287,7 +313,12 @@ export class GameState {
     if (this.candyMachineEffects.length > 0) return false;
     if (this.pendingCandyMachineTriggers.length > 0) return false;
     if (this.autoRefreshEffect) return false;
-    if (this.phase === "won" || this.phase === "lost" || this.phase === "exploding") {
+    if (
+      this.phase === "won" ||
+      this.phase === "lost" ||
+      this.phase === "exploding" ||
+      this.phase === "celebrating"
+    ) {
       return false;
     }
     if (this.hasVanishAnimation()) return false;
@@ -312,14 +343,46 @@ export class GameState {
 
   private resolveWinOrPlaying(): void {
     if (this.checkWinCondition()) {
-      this.phase = "won";
+      this.tryEnterWin();
     } else {
       this.phase = "playing";
       this.checkAndAutoRefreshBoard();
     }
   }
 
+  /** rush：进入庆祝；经典：直接 won；已在庆祝/已结束则忽略 */
+  private tryEnterWin(): void {
+    if (!this.checkWinCondition()) return;
+    if (this.phase === "won" || this.phase === "celebrating") return;
+    if (this.celebrationFinished) {
+      this.phase = "won";
+      return;
+    }
+    if (this.isRushMode()) {
+      this.beginWinCelebration();
+    } else {
+      this.phase = "won";
+    }
+  }
+
+  private beginWinCelebration(): void {
+    if (this.phase === "celebrating" || this.celebrationFinished) return;
+    this.phase = "celebrating";
+    if (this.isComboEnabled()) {
+      this.comboState = createComboState();
+      this.comboRewardFlights = [];
+    }
+    this.celebrationStep = "bingo";
+    this.celebrationElapsed = 0;
+    this.celebrationFlights = [];
+    this.pendingCelebrationTriggers = [];
+    this.celebrationBuffIds = new Set();
+    this.confettiState = null;
+    this.bingoToken += 1;
+  }
+
   private syncPhaseAfterAnimations(): void {
+    if (this.phase === "celebrating") return;
     if (this.animations.length === 0) {
       if (this.phase === "animating") {
         this.resolveWinOrPlaying();
@@ -869,6 +932,11 @@ export class GameState {
       return;
     }
 
+    if (this.phase === "celebrating") {
+      this.tickWinCelebration(dt);
+      return;
+    }
+
     if (this.phase !== "playing" && this.phase !== "animating") return;
     if (this.phase === "playing" || this.phase === "animating") {
       this.remainingSeconds -= dt;
@@ -880,6 +948,7 @@ export class GameState {
         }
       }
     }
+    this.syncEnergyOrbRipple();
     const hasBlockingAnim =
       this.animations.length > 0 || this.hasVanishAnimation();
     if (this.spawnManager.tickSpawnFade(dt * 1000)) {
@@ -941,7 +1010,12 @@ export class GameState {
     launchClick?: { boardPx: [number, number] },
   ): boolean {
     if (!this.canAcceptLaunchClick(now)) return false;
-    if (this.phase === "won" || this.phase === "lost" || this.phase === "exploding") {
+    if (
+      this.phase === "won" ||
+      this.phase === "lost" ||
+      this.phase === "exploding" ||
+      this.phase === "celebrating"
+    ) {
       return false;
     }
 
@@ -1437,7 +1511,7 @@ export class GameState {
     );
     this.rebuildCellMap();
     if (this.checkWinCondition()) {
-      this.phase = "won";
+      this.tryEnterWin();
     }
   }
 
@@ -1466,7 +1540,7 @@ export class GameState {
     this.areaBombEffects.splice(index, 1);
     this.applyPartialBuffHit(effect.pendingCommit.hit);
     if (this.checkWinCondition()) {
-      this.phase = "won";
+      this.tryEnterWin();
     }
   }
 
@@ -1595,7 +1669,7 @@ export class GameState {
     if (effect.elapsed >= totalDuration) {
       this.crossBombEffects.splice(index, 1);
       if (this.checkWinCondition()) {
-        this.phase = "won";
+        this.tryEnterWin();
       }
     }
   }
@@ -2553,7 +2627,7 @@ export class GameState {
     );
     this.rebuildCellMap();
     if (this.checkWinCondition()) {
-      this.phase = "won";
+      this.tryEnterWin();
     }
   }
 
@@ -2639,7 +2713,7 @@ export class GameState {
     this.arrows = this.arrows.filter((a) => !targetIds.has(a.instanceId));
     this.rebuildCellMap();
     if (this.checkWinCondition()) {
-      this.phase = "won";
+      this.tryEnterWin();
     }
   }
 
@@ -3631,7 +3705,235 @@ export class GameState {
   }
 
   getComboRewardFlightsForRender(): ComboRewardFlight[] {
-    return this.comboRewardFlights.map((f) => ({ ...f }));
+    return [
+      ...this.comboRewardFlights.map((f) => ({ ...f })),
+      ...this.celebrationFlights.map((f) => ({ ...f })),
+    ];
+  }
+
+  getEnergyOrbHud(): EnergyOrbHudState | null {
+    if (!this.isRushMode()) return null;
+    const goal = this.goalTracker.getClearArrowCountGoal();
+    if (!goal) return null;
+    return {
+      visible: true,
+      fill: Math.max(0, Math.min(1, goal.current / Math.max(1, goal.target))),
+      rippleToken: this.energyRippleToken,
+    };
+  }
+
+  getBingoHudState(): BingoHudState | null {
+    if (this.phase !== "celebrating" || this.celebrationStep !== "bingo") {
+      return null;
+    }
+    return { active: true, token: this.bingoToken };
+  }
+
+  getConfettiStateForRender(): ConfettiState | null {
+    return this.confettiState;
+  }
+
+  /** UI 将能量球中心映射到棋盘像素后写入，供庆祝飞入使用 */
+  setCelebrationOrbOrigin(x: number, y: number): void {
+    this.celebrationOrbOrigin = { x, y };
+  }
+
+  private syncEnergyOrbRipple(): void {
+    const goal = this.goalTracker.getClearArrowCountGoal();
+    if (!goal) return;
+    if (goal.current > this.lastEnergyClearCount) {
+      this.energyRippleToken += 1;
+      this.lastEnergyClearCount = goal.current;
+    }
+  }
+
+  private tickWinCelebration(dt: number): void {
+    if (!this.celebrationStep) return;
+
+    if (this.celebrationStep === "bingo") {
+      this.celebrationElapsed += dt;
+      if (this.celebrationElapsed >= BINGO_DURATION_SEC) {
+        this.startCelebrationFlights();
+      }
+      return;
+    }
+
+    if (this.celebrationStep === "flying") {
+      this.tickCelebrationFlights(dt);
+      return;
+    }
+
+    if (this.celebrationStep === "triggering") {
+      this.tickCelebrationTriggers(dt);
+      if (
+        this.pendingCelebrationTriggers.length === 0 &&
+        this.celebrationEffectsSettled()
+      ) {
+        this.beginRemainingBoardBuffTriggers();
+      }
+      return;
+    }
+
+    if (this.celebrationStep === "sweeping") {
+      this.tickCelebrationTriggers(dt);
+      if (
+        this.pendingCelebrationTriggers.length === 0 &&
+        this.celebrationEffectsSettled()
+      ) {
+        // 连锁/效果结算后可能又露出新的可触发道具，再扫一轮
+        if (!this.queueRemainingTriggerableBuffs()) {
+          this.startCelebrationConfetti();
+        }
+      }
+      return;
+    }
+
+    if (this.celebrationStep === "confetti") {
+      if (!this.confettiState) {
+        this.finishWinCelebration();
+        return;
+      }
+      this.confettiState = tickConfettiState(this.confettiState, dt);
+      if (this.confettiState.elapsed >= this.confettiState.duration) {
+        this.finishWinCelebration();
+      }
+    }
+  }
+
+  private startCelebrationFlights(): void {
+    const buffs = spawnCelebrationBuffs(this.buildSpawnBlockContext(), () =>
+      this.nextInstanceId(),
+    );
+    const boardW = this.level.width * STEP;
+    const boardH = this.level.height * STEP;
+    const origin = this.celebrationOrbOrigin;
+    const fromX = origin?.x ?? boardW + STEP * 0.35;
+    const fromY = origin?.y ?? boardH * 0.5;
+    this.celebrationFlights = [];
+    this.celebrationBuffIds = new Set();
+    for (const buff of buffs) {
+      const cell = buff.occupiedPositions[0];
+      if (!cell) continue;
+      this.celebrationBuffIds.add(buff.instanceId);
+      this.celebrationFlights.push({
+        buff,
+        fromX,
+        fromY,
+        toX: cell[0] * STEP + CELL * 0.5,
+        toY: cell[1] * STEP + CELL * 0.5,
+        elapsed: 0,
+        duration: CELEBRATION_FLIGHT_DURATION_SEC,
+      });
+    }
+    this.celebrationStep = "flying";
+    this.celebrationElapsed = 0;
+    if (this.celebrationFlights.length === 0) {
+      this.beginRemainingBoardBuffTriggers();
+    }
+  }
+
+  private tickCelebrationFlights(dt: number): void {
+    if (this.celebrationFlights.length === 0) {
+      this.beginCelebrationTriggers();
+      return;
+    }
+    const done: ComboRewardFlight[] = [];
+    for (const flight of this.celebrationFlights) {
+      flight.elapsed += dt;
+      if (flight.elapsed >= flight.duration) done.push(flight);
+    }
+    if (done.length === 0) return;
+    this.celebrationFlights = this.celebrationFlights.filter(
+      (f) => f.elapsed < f.duration,
+    );
+    for (const flight of done) {
+      this.buffs.push(flight.buff);
+    }
+    this.rebuildCellMap();
+    if (this.celebrationFlights.length === 0) {
+      this.beginCelebrationTriggers();
+    }
+  }
+
+  private beginCelebrationTriggers(): void {
+    const ordered = [...this.celebrationBuffIds];
+    this.pendingCelebrationTriggers = ordered.map((buffId, i) => ({
+      buffId,
+      remainingSec: i * CELEBRATION_TRIGGER_STAGGER_SEC,
+    }));
+    this.celebrationStep = "triggering";
+    if (this.pendingCelebrationTriggers.length === 0) {
+      this.beginRemainingBoardBuffTriggers();
+    }
+  }
+
+  /** 扫荡棋盘上剩余可主动触发的增益，逐一间隔触发 */
+  private beginRemainingBoardBuffTriggers(): void {
+    this.celebrationStep = "sweeping";
+    if (!this.queueRemainingTriggerableBuffs()) {
+      this.startCelebrationConfetti();
+    }
+  }
+
+  /** @returns 是否排入了至少一个待触发道具 */
+  private queueRemainingTriggerableBuffs(): boolean {
+    const ids = this.listPlayerTriggerableBuffIds();
+    if (ids.length === 0) return false;
+    this.pendingCelebrationTriggers = ids.map((buffId, i) => ({
+      buffId,
+      remainingSec: i * CELEBRATION_TRIGGER_STAGGER_SEC,
+    }));
+    return true;
+  }
+
+  private listPlayerTriggerableBuffIds(): number[] {
+    return this.buffs
+      .filter(
+        (b) =>
+          this.isMechanicDrawable(b.zoneId) &&
+          isPlayerTriggerableBuffKind(b.kind),
+      )
+      .map((b) => b.instanceId);
+  }
+
+  private tickCelebrationTriggers(dt: number): void {
+    if (this.pendingCelebrationTriggers.length === 0) return;
+    const ready: number[] = [];
+    for (const pending of this.pendingCelebrationTriggers) {
+      pending.remainingSec -= dt;
+      if (pending.remainingSec <= 0) ready.push(pending.buffId);
+    }
+    this.pendingCelebrationTriggers = this.pendingCelebrationTriggers.filter(
+      (p) => p.remainingSec > 0,
+    );
+    for (const buffId of ready) {
+      this.triggerBuff(buffId);
+    }
+  }
+
+  private celebrationEffectsSettled(): boolean {
+    if (this.celebrationFlights.length > 0) return false;
+    if (this.pendingCelebrationTriggers.length > 0) return false;
+    if (this.hasActivePropEffect()) return false;
+    if (this.animations.length > 0) return false;
+    return true;
+  }
+
+  private startCelebrationConfetti(): void {
+    const boardW = this.level.width * STEP;
+    const boardH = this.level.height * STEP;
+    this.confettiState = createConfettiState(boardW, boardH);
+    this.celebrationStep = "confetti";
+    this.celebrationElapsed = 0;
+  }
+
+  private finishWinCelebration(): void {
+    this.celebrationStep = "done";
+    this.celebrationFinished = true;
+    this.confettiState = null;
+    this.celebrationFlights = [];
+    this.pendingCelebrationTriggers = [];
+    this.phase = "won";
   }
 
   private tickComboSystem(dt: number): void {

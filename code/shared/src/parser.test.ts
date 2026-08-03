@@ -352,6 +352,10 @@ describe("shared serializer roundtrip", () => {
       gameMode: "rush",
       spawnIntervalSec: 20,
       comboEnabled: false,
+      spawnWeightAdjust: [
+        { minElimCells: 0, buffDelta: 0, arrowDelta: 0, mechDelta: 0 },
+        { minElimCells: 40, buffDelta: 150, arrowDelta: 80, mechDelta: 70 },
+      ],
       spawnPool: [
         { kind: 1, weight: 700, colorId: 7 },
         { kind: 17, weight: 150, bombRadius: 1 },
@@ -377,11 +381,14 @@ describe("shared serializer roundtrip", () => {
     const { doc } = createDocumentFromJson("level-9001.json", data);
     expect(doc.meta.gameMode).toBe("rush");
     expect(doc.meta.comboEnabled).toBe(false);
+    expect(doc.meta.spawnWeightAdjust?.length).toBe(2);
+    expect(doc.meta.spawnWeightAdjust?.[1]?.buffDelta).toBe(150);
     expect(doc.meta.spawnPool?.length).toBe(3);
     const json = serializeLevelData(doc);
     const reparsed = parseLevelData(9001, JSON.parse(json));
     expect(reparsed.gameMode).toBe("rush");
     expect(reparsed.comboEnabled).toBe(false);
+    expect(reparsed.spawnWeightAdjust?.[1]?.arrowDelta).toBe(80);
     expect(reparsed.spawnIntervalSec).toBe(20);
     expect(reparsed.buffs.length).toBe(2);
     expect(reparsed.buffs[0]?.kind).toBe(17);

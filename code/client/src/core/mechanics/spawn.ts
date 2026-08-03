@@ -12,6 +12,10 @@ import type {
   Vec2,
 } from "../types.ts";
 import { DIR_VEC, inBounds, vecKey } from "../types.ts";
+import {
+  CELEBRATION_BUFF_KINDS,
+  CELEBRATION_MAX_BUFFS,
+} from "./win-celebration.ts";
 
 export const SPAWN_FADE_MS = 400;
 
@@ -558,6 +562,55 @@ export function runSpawnWave(
     else failStreak++;
   }
 
+  return result;
+}
+
+/** 通关庆祝：在空格上生成最多 N 个 17/18/23 道具 */
+export function spawnCelebrationBuffs(
+  ctx: SpawnBlockContext,
+  nextInstanceId: () => number,
+  maxCount: number = CELEBRATION_MAX_BUFFS,
+  rng: Rng = Math.random,
+): BuffItem[] {
+  const result: BuffItem[] = [];
+  const workOccupied = new Set(ctx.occupied);
+  const workCtx: SpawnBlockContext = { ...ctx, occupied: workOccupied };
+  const n = Math.max(0, Math.min(maxCount, CELEBRATION_MAX_BUFFS));
+  for (let i = 0; i < n; i++) {
+    const cell = pickRandomCell(workCtx, rng);
+    if (!cell) break;
+    workOccupied.add(vecKey(cell));
+    const kind =
+      CELEBRATION_BUFF_KINDS[Math.floor(rng() * CELEBRATION_BUFF_KINDS.length)]!;
+    const id = nextInstanceId();
+    if (kind === 17) {
+      result.push({
+        kind: 17,
+        instanceId: id,
+        layer: 2,
+        occupiedPositions: [cell],
+        bombRadius: 1,
+        zoneId: null,
+      });
+    } else if (kind === 18) {
+      result.push({
+        kind: 18,
+        instanceId: id,
+        layer: 2,
+        occupiedPositions: [cell],
+        crossArm: 2,
+        zoneId: null,
+      });
+    } else {
+      result.push({
+        kind: 23,
+        instanceId: id,
+        layer: 2,
+        occupiedPositions: [cell],
+        zoneId: null,
+      });
+    }
+  }
   return result;
 }
 

@@ -131,6 +131,19 @@ export function isSpawnWeightTotalValid(sum: number): boolean {
   return Math.abs(sum - SPAWN_WEIGHT_TOTAL) <= SPAWN_WEIGHT_TOLERANCE;
 }
 
+/** 动态调整段守恒：增益增加量应等于箭头+机制减少量，以保持总分 1000 */
+export function spawnWeightAdjustTierBalance(
+  tier: Pick<SpawnWeightAdjustTier, "buffDelta" | "arrowDelta" | "mechDelta">,
+): number {
+  return tier.buffDelta - (tier.arrowDelta + tier.mechDelta);
+}
+
+export function isSpawnWeightAdjustTierBalanced(
+  tier: Pick<SpawnWeightAdjustTier, "buffDelta" | "arrowDelta" | "mechDelta">,
+): boolean {
+  return Math.abs(spawnWeightAdjustTierBalance(tier)) <= SPAWN_WEIGHT_TOLERANCE;
+}
+
 /** 权重合计 → 显示用百分比（1000 → 100%） */
 export function spawnWeightSumPercent(sum: number): number {
   return sum / 10;
